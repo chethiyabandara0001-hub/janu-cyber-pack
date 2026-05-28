@@ -4,7 +4,7 @@ import { createServer as createViteServer } from "vite";
 import fs from "fs";
 
 // Import types
-import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement } from "./src/types";
+import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, AdSettings, SupportMessage } from "./src/types";
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "./src/mockData";
 
 // Initialize Firebase JS SDK
@@ -145,6 +145,41 @@ async function getAnnouncement(): Promise<HomeAnnouncement> {
   }
 }
 
+async function getAdSettings(): Promise<AdSettings> {
+  try {
+    const ref = doc(db, "settings", "ads");
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data() as AdSettings;
+    } else {
+      const defaultAds: AdSettings = {
+        dayTimeAdCode: "https://t.me/janucyberpack",
+        nightTimeAdCode: "https://t.me/janucyberpack"
+      };
+      await setDoc(ref, defaultAds);
+      return defaultAds;
+    }
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, "settings/ads");
+    return {
+      dayTimeAdCode: "https://t.me/janucyberpack",
+      nightTimeAdCode: "https://t.me/janucyberpack"
+    };
+  }
+}
+
+async function getSupportMessages(): Promise<SupportMessage[]> {
+  try {
+    const snap = await getDocs(collection(db, "support_messages"));
+    const list: SupportMessage[] = [];
+    snap.forEach(d => list.push(d.data() as SupportMessage));
+    return list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, "support_messages");
+    return [];
+  }
+}
+
 async function getUsers(): Promise<any[]> {
   try {
     const snap = await getDocs(collection(db, "users"));
@@ -198,7 +233,84 @@ async function getSlips(): Promise<PaymentSlip[]> {
   }
 }
 
-async function startServer() {
+async function getFreePackages(): Promise<FreePackage[]> {
+  try {
+    const snap = await getDocs(collection(db, "free_packages"));
+    const list: FreePackage[] = [];
+    snap.forEach(d => list.push(d.data() as FreePackage));
+    if (list.length === 0) {
+      const initialFree = [
+        {
+          id: "free-dialog-mobile-social",
+          isp: "Dialog" as const,
+          packageType: "Mobile" as const,
+          packageName: "Social Media Pack",
+          price: "Free",
+          code: "WGRD-DIALOG-SOC-99X-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-dialog-mobile-zoom",
+          isp: "Dialog" as const,
+          packageType: "Mobile" as const,
+          packageName: "Zoom Unlimited",
+          price: "Free",
+          code: "VMESS-DIALOG-ZM-22K-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-mobitel-mobile-tiktok",
+          isp: "Mobitel" as const,
+          packageType: "Mobile" as const,
+          packageName: "TikTok Heavy",
+          price: "Free",
+          code: "TROJAN-MOBITEL-TT-44W-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-hutch-router-anytime",
+          isp: "Hutch" as const,
+          packageType: "Router" as const,
+          packageName: "Anytime Free VPN",
+          price: "Free",
+          code: "SSH-HUTCH-RTR-77N-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-airtel-fiber-yt",
+          isp: "Airtel" as const,
+          packageType: "Fiber" as const,
+          packageName: "YouTube Unlimited",
+          price: "Free",
+          code: "V2RAY-AIRTEL-YT-88Q-FREE",
+          createdAt: new Date().toISOString()
+        }
+      ];
+      for (const fp of initialFree) {
+        await setDoc(doc(db, "free_packages", fp.id), fp);
+        list.push(fp);
+      }
+    }
+    return list;
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, "free_packages");
+    return [];
+  }
+}
+
+async function getFreeRequests(): Promise<FreeRequest[]> {
+  try {
+    const snap = await getDocs(collection(db, "free_requests"));
+    const list: FreeRequest[] = [];
+    snap.forEach(d => list.push(d.data() as FreeRequest));
+    return list;
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, "free_requests");
+    return [];
+  }
+}
+
+export async function createExpressApp() {
   const app = express();
   const PORT = 3000;
 
@@ -215,13 +327,167 @@ async function startServer() {
       const pt = await getPosts();
       const cn = await getContact();
       const an = await getAnnouncement();
+      const fp = await getFreePackages();
+      const fr = await getFreeRequests();
 
       res.json({
         packages: p,
         posts: pt,
         contact: cn,
-        announcement: an
+        announcement: an,
+        freePackages: fp,
+        freeRequests: fr
       });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Free VPN request submission route
+  app.post("/api/free-requests/submit", async (req, res) => {
+    try {
+      const { userId, userEmail, userName, freePackageId } = req.body;
+      if (!userId || !freePackageId) {
+        return res.status(400).json({ error: "Missing required selection details" });
+      }
+
+      const list = await getFreePackages();
+      const pkg = list.find(p => p.id === freePackageId);
+      if (!pkg) {
+        return res.status(404).json({ error: "Selected free package configuration was not found" });
+      }
+
+      const requestId = "freq_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+      const newRequest: FreeRequest = {
+        id: requestId,
+        userId,
+        userEmail: userEmail || "anonymous@janucyberpack",
+        userName: userName || "Anonymous User",
+        isp: pkg.isp,
+        packageType: pkg.packageType,
+        packageName: pkg.packageName,
+        price: pkg.price || "Free",
+        codeReceived: pkg.code,
+        requestedAt: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, "free_requests", requestId), newRequest);
+
+      const updatedRequests = await getFreeRequests();
+      res.json({ status: "success", request: newRequest, freeRequests: updatedRequests });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Save/Update Free VPN Package details (Admin Only)
+  app.post("/api/admin/free-packages/save", async (req, res) => {
+    try {
+      const pkg: FreePackage = req.body;
+      if (!pkg.isp || !pkg.packageType || !pkg.packageName || !pkg.code) {
+        return res.status(400).json({ error: "Missing package parameters" });
+      }
+
+      const pkgId = pkg.id || "free_pack_" + Date.now();
+      pkg.id = pkgId;
+      pkg.price = pkg.price || "Free";
+
+      await setDoc(doc(db, "free_packages", pkgId), pkg);
+
+      const updated = await getFreePackages();
+      res.json({ status: "success", freePackages: updated });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Delete Free VPN Package details (Admin Only)
+  app.delete("/api/admin/free-packages/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      await deleteDoc(doc(db, "free_packages", id));
+      const updated = await getFreePackages();
+      res.json({ status: "success", freePackages: updated });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Get active advertisement redirection code depending on day/night hours
+  app.get("/api/ad-settings/active", async (req, res) => {
+    try {
+      const ads = await getAdSettings();
+      // Server Time hour (UTC or system time. Sri Lanka is UTC+5:30, but standard hour comparison is fine) 
+      const currentHour = new Date().getUTCHours() + 5.5; // Sri Lanka Hour
+      const lankaHour = (currentHour >= 24 ? currentHour - 24 : currentHour) % 24;
+      
+      // Day is 6 AM to 6 PM (06:00 to 18:00)
+      const isDay = lankaHour >= 6 && lankaHour < 18;
+      const activeLink = isDay ? (ads.dayTimeAdCode || 'https://t.me/janucyberpack') : (ads.nightTimeAdCode || 'https://t.me/janucyberpack');
+      
+      res.json({
+        adType: isDay ? "day" : "night",
+        adLink: activeLink,
+        isDay
+      });
+    } catch (e) {
+      res.json({ adType: "night", adLink: "https://t.me/janucyberpack", isDay: false });
+    }
+  });
+
+  // Get ad configurations depending on administrative level
+  app.get("/api/admin/ad-settings", async (req, res) => {
+    try {
+      const email = String(req.query.email || "").toLowerCase().trim();
+      const ads = await getAdSettings();
+
+      if (email === "chethiyabandara0001@gmail.com") {
+        res.json({
+          dayTimeAdCode: ads.dayTimeAdCode || "",
+          nightTimeAdCode: ads.nightTimeAdCode || ""
+        });
+      } else {
+        // Subadmins can only know or get nightTimeAdCode
+        res.json({
+          dayTimeAdCode: "●●●●●●● (Restricted: Super-Admin Only)",
+          nightTimeAdCode: ads.nightTimeAdCode || ""
+        });
+      }
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Save/Update ad configurations
+  app.post("/api/admin/ad-settings/save", async (req, res) => {
+    try {
+      const { email, dayTimeAdCode, nightTimeAdCode } = req.body;
+      const targetEmail = String(email || "").toLowerCase().trim();
+      
+      const current = await getAdSettings();
+
+      if (targetEmail === "chethiyabandara0001@gmail.com") {
+        current.dayTimeAdCode = dayTimeAdCode || "";
+        current.nightTimeAdCode = nightTimeAdCode || "";
+      } else {
+        // Standard subadmins are only permitted to update night time code
+        current.nightTimeAdCode = nightTimeAdCode || "";
+      }
+
+      await setDoc(doc(db, "settings", "ads"), current);
+      
+      // Return updated according to permissions
+      if (targetEmail === "chethiyabandara0001@gmail.com") {
+        res.json({ status: "success", adSettings: current });
+      } else {
+        res.json({
+          status: "success",
+          adSettings: {
+            dayTimeAdCode: "●●●●●●● (Restricted: Super-Admin Only)",
+            nightTimeAdCode: current.nightTimeAdCode
+          }
+        });
+      }
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }
@@ -407,6 +673,49 @@ async function startServer() {
       const slips = await getSlips();
       const userSlips = slips.filter(s => s.userId === userId);
       res.json(userSlips);
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Support Messages API for 1-on-1 private messaging
+  app.get("/api/support-messages", async (req, res) => {
+    try {
+      const { userId } = req.query;
+      const allMsgs = await getSupportMessages();
+      if (userId) {
+        const userMsgs = allMsgs.filter(m => m.userId === userId);
+        return res.json(userMsgs);
+      }
+      res.json(allMsgs);
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  app.post("/api/support-messages/send", async (req, res) => {
+    try {
+      const { userId, userEmail, userName, message, sender } = req.body;
+      if (!userId || !message || !sender) {
+        return res.status(400).json({ error: "Missing required message parameters" });
+      }
+
+      const msgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6);
+      const newMsg: SupportMessage = {
+        id: msgId,
+        userId,
+        userEmail: userEmail || "anonymous@datastore.shop",
+        userName: userName || "Anonymous",
+        message,
+        sender,
+        timestamp: new Date().toISOString()
+      };
+
+      await setDoc(doc(db, "support_messages", msgId), newMsg);
+
+      const allMsgs = await getSupportMessages();
+      const userMsgs = allMsgs.filter(m => m.userId === userId);
+      res.json({ status: "success", message: newMsg, messages: userMsgs });
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }
@@ -765,9 +1074,13 @@ PersistentKeepalive = 25`;
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running at http://0.0.0.0:${PORT}`);
-  });
+  return app;
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  createExpressApp().then((app) => {
+    app.listen(3000, "0.0.0.0", () => {
+      console.log("Server running at http://0.0.0.0:3000");
+    });
+  });
+}

@@ -105,6 +105,39 @@
         "announcementText": { "type": "string" },
         "showAnnouncement": { "type": "boolean" }
       }
+    },
+    "FreePackage": {
+      "title": "FreePackage",
+      "description": "Pre-configured codes/details for free packages per ISP and Type",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "isp": { "type": "string", "enum": ["Dialog", "Mobitel", "Hutch", "Airtel"] },
+        "packageType": { "type": "string", "enum": ["Mobile", "Router", "Fiber"] },
+        "packageName": { "type": "string" },
+        "price": { "type": "string" },
+        "code": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "isp", "packageType", "packageName", "price", "code"]
+    },
+    "FreeRequest": {
+      "title": "FreeRequest",
+      "description": "A log of user selections for Free VPN which instantly delivers the code",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "isp": { "type": "string" },
+        "packageType": { "type": "string" },
+        "packageName": { "type": "string" },
+        "price": { "type": "string" },
+        "codeReceived": { "type": "string" },
+        "requestedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "userEmail", "isp", "packageType", "packageName", "price", "codeReceived", "requestedAt"]
     }
   },
   "firestore": {
@@ -131,6 +164,14 @@
     "settings/announcement": {
       "schema": "HomeAnnouncement",
       "description": "Singleton configuration document for top alert marquee"
+    },
+    "free_packages/{packageId}": {
+      "schema": "FreePackage",
+      "description": "Store pre-uploaded codes for free VPN plans"
+    },
+    "free_requests/{requestId}": {
+      "schema": "FreeRequest",
+      "description": "Tracks logs of users who select free packages"
     }
   }
 }

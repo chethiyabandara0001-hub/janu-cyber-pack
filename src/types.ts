@@ -85,10 +85,50 @@ export interface HomeAnnouncement {
   showAnnouncement: boolean;
 }
 
+export interface FreePackage {
+  id: string;
+  isp: 'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel';
+  packageType: 'Mobile' | 'Router' | 'Fiber';
+  packageName: string;
+  price: string;
+  code: string;
+  createdAt?: string;
+}
+
+export interface FreeRequest {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  isp: string;
+  packageType: string;
+  packageName: string;
+  price: string;
+  codeReceived: string;
+  requestedAt: string;
+}
+
+export interface AdSettings {
+  dayTimeAdCode: string;
+  nightTimeAdCode: string;
+}
+
+export interface SupportMessage {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  message: string;
+  sender: 'user' | 'admin';
+  timestamp: string;
+}
+
 export interface AppState {
   packages: Package[];
   posts: Post[];
   slips: PaymentSlip[];
   contact: ContactDetails;
   announcement: HomeAnnouncement;
+  freePackages?: FreePackage[];
+  freeRequests?: FreeRequest[];
 }

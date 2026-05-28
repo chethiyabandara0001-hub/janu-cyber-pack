@@ -7,10 +7,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
-  ChevronRight, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert
+  ChevronRight, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User } from './types';
+import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User, FreePackage, FreeRequest, SupportMessage } from './types';
 
 export default function App() {
   // Theme state: 'cyberpunk-dark' | 'cyberpunk-light' | 'acid-volt' | 'neon-blue'
@@ -23,8 +23,8 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin'
-  const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin'>('home');
+  // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin' | 'free-vpn'
+  const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn'>('home');
   const [user, setUser] = useState<User | null>(null);
   
   // App Data States
@@ -33,6 +33,44 @@ export default function App() {
   const [contact, setContact] = useState<ContactDetails | null>(null);
   const [announcement, setAnnouncement] = useState<HomeAnnouncement | null>(null);
   const [userSlips, setUserSlips] = useState<PaymentSlip[]>([]);
+  const [freePackages, setFreePackages] = useState<FreePackage[]>([]);
+  const [freeRequests, setFreeRequests] = useState<FreeRequest[]>([]);
+
+  // Free VPN Client selection states
+  const [selectedFreeIsp, setSelectedFreeIsp] = useState<'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel'>('Dialog');
+  const [selectedFreeType, setSelectedFreeType] = useState<'Mobile' | 'Router' | 'Fiber'>('Mobile');
+  const [selectedFreePackageId, setSelectedFreePackageId] = useState<string>('');
+  const [isClaimingFree, setIsClaimingFree] = useState<boolean>(false);
+  const [claimedFreeRequest, setClaimedFreeRequest] = useState<FreeRequest | null>(null);
+  const [freeClaimError, setFreeClaimError] = useState<string>('');
+
+  // Free VPN Admin state
+  const [adminFreeIsp, setAdminFreeIsp] = useState<'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel'>('Dialog');
+  const [adminFreeType, setAdminFreeType] = useState<'Mobile' | 'Router' | 'Fiber'>('Mobile');
+  const [adminFreePackageName, setAdminFreePackageName] = useState<string>('');
+  const [adminFreeCode, setAdminFreeCode] = useState<string>('');
+  const [adminFreePrice, setAdminFreePrice] = useState<string>('Free');
+  const [isAdminSavingFree, setIsAdminSavingFree] = useState<boolean>(false);
+  const [adminFreeError, setAdminFreeError] = useState<string>('');
+  const [confirmDeleteFreeId, setConfirmDeleteFreeId] = useState<string | null>(null);
+
+  // Administrative Ad Codes configuration states
+  const [adminDayTimeAdCode, setAdminDayTimeAdCode] = useState<string>('');
+  const [adminNightTimeAdCode, setAdminNightTimeAdCode] = useState<string>('');
+  const [isSavingAdSettings, setIsSavingAdSettings] = useState<boolean>(false);
+  const [adSettingsMessage, setAdSettingsMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // User Ad Redirections Tracking State (0 to 10)
+  const [adRedirectionCount, setAdRedirectionCount] = useState<number>(0);
+  const [isLoadingActiveAd, setIsLoadingActiveAd] = useState<boolean>(false);
+
+  // Private Support Chat System States
+  const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
+  const [activeUserChatId, setActiveUserChatId] = useState<string | null>(null);
+  const [currentChatInput, setCurrentChatInput] = useState<string>('');
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
+  const [isSendingSupportMsg, setIsSendingSupportMsg] = useState<boolean>(false);
+  const [isFetchingSupportMsgs, setIsFetchingSupportMsgs] = useState<boolean>(false);
   
   // Slip upload popup settings
   const [selectedPackForSlip, setSelectedPackForSlip] = useState<Package | null>(null);
@@ -92,6 +130,14 @@ export default function App() {
   const [isTerminalLive, setIsTerminalLive] = useState<boolean>(false);
   const [customBotCmd, setCustomBotCmd] = useState<string>('');
   const terminalEndRef = useRef<HTMLDivElement>(null);
+  const userChatEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto scroll to latest support chat messages
+  useEffect(() => {
+    if (userChatEndRef.current) {
+      userChatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [supportMessages, isSupportModalOpen]);
 
   // Auto scroll to latest logs
   useEffect(() => {
@@ -179,10 +225,290 @@ export default function App() {
       setPosts(data?.posts || []);
       setContact(data?.contact || null);
       setAnnouncement(data?.announcement || null);
+      setFreePackages(data?.freePackages || []);
+      setFreeRequests(data?.freeRequests || []);
     } catch (e) {
       console.error("Error loading index data", e);
     }
   };
+
+  // User Free VPN Activation Handler
+  const handleClaimFreeVpn = async (pkgId: string) => {
+    if (!user) {
+      setLoginProvider('email');
+      setShowLoginModal(true);
+      return;
+    }
+
+    setIsClaimingFree(true);
+    setFreeClaimError('');
+    setClaimedFreeRequest(null);
+
+    try {
+      const response = await fetch('/api/free-requests/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          userEmail: user.email,
+          userName: user.displayName || user.email.split('@')[0],
+          freePackageId: pkgId
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to request free VPN package');
+      }
+
+      setClaimedFreeRequest(data.request);
+      if (data.freeRequests) {
+        setFreeRequests(data.freeRequests);
+      }
+    } catch (err: any) {
+      setFreeClaimError(err.message || 'An error occurred while activating package.');
+    } finally {
+      setIsClaimingFree(false);
+    }
+  };
+
+  // Admin save Free VPN package
+  const handleSaveFreePackage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminFreePackageName || !adminFreeCode) {
+      setAdminFreeError('Package Name and Activation Code are required.');
+      return;
+    }
+
+    setIsAdminSavingFree(true);
+    setAdminFreeError('');
+
+    try {
+      const response = await fetch('/api/admin/free-packages/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isp: adminFreeIsp,
+          packageType: adminFreeType,
+          packageName: adminFreePackageName,
+          code: adminFreeCode,
+          price: adminFreePrice || 'Free'
+        })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save free VPN package.');
+      }
+
+      setFreePackages(data.freePackages || []);
+      setAdminFreePackageName('');
+      setAdminFreeCode('');
+    } catch (err: any) {
+      setAdminFreeError(err.message || 'An error occurred while saving.');
+    } finally {
+      setIsAdminSavingFree(false);
+    }
+  };
+
+  // Admin delete Free VPN package
+  const handleDeleteFreePackage = async (id: string) => {
+    try {
+      setAdminFreeError('');
+      const response = await fetch(`/api/admin/free-packages/${id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete free VPN package.');
+      }
+
+      setFreePackages(data.freePackages || []);
+      setConfirmDeleteFreeId(null);
+    } catch (err: any) {
+      setAdminFreeError(err.message || 'An error occurred while deleting.');
+    }
+  };
+
+  // Load Ad settings for admin configurations
+  const fetchAdSettings = async () => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      const res = await fetch(`/api/admin/ad-settings?email=${encodeURIComponent(user.email)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAdminDayTimeAdCode(data.dayTimeAdCode || '');
+        setAdminNightTimeAdCode(data.nightTimeAdCode || '');
+      }
+    } catch (e) {
+      console.error("Failed to load ad settings", e);
+    }
+  };
+
+  // Save Ad settings to Firestore
+  const handleSaveAdSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || user.role !== 'admin') return;
+    setIsSavingAdSettings(true);
+    setAdSettingsMessage(null);
+    try {
+      const res = await fetch('/api/admin/ad-settings/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          dayTimeAdCode: adminDayTimeAdCode,
+          nightTimeAdCode: adminNightTimeAdCode
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to save ad configurations');
+      }
+      setAdSettingsMessage({ type: 'success', text: 'Ad settings updated successfully.' });
+      if (data.adSettings) {
+        setAdminDayTimeAdCode(data.adSettings.dayTimeAdCode || '');
+        setAdminNightTimeAdCode(data.adSettings.nightTimeAdCode || '');
+      }
+    } catch (err: any) {
+      setAdSettingsMessage({ type: 'error', text: err.message || 'Error saving ad configurations' });
+    } finally {
+      setIsSavingAdSettings(false);
+    }
+  };
+
+  // Trigger ad redirect check and increment count
+  const handleTriggerAdRedirect = async () => {
+    if (!selectedFreePackageId) return;
+    setIsLoadingActiveAd(true);
+    setFreeClaimError('');
+    try {
+      const res = await fetch('/api/ad-settings/active');
+      if (!res.ok) throw new Error('Could not retrieve active ad source.');
+      const data = await res.json();
+      const adUrl = data.adLink || 'https://t.me/janucyberpack';
+      
+      // Attempt redirecting
+      window.open(adUrl, '_blank', 'noopener,noreferrer');
+      
+      // Update count
+      const currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
+      const nextCount = Math.min(10, currentCount + 1);
+      
+      localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, String(nextCount));
+      setAdRedirectionCount(nextCount);
+    } catch (e: any) {
+      setFreeClaimError('Ad network failed: ' + e.message);
+    } finally {
+      setIsLoadingActiveAd(false);
+    }
+  };
+
+  // Support Chat functions for user and admin private communications
+  const fetchSupportMessages = async (targetUserId?: string) => {
+    setIsFetchingSupportMsgs(true);
+    try {
+      let url = '/api/support-messages';
+      if (targetUserId) {
+        url += `?userId=${encodeURIComponent(targetUserId)}`;
+      } else if (user && user.role !== 'admin') {
+        url += `?userId=${encodeURIComponent(user.uid)}`;
+      }
+      const res = await fetch(url);
+      if (res.ok) {
+        const data = await res.json();
+        setSupportMessages(data);
+      }
+    } catch (e) {
+      console.error("Failed to load support messages", e);
+    } finally {
+      setIsFetchingSupportMsgs(false);
+    }
+  };
+
+  const handleSendSupportMessage = async (sender: 'user' | 'admin', customUserId?: string, customUserName?: string, customUserEmail?: string) => {
+    if (!currentChatInput.trim()) return;
+    setIsSendingSupportMsg(true);
+    try {
+      let targetUid = '';
+      let targetEmail = '';
+      let targetName = '';
+
+      if (sender === 'admin') {
+        targetUid = customUserId || activeUserChatId || '';
+        targetEmail = customUserEmail || '';
+        targetName = customUserName || '';
+      } else {
+        targetUid = user?.uid || 'guest_user';
+        targetEmail = user?.email || 'anonymous@datastore.shop';
+        targetName = user?.displayName || 'Anonymous';
+      }
+
+      if (!targetUid) {
+        console.error("No valid thread room ID specified");
+        setIsSendingSupportMsg(false);
+        return;
+      }
+
+      const res = await fetch('/api/support-messages/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: targetUid,
+          userEmail: targetEmail,
+          userName: targetName,
+          message: currentChatInput,
+          sender: sender
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCurrentChatInput('');
+        setSupportMessages(data.messages || []);
+        fetchSupportMessages(sender === 'admin' ? targetUid : undefined);
+      }
+    } catch (e) {
+      console.error("Failed to send message", e);
+    } finally {
+      setIsSendingSupportMsg(false);
+    }
+  };
+
+  // Automatic Support Chat Polling Hooks
+  useEffect(() => {
+    let intervalId: any;
+    if (isSupportModalOpen && user) {
+      fetchSupportMessages();
+      intervalId = setInterval(() => {
+        fetchSupportMessages();
+      }, 5000);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isSupportModalOpen, user]);
+
+  useEffect(() => {
+    let intervalId: any;
+    if (activeTab === 'admin' && user?.role === 'admin') {
+      if (activeUserChatId) {
+        fetchSupportMessages(activeUserChatId);
+        intervalId = setInterval(() => {
+          fetchSupportMessages(activeUserChatId);
+        }, 5000);
+      } else {
+        fetchSupportMessages();
+        intervalId = setInterval(() => {
+          fetchSupportMessages();
+        }, 8000);
+      }
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [activeTab, user, activeUserChatId]);
 
   useEffect(() => {
     fetchAllData();
@@ -234,8 +560,18 @@ export default function App() {
   useEffect(() => {
     if (activeTab === 'admin' && user?.role === 'admin') {
       fetchAdminStats();
+      fetchAdSettings();
     }
   }, [activeTab, user]);
+
+  useEffect(() => {
+    if (selectedFreePackageId) {
+      const savedClicks = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
+      setAdRedirectionCount(savedClicks);
+    } else {
+      setAdRedirectionCount(0);
+    }
+  }, [selectedFreePackageId]);
 
   // Auth execution using API
   const handleAuthSignIn = async (e?: React.FormEvent) => {
@@ -665,7 +1001,6 @@ export default function App() {
   };
 
   const handleDemoteAdmin = async (uid: string) => {
-    if (!confirm("Are you sure you want to revoke Admin rights and demote this user?")) return;
     setAdminManageMessage(null);
     try {
       const res = await fetch('/api/admin/users/demote', {
@@ -1217,6 +1552,18 @@ export default function App() {
             <Layers className="w-4 h-4" />
             VPN Subscriptions
           </button>
+
+          <button
+            onClick={() => setActiveTab('free-vpn')}
+            className={`w-full py-2.5 px-4 rounded-lg flex items-center gap-3 font-medium transition text-left cursor-pointer text-xs ${
+              activeTab === 'free-vpn' 
+                ? 'bg-emerald-550/10 text-emerald-400 font-bold border border-emerald-500/10 font-mono' 
+                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            get free vpn
+          </button>
           
           {user && (
             <button
@@ -1378,31 +1725,37 @@ export default function App() {
         </header>
 
         {/* MOBILE NAVIGATION PILLS */}
-        <div className="md:hidden flex space-x-1 px-4 py-2 bg-slate-900 border-b border-slate-800 justify-center">
+        <div className="md:hidden flex flex-wrap gap-1 px-4 py-2 bg-slate-900 border-b border-slate-800 justify-center">
           <button 
             onClick={() => setActiveTab('home')}
-            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition ${activeTab === 'home' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'home' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
           >
             News
           </button>
           <button 
             onClick={() => setActiveTab('packages')}
-            className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition ${activeTab === 'packages' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'packages' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
           >
             VPN List
+          </button>
+          <button 
+            onClick={() => setActiveTab('free-vpn')}
+            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'free-vpn' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 font-mono' : 'text-slate-400'}`}
+          >
+            Free VPN
           </button>
           {user && (
             <button 
               onClick={() => setActiveTab('dashboard')}
-              className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition ${activeTab === 'dashboard' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+              className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'dashboard' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
             >
-              My Account
+              Account
             </button>
           )}
           {user?.role === 'admin' && (
             <button 
               onClick={() => setActiveTab('admin')}
-              className={`flex-1 text-center py-2 text-xs font-semibold rounded-lg transition ${activeTab === 'admin' ? 'bg-amber-500/10 text-amber-400' : 'text-amber-500'}`}
+              className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'admin' ? 'bg-amber-500/10 text-amber-400' : 'text-amber-500'}`}
             >
               Admin ⭐
             </button>
@@ -1663,6 +2016,59 @@ export default function App() {
                 </div>
               )}
 
+              {/* DIRECT CHAT SUPPORT BOX FOR CUSTOMER COOPERATION */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 animate-fade-in">
+                <div className="flex items-center gap-2.5 border-b border-slate-800 pb-3">
+                  <MessagesSquare className="w-5 h-5 text-indigo-400" />
+                  <div>
+                    <h5 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Confidential Support</h5>
+                    <p className="text-[10px] text-slate-450 font-mono">1-on-1 Help Line with Administrators</p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-350 leading-relaxed">
+                  Have inquiries regarding system settings, bank slips, or manual tunnel coupon codes? Open a private chat directly with the admins.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) {
+                      setShowLoginModal(true);
+                    } else {
+                      setIsSupportModalOpen(true);
+                    }
+                  }}
+                  className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-indigo-500/10"
+                >
+                  <MessageSquare className="w-4 h-4 text-indigo-100" />
+                  <span>Open Admin Support Chat</span>
+                </button>
+              </div>
+
+              {/* FLOATING DIRECT DEEP CHAT ICON WIDGET */}
+              <div className="fixed bottom-6 right-6 z-40">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!user) {
+                      setShowLoginModal(true);
+                    } else {
+                      setIsSupportModalOpen(true);
+                    }
+                  }}
+                  className="flex items-center gap-2 px-4 py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-500/30 hover:scale-105 transition-all cursor-pointer font-sans text-xs font-bold font-mono tracking-wider"
+                  title="Chat Directly to Admin"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <MessagesSquare className="w-4 h-4 text-white" />
+                  <span>Support Line</span>
+                </button>
+              </div>
+
               {/* Bot Info Jumbotron */}
               <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 text-center space-y-3">
                 <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20">
@@ -1782,6 +2188,433 @@ export default function App() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB: GET FREE VPN INTERACTIVE GATEWAY */}
+        {activeTab === 'free-vpn' && (
+          <div className="space-y-8 animate-fade-in font-sans">
+            <div className="border-b border-slate-800 pb-4">
+              <span className="text-[10px] text-emerald-400 font-mono tracking-widest uppercase font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                ⚡ Complimentary bypass tunnel gateway
+              </span>
+              <h2 className="text-2xl font-bold tracking-tight text-white mt-3 mb-1">
+                Get Free Unlimited High-Speed VPN
+              </h2>
+              <p className="text-xs text-slate-400">
+                Choose your local Sri Lankan internet service provider (ISP), select your preferred connection interface, and unlock complimentary high-speed bypass codes configuration logs.
+              </p>
+            </div>
+
+            {/* MAIN SELECTIONS AND CLASSIFICATIONS */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              
+              {/* STEP 1: CHOOSE ISP & CONNECTION TYPES */}
+              <div className="lg:col-span-4 space-y-6">
+                
+                {/* ISP CHOOSER SELECTOR CARDS */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
+                    Line 1: Pick Telecom Operator ( श्रीलंका ISP )
+                  </p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { name: 'Dialog' as const, color: 'border-red-500/40 text-red-400 bg-red-500/5', desc: 'Sri Lanka #1' },
+                      { name: 'Mobitel' as const, color: 'border-green-500/40 text-green-400 bg-green-500/5', desc: 'National Carrier' },
+                      { name: 'Hutch' as const, color: 'border-orange-500/40 text-orange-400 bg-orange-500/5', desc: 'True Unlimited' },
+                      { name: 'Airtel' as const, color: 'border-amber-500/40 text-amber-500 bg-amber-500/5', desc: 'High Speed 5G' }
+                    ].map((isp) => (
+                      <button
+                        key={isp.name}
+                        onClick={() => {
+                          setSelectedFreeIsp(isp.name);
+                          setSelectedFreePackageId('');
+                        }}
+                        className={`p-3 rounded-xl border flex flex-col text-left transition-all cursor-pointer relative ${
+                          selectedFreeIsp === isp.name
+                            ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10 scale-[1.02] shadow-lg shadow-indigo-950/20 ring-1 ring-indigo-500/50'
+                            : 'border-slate-800 text-slate-400 bg-slate-950/40 hover:border-slate-750 hover:text-slate-300'
+                        }`}
+                      >
+                        <span className="font-bold text-xs">{isp.name}</span>
+                        <span className="text-[9px] text-slate-500 mt-0.5">{isp.desc}</span>
+                        
+                        {selectedFreeIsp === isp.name && (
+                          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* INTERFACE TYPE SELECTOR CARDS */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
+                    Line 2: Pick Interface Interface
+                  </p>
+
+                  <div className="space-y-2">
+                    {[
+                      { type: 'Mobile' as const, desc: 'Optimized for Mobile zoom, tik tok & social packets' },
+                      { type: 'Router' as const, desc: 'Bypass router restrictions with custom WAN tunnels' },
+                      { type: 'Fiber' as const, desc: 'Direct ultra-high speed Fiber optic configuration codes' }
+                    ].map((intf) => (
+                      <button
+                        key={intf.type}
+                        onClick={() => {
+                          setSelectedFreeType(intf.type);
+                          setSelectedFreePackageId('');
+                        }}
+                        className={`w-full p-3 rounded-xl border flex items-center justify-between transition text-left cursor-pointer ${
+                          selectedFreeType === intf.type
+                            ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10 font-bold'
+                            : 'border-slate-800 text-slate-400 bg-slate-950/40 hover:border-slate-750'
+                        }`}
+                      >
+                        <div>
+                          <p className="text-xs font-mono">{intf.type}</p>
+                          <p className="text-[9px] text-slate-500 font-sans mt-0.5">{intf.desc}</p>
+                        </div>
+                        <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+
+              {/* STEP 2: SHOW MATCHING FREE PACKAGES */}
+              <div className="lg:col-span-8 space-y-6">
+                
+                {/* Guest Account Prompt */}
+                {!user && (
+                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex gap-4 items-start">
+                    <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wide">Client Session is Anonymous</h4>
+                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                        You can view all packages and operators, but you must be signed in to submit your request and view your personal free bypass credentials history. Unlocked credentials will sync automatically with your cloud profile.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setLoginProvider('email');
+                          setShowLoginModal(true);
+                        }}
+                        className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-[10px] font-bold text-slate-950 rounded-lg cursor-pointer transition uppercase"
+                      >
+                        🔑 Sign In Now
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Filter and Match list */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+                  
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
+                      🌐 Match Result and Available VPN Bundles
+                    </h3>
+                    <span className="text-[10px] text-slate-400 bg-slate-950 px-2.5 py-0.5 rounded font-mono border border-slate-850">
+                      ISP: {selectedFreeIsp} • TYPE: {selectedFreeType}
+                    </span>
+                  </div>
+
+                  {/* Filtered lists of FreePackages */}
+                  {freePackages.filter(p => p.isp === selectedFreeIsp && p.packageType === selectedFreeType).length === 0 ? (
+                    <div className="text-center py-16 space-y-3 bg-slate-950/40 rounded-xl border border-slate-850/60 border-dashed">
+                      <Layers className="w-8 h-8 text-slate-600 mx-auto opacity-50" />
+                      <p className="text-xs text-slate-400 font-mono select-none">No free packages uploaded yet for this specific configurations combo.</p>
+                      {user?.role === 'admin' && (
+                        <p className="text-[10px] text-indigo-400 select-none">You can add codes below in administrative parameters!</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {freePackages
+                        .filter(p => p.isp === selectedFreeIsp && p.packageType === selectedFreeType)
+                        .map((pkg) => {
+                          const isSelected = selectedFreePackageId === pkg.id;
+                          return (
+                            <div
+                              key={pkg.id}
+                              onClick={() => {
+                                setSelectedFreePackageId(pkg.id);
+                                setClaimedFreeRequest(null);
+                                setFreeClaimError('');
+                              }}
+                              className={`p-4 rounded-xl border transition-all cursor-pointer relative flex flex-col justify-between ${
+                                isSelected
+                                  ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/30'
+                                  : 'border-slate-800/80 bg-slate-950/30 hover:border-slate-700 hover:bg-slate-950/50'
+                              }`}
+                            >
+                              <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] text-emerald-400 font-mono font-bold uppercase py-0.5 px-2 bg-emerald-500/10 border border-emerald-500/20 rounded">
+                                    {pkg.price || 'Free'}
+                                  </span>
+                                  {isSelected && (
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 antialiased"></span>
+                                  )}
+                                </div>
+                                <h4 className="text-sm font-bold text-white mt-2">{pkg.packageName}</h4>
+                                <p className="text-[10px] text-slate-400">Sri Lankan ISP tunnel bypass protocols matched.</p>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between">
+                                <span className="text-[9px] text-slate-500 font-mono">Matched Core DB: {pkg.id}</span>
+                                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1 font-mono">
+                                  LKR 0 LKR
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  )}
+
+                  {/* Submission and loading action center */}
+                  {selectedFreePackageId && (
+                    <div className="pt-4 border-t border-slate-800/60 space-y-4">
+                      
+                      {freeClaimError && (
+                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 font-mono flex items-center gap-2">
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          {freeClaimError}
+                        </div>
+                      )}
+
+                      {/* Display successful claiming info */}
+                      {claimedFreeRequest && (
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 space-y-3 animate-fade-in font-mono">
+                          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase mb-1">
+                            <Check className="w-4 h-4" />
+                            Complementary Free VPN Activated Successfully!
+                          </div>
+                          <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+                            Your server bypass config has been mapped. Copy this activation token and paste it directly inside your Shadowsocks, V2Ray or Wireguard Client application:
+                          </p>
+                          <div className="bg-slate-950 border border-slate-850 p-2.5 rounded-lg flex items-center justify-between gap-4">
+                            <span className="text-white text-xs select-all truncate break-all block flex-1 font-mono">{claimedFreeRequest.codeReceived}</span>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(claimedFreeRequest.codeReceived);
+                                alert('Activation code copied to clipboard!');
+                              }}
+                              className="px-2.5 py-1.5 bg-emerald-500 text-slate-950 hover:bg-emerald-400 font-bold rounded text-[10px] transition shrink-0 uppercase cursor-pointer"
+                            >
+                              Copy Code
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Advertisement redirection verification engine */}
+                      <div className="bg-slate-950/80 border border-slate-850 p-5 rounded-2xl space-y-4 font-mono text-[11px]">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5">
+                            🛡️ Ads Redirection Verification
+                          </span>
+                          <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
+                            {adRedirectionCount} / 10 Completed
+                          </span>
+                        </div>
+
+                        <p className="text-slate-400 font-sans leading-relaxed">
+                          To authorize secure Sri Lankan telecom bypass keys and deliver configuration log protocols, please complete authentication by opening the active advertisement portal ten (10) times. Overriding limits triggers server sync instantly.
+                        </p>
+
+                        {/* Staggered progress grid nodes */}
+                        <div className="grid grid-cols-10 gap-1.5">
+                          {Array.from({ length: 10 }).map((_, idx) => {
+                            const isCompleted = idx < adRedirectionCount;
+                            const isActive = idx === adRedirectionCount;
+                            return (
+                              <div
+                                key={idx}
+                                className={`h-2 rounded transition-all duration-300 ${
+                                  isCompleted
+                                    ? 'bg-emerald-500 shadow-md shadow-emerald-500/20'
+                                    : isActive
+                                    ? 'bg-indigo-500 animate-pulse'
+                                    : 'bg-slate-800'
+                                }`}
+                                title={`Step ${idx + 1}`}
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {/* Interactive Click triggers */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-slate-500">
+                              Current Mode: {new Date().getHours() >= 6 && new Date().getHours() < 18 ? '☀️ Day Time Ads Active' : '🌙 Night Time Ads Active'}
+                            </p>
+                            {adRedirectionCount > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, '0');
+                                  setAdRedirectionCount(0);
+                                }}
+                                className="text-[9px] text-red-400/80 hover:text-red-400 underline cursor-pointer"
+                              >
+                                Reset verification counter
+                              </button>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleTriggerAdRedirect}
+                            disabled={isLoadingActiveAd || adRedirectionCount >= 10}
+                            className={`px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center gap-1.5 transition cursor-pointer ${
+                              adRedirectionCount >= 10
+                                ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20'
+                                : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-950/40'
+                            }`}
+                          >
+                            {isLoadingActiveAd ? (
+                              <>
+                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                Connecting Portal...
+                              </>
+                            ) : adRedirectionCount >= 10 ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                Ad Gate Cleared
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                                🚀 Redirect & Verify [Step {adRedirectionCount + 1}/10]
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Main activation trigger button */}
+                      <div className="flex items-center justify-between gap-4 pt-2">
+                        <p className="text-[10px] text-slate-500 font-mono max-w-sm">
+                          {adRedirectionCount < 10 
+                            ? `⚠️ Please complete all 10 redirections to unlock complementary VPN files. (Remaining: ${10 - adRedirectionCount})`
+                            : '⚡ Tunnel verified successfully! Click to fetch and deploy keys.'}
+                        </p>
+                        
+                        <button
+                          onClick={() => handleClaimFreeVpn(selectedFreePackageId)}
+                          disabled={isClaimingFree || adRedirectionCount < 10}
+                          className={`px-6 py-2.5 text-xs font-bold rounded-xl transition uppercase flex items-center gap-2 shrink-0 cursor-pointer shadow-lg ${
+                            isClaimingFree || adRedirectionCount < 10
+                              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-750/30'
+                              : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-950/30 font-extrabold'
+                          }`}
+                        >
+                          {isClaimingFree ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              activating Tunnels...
+                            </>
+                          ) : adRedirectionCount < 10 ? (
+                            <>
+                              <Lock className="w-3.5 h-3.5" />
+                              CONFIRM & GET CODE
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              CONFIRM & GET CODE
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                    </div>
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {/* CLAIM HISTORY TRACKER (USER DATA COGNIZANT) */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+              <div className="border-b border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
+                  📁 Your Free Claims & Activation History
+                </h3>
+                <p className="text-[11px] text-slate-500 font-serif mt-0.5">
+                  Synchronous logs displaying all your claimed data packets. You can access previously claim vouchers anytime.
+                </p>
+              </div>
+
+              {!user ? (
+                <p className="text-xs text-slate-400 font-mono py-6 text-center">
+                  Anonymous Session. Please log in to view your claiming logs.
+                </p>
+              ) : freeRequests.filter(r => r.userId === user.uid).length === 0 ? (
+                <p className="text-xs text-slate-400 font-mono py-8 text-center">
+                  You have not claimed any complimentary VPN packages yet. Try picking your local ISP toClaim your first!
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs font-mono text-slate-300 border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-800 text-slate-500 text-[10px] uppercase">
+                        <th className="py-2.5">Date</th>
+                        <th className="py-2.5">ISP</th>
+                        <th className="py-2.5">Type</th>
+                        <th className="py-2.5">Package</th>
+                        <th className="py-2.5">Delivered Voucher Code</th>
+                        <th className="py-2.5 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {freeRequests
+                        .filter(r => r.userId === user.uid)
+                        .map((req) => (
+                          <tr key={req.id} className="border-b border-slate-850/60 hover:bg-slate-950/20 transition-all">
+                            <td className="py-3 text-slate-400 text-[11px]">
+                              {new Date(req.requestedAt).toLocaleString()}
+                            </td>
+                            <td className="py-3">
+                              <span className="font-bold text-white">{req.isp}</span>
+                            </td>
+                            <td className="py-3 text-slate-400">
+                              {req.packageType}
+                            </td>
+                            <td className="py-3 font-sans font-medium text-slate-200">
+                              {req.packageName}
+                            </td>
+                            <td className="py-3">
+                              <code className="text-emerald-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-850 text-[11px]" title={req.codeReceived}>
+                                {req.codeReceived.substring(0, 16)}...
+                              </code>
+                            </td>
+                            <td className="py-3 text-right">
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(req.codeReceived);
+                                  alert('Copied claimed code to clipboard!');
+                                }}
+                                className="px-2 py-1 bg-slate-950 hover:bg-slate-850 border border-slate-850 hover:border-slate-750 text-indigo-400 text-[10px] rounded transition uppercase cursor-pointer"
+                              >
+                                Copy Code
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
           </div>
         )}
 
@@ -2637,57 +3470,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4. ACTIVE USER BANDWIDTH OVERRIDES */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                📊 Telegram Simulated Data Usage Adjuster
-              </h3>
-
-              <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end text-xs">
-                <div>
-                  <label className="block text-slate-400 mb-1">Select Active Client Profile:</label>
-                  <select
-                    value={selectedUserIdForBandwidth}
-                    onChange={(e) => setSelectedUserIdForBandwidth(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white outline-none focus:border-indigo-500/50"
-                  >
-                    <option value="">Select User profile...</option>
-                    {adminStats?.users.filter((u: any) => u.role !== 'admin').map((u: any) => (
-                      <option key={u.uid} value={u.uid}>{u.displayName} ({u.email})</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 mb-1">Allocate Total Cap (Gigabytes):</label>
-                  <input
-                    type="number"
-                    value={adminUserTotalGB}
-                    onChange={(e) => setAdminUserTotalGB(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white font-mono outline-none focus:border-indigo-500/50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-400 mb-1">Simulate Used Transfer (Gigabytes):</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={adminUserUsedGB}
-                    onChange={(e) => setAdminUserUsedGB(Number(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white font-mono outline-none focus:border-indigo-500/50"
-                  />
-                </div>
-
-                <button
-                  onClick={handleUpdateBandwidth}
-                  className="w-full py-2 font-bold text-white bg-indigo-500 hover:bg-indigo-600 rounded cursor-pointer transition shadow shadow-indigo-500/10"
-                >
-                  Sync to Backend Database
-                </button>
-              </div>
-            </div>
-
             {/* 4.5 ADMIN ACCESS CONTROL & ROLE DELEGATION */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
@@ -2991,129 +3773,531 @@ export default function App() {
 
             </div>
 
-            {/* TELEGRAM BOT LIVE TERMINAL PREVIEW */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
-                <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    🤖 Telegram Verification Bot Live API Daemon Terminal
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Synchronized interactive long-polling daemon console displaying simulated system notifications, client registrations, and verifier ticks.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 font-mono text-[11px]">
-                  <button
-                    type="button"
-                    onClick={() => setIsTerminalLive(!isTerminalLive)}
-                    className={`px-3 py-1 font-bold rounded flex items-center gap-1 transition-all cursor-pointer ${
-                      isTerminalLive
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
-                        : "bg-slate-800 text-slate-400 border border-slate-700 hover:bg-slate-700"
-                    }`}
-                  >
-                    <span className={`w-1.5 h-1.5 rounded-full ${isTerminalLive ? "bg-emerald-400 animate-ping" : "bg-slate-500"}`}></span>
-                    {isTerminalLive ? "FEED LIVE" : "FEED PAUSED"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setTerminalLogs([])}
-                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded transition font-bold cursor-pointer"
-                  >
-                    Clear Screen
-                  </button>
-                </div>
+            {/* 6. FREE DATA SETTINGS & UPLOAD VOUCHER CODES */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+              <div className="border-b border-slate-800 pb-3">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  🎁 6. FREE DATA SETTINGS & TUNNEL MANAGER
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Upload free bypass configuration voucher codes, manage operator classifications, and monitor select-activations submitted by clients.
+                </p>
               </div>
 
-              {/* Terminal Screen Body */}
-              <div className="mt-5 bg-slate-950 border border-slate-850 rounded-xl p-4.5 font-mono text-xs text-slate-300 relative overflow-hidden flex flex-col h-64 shadow-inner">
-                {/* Simulated Linux Bar */}
-                <div className="absolute top-0 left-0 right-0 h-8 bg-slate-900 border-b border-slate-855 px-4 flex items-center justify-between text-[11px] text-slate-500 select-none">
-                  <span className="flex items-center gap-1.5 font-semibold text-slate-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-800"></span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-800"></span>
-                    <span className="w-2.5 h-2.5 rounded-full bg-slate-800"></span>
-                    <span className="ml-2">telegram-bot-daemon.log • 10Gbps Tunnel</span>
-                  </span>
-                  <span>node server.ts - active</span>
-                </div>
-
-                {/* Log Line Scroll Container */}
-                <div className="flex-1 overflow-y-auto mt-7 mb-2 pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-slate-800">
-                  {terminalLogs.length === 0 ? (
-                    <div className="text-center py-16 text-slate-600 italic select-none">
-                      Terminal log stream is empty. Type a command or wait for live daemon processes to post.
-                    </div>
-                  ) : (
-                    terminalLogs.map((log, index) => {
-                      let colorClass = "text-slate-300";
-                      if (log.includes("[SYSTEM]")) colorClass = "text-indigo-300";
-                      else if (log.includes("[BOT]")) colorClass = "text-[#3bf0fa]";
-                      else if (log.includes("[SUCCESS]")) colorClass = "text-emerald-400";
-                      else if (log.includes("[USER-ADMIN]")) colorClass = "text-slate-200 font-bold";
-                      else if (log.includes("[ADMINCMD]")) colorClass = "text-pink-400 font-bold";
-                      else if (log.includes("[BOT-ROUTER]")) colorClass = "text-amber-400";
-
-                      return (
-                        <div key={index} className={`leading-relaxed whitespace-pre-wrap ${colorClass}`}>
-                          {log}
-                        </div>
-                      );
-                    })
-                  )}
-                  <div ref={terminalEndRef} />
-                </div>
-              </div>
-
-              {/* Custom Command Prompt Form */}
-              <form onSubmit={handleSendTerminalCmd} className="mt-4 flex flex-col md:flex-row items-stretch md:items-center gap-3">
-                <div className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-2 flex items-center gap-2 text-xs font-mono">
-                  <span className="text-indigo-400 font-bold shrink-0 select-none">admin@datastore:~$</span>
-                  <input
-                    type="text"
-                    value={customBotCmd}
-                    onChange={(e) => setCustomBotCmd(e.target.value)}
-                    placeholder="Type custom command or bot query (e.g. /status, /restart, hello bot)..."
-                    className="flex-1 bg-transparent text-slate-100 outline-none w-full placeholder-slate-700 border-none p-0 focus:ring-0"
-                  />
-                </div>
+              {/* Form and List Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 
-                <div className="flex items-center gap-2">
+                {/* Upload Form (Column 1) */}
+                <form onSubmit={handleSaveFreePackage} className="lg:col-span-4 space-y-4 text-xs font-sans">
+                  <p className="font-bold text-indigo-400 font-mono uppercase tracking-wider text-[11px] pb-1 border-b border-slate-850">
+                    Create New Free Configuration
+                  </p>
+
+                  {adminFreeError && (
+                    <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded text-red-400 font-mono">
+                      {adminFreeError}
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-slate-400 mb-1">Select Sri Lankan ISP Operator:</label>
+                      <select
+                        value={adminFreeIsp}
+                        onChange={(e: any) => setAdminFreeIsp(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white outline-none focus:border-indigo-500 font-mono"
+                      >
+                        <option value="Dialog">Dialog</option>
+                        <option value="Mobitel">Mobitel</option>
+                        <option value="Hutch">Hutch</option>
+                        <option value="Airtel">Airtel</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 mb-1">Select Package connection Interface:</label>
+                      <select
+                        value={adminFreeType}
+                        onChange={(e: any) => setAdminFreeType(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white outline-none focus:border-indigo-500 font-mono"
+                      >
+                        <option value="Mobile">Mobile</option>
+                        <option value="Router">Router</option>
+                        <option value="Fiber">Fiber</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 mb-1">Package Display Name:</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Social Media Pack"
+                        value={adminFreePackageName}
+                        onChange={(e) => setAdminFreePackageName(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white outline-none focus:border-indigo-500 placeholder-slate-700"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 mb-1">Voucher Activation Code / Configuration link:</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. wgrd://dialog-free-unlimited-bypass..."
+                        value={adminFreeCode}
+                        onChange={(e) => setAdminFreeCode(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white outline-none focus:border-indigo-500 font-mono placeholder-slate-700 text-[11px]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-400 mb-1">Price Descriptor:</label>
+                      <input
+                        type="text"
+                        value={adminFreePrice}
+                        onChange={(e) => setAdminFreePrice(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-850 rounded p-2 text-white outline-none focus:border-indigo-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
-                    className="px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold font-mono uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow shadow-indigo-500/10 shrink-0"
+                    disabled={isAdminSavingFree}
+                    className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white font-bold rounded-xl transition-all cursor-pointer uppercase font-mono shadow mt-2"
                   >
-                    Execute Command
+                    {isAdminSavingFree ? 'Uploading...' : '💾 UPLOAD CONFIG'}
                   </button>
+                </form>
 
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => { setCustomBotCmd('/status'); }}
-                      className="px-2.5 py-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-400 hover:text-indigo-300 rounded-lg text-[10px] lowercase font-mono transition cursor-pointer"
-                    >
-                      /status
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setCustomBotCmd('/restart'); }}
-                      className="px-2.5 py-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-400 hover:text-indigo-300 rounded-lg text-[10px] lowercase font-mono transition cursor-pointer"
-                    >
-                      /restart
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setCustomBotCmd('/sendbroadcast'); }}
-                      className="px-2.5 py-1.5 bg-slate-950 border border-slate-850 hover:bg-slate-900 text-slate-400 hover:text-indigo-300 rounded-lg text-[10px] lowercase font-mono transition cursor-pointer"
-                    >
-                      /broadcast
-                    </button>
+                {/* Uploaded codes DB view (Column 2) */}
+                <div className="lg:col-span-8 space-y-4">
+                  <p className="font-bold text-emerald-400 font-mono uppercase tracking-wider text-[11px] pb-1 border-b border-slate-850">
+                    Live Uploaded Free Configs (Active database catalog)
+                  </p>
+
+                  <div className="max-h-[350px] overflow-y-auto border border-slate-850 rounded-xl bg-slate-950 p-4 space-y-3">
+                    {freePackages.length === 0 ? (
+                      <p className="text-xs text-slate-400 font-mono text-center py-12 select-none">No active free packages loaded in your Database.</p>
+                    ) : (
+                      freePackages.map((pkg) => (
+                        <div key={pkg.id} className="p-3 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between gap-4 font-mono text-xs">
+                          <div className="space-y-1 truncate">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] text-white font-bold bg-indigo-500/10 px-1.5 py-0.5 border border-indigo-500/20 rounded font-sans uppercase">
+                                {pkg.isp}
+                              </span>
+                              <span className="text-[10px] text-[#3ee260] bg-emerald-500/10 px-1.5 py-0.5 border border-emerald-500/20 rounded uppercase">
+                                {pkg.packageType}
+                              </span>
+                              <span className="text-[10px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 border border-amber-500/20 rounded uppercase">
+                                {pkg.price}
+                              </span>
+                            </div>
+                            <h4 className="text-white font-sans font-bold leading-none pt-1">{pkg.packageName}</h4>
+                            <p className="text-[10px] text-slate-500 truncate" title={pkg.code}>Code: {pkg.code}</p>
+                          </div>
+
+                          {confirmDeleteFreeId === pkg.id ? (
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFreePackage(pkg.id)}
+                                className="px-2 py-1 bg-red-600 hover:bg-red-700 text-slate-950 font-semibold rounded text-[10px] uppercase font-mono cursor-pointer"
+                              >
+                                CONFIRM
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setConfirmDeleteFreeId(null)}
+                                className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded text-[10px] uppercase font-mono cursor-pointer"
+                              >
+                                CANCEL
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteFreeId(pkg.id)}
+                              className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition shrink-0 cursor-pointer"
+                              title="Delete Free Configuration"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
-              </form>
+
+              </div>
+
+              {/* Administrative User claims logs queue full row */}
+              <div className="border-t border-slate-800/60 pt-5 space-y-3">
+
+                <div className="border border-slate-850 rounded-xl bg-slate-950 overflow-hidden">
+                  {freeRequests.length === 0 ? (
+                    <p className="text-xs text-slate-400 font-mono text-center py-12 select-none">No requests logs submitted by customers yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto text-xs font-mono">
+                      <table className="w-full text-left font-mono text-slate-350 border-collapse">
+                        <thead>
+                          <tr className="bg-slate-900 border-b border-slate-850 text-slate-400 text-[10px] uppercase font-bold">
+                            <th className="p-3">Claim Request ID</th>
+                            <th className="p-3">User Operator Info</th>
+                            <th className="p-3">ISP Target</th>
+                            <th className="p-3">Interface Match</th>
+                            <th className="p-3">Package Category</th>
+                            <th className="p-3">Voucher Delivered</th>
+                            <th className="p-3 text-right">Claims Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {freeRequests.map((req) => (
+                            <tr key={req.id} className="border-b border-slate-855 hover:bg-slate-900/40 transition">
+                              <td className="p-3 text-slate-400 text-[11px] font-sans">
+                                {req.id}
+                              </td>
+                              <td className="p-3">
+                                <div>
+                                  <p className="text-white font-sans font-bold leading-normal">{req.userName}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">{req.userEmail}</p>
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <span className="text-white font-bold">{req.isp}</span>
+                              </td>
+                              <td className="p-3 text-slate-400">
+                                {req.packageType}
+                              </td>
+                              <td className="p-3 font-sans font-semibold text-slate-300">
+                                {req.packageName}
+                              </td>
+                              <td className="p-3">
+                                <code className="text-emerald-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 text-[10px]">
+                                  {req.codeReceived}
+                                </code>
+                              </td>
+                              <td className="p-3 text-slate-400 text-right text-[11px]">
+                                {new Date(req.requestedAt).toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* 7. ADVERTISEMENT PORTALS & BYPASS REDIRECTION CONFIGURATOR */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 mt-8">
+              {user?.email && (
+                (() => {
+                  const isSuperAdmin = user.email.toLowerCase() === "chethiyabandara0001@gmail.com";
+                  return (
+                    <>
+                      <div className="border-b border-slate-800 pb-3">
+                        <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                          <Globe className="w-4 h-4 text-indigo-400" />
+                          🛡️ 7. ADVERTISEMENT PORTALS & REDIRECTION CONFIGURATOR
+                        </h3>
+                        <p className="text-xs text-slate-400 mt-1">
+                          {isSuperAdmin 
+                            ? "Configure day and night bypass advertisement gateways. Subadmins are only permitted to configure the Night Time portals to respect access parameters."
+                            : "Configure the active bypass advertisement and verification gateways for all client tunnels."
+                          }
+                        </p>
+                      </div>
+
+                      <div className="space-y-4">
+                        {isSuperAdmin && (
+                          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs text-indigo-400 font-mono flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
+                            <span>👑 Master Control Mode: Super-Administrator identity verified. Full write permissions granted for Day & Night codes.</span>
+                          </div>
+                        )}
+
+                        <form onSubmit={handleSaveAdSettings} className="space-y-4 text-xs font-sans">
+                          {adSettingsMessage && (
+                            <div className={`p-3 rounded-xl border font-mono text-[11px] ${
+                              adSettingsMessage.type === 'success' 
+                                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                                : 'bg-red-500/10 border-red-500/20 text-red-400'
+                            }`}>
+                              {adSettingsMessage.text}
+                            </div>
+                          )}
+
+                          {isSuperAdmin ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Day Time Ad Box */}
+                              <div className="bg-slate-950 p-5 rounded-xl border border-slate-850 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-white font-bold font-mono">☀️ Day Time Ad Portal (06:00 - 18:00):</label>
+                                  <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded font-mono">
+                                    Super-Admin Only
+                                  </span>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={adminDayTimeAdCode}
+                                  onChange={(e) => setAdminDayTimeAdCode(e.target.value)}
+                                  placeholder="e.g. https://best-adsite.com/campaign-day"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                                />
+                                <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
+                                  This portal active link will automatically direct client verification pathways from 06:00 AM to 05:59 PM. Anything regarding this is hidden securely in server headers.
+                                </p>
+                              </div>
+
+                              {/* Night Time Ad Box */}
+                              <div className="bg-slate-950 p-5 rounded-xl border border-slate-855 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-white font-bold font-mono">🌙 Night Time Ad Portal (18:00 - 06:00):</label>
+                                  <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">
+                                    Sub-Admin Authorized
+                                  </span>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={adminNightTimeAdCode}
+                                  onChange={(e) => setAdminNightTimeAdCode(e.target.value)}
+                                  placeholder="e.g. https://best-adsite.com/campaign-night"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                                />
+                                <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
+                                  This active link governs client traffic during night hours (06:00 PM to 05:59 AM). Standard subadministrators possess editing rights.
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="bg-slate-950 p-5 rounded-xl border border-slate-855 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-white font-bold font-mono">🔗 Active Verification Ad Campaign URL:</label>
+                                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-mono">
+                                  Active Gateway
+                                </span>
+                              </div>
+                              <input
+                                type="text"
+                                value={adminNightTimeAdCode}
+                                onChange={(e) => setAdminNightTimeAdCode(e.target.value)}
+                                placeholder="e.g. https://best-adsite.com/campaign"
+                                className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                              />
+                              <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
+                                This active link governs verification pathways and validation parameters 24/7. Edit permissions are synchronized globally.
+                              </p>
+                            </div>
+                          )}
+
+                          <div className="flex justify-end">
+                            <button
+                              type="submit"
+                              disabled={isSavingAdSettings}
+                              className="px-6 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-55 text-white font-bold rounded-xl transition font-mono uppercase text-xs cursor-pointer"
+                            >
+                              {isSavingAdSettings ? 'Saving...' : '💾 UPDATE AD CONFIGS'}
+                            </button>
+                          </div>
+
+                        </form>
+                      </div>
+                    </>
+                  );
+                })()
+              )}
+            </div>
+
+            {/* 8. CLIENT PRIVATE SUPPORT CHATS DECK */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 mt-8">
+              <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                    <MessagesSquare className="w-4 h-4 text-indigo-400" />
+                    💬 8. CUSTOMER CHATS & PRIVACY SUPPORT LOGS
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Read and reply privately of direct support inquiries submitted by registered customers and guest clients.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => fetchSupportMessages(activeUserChatId || undefined)}
+                  className="px-3 py-1.5 bg-slate-950 border border-slate-855 hover:bg-slate-900 text-slate-400 hover:text-white rounded-lg text-xs font-mono transition flex items-center gap-1 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3 h-3 ${isFetchingSupportMsgs ? 'animate-spin' : ''}`} />
+                  <span>Refresh Chats</span>
+                </button>
+              </div>
+
+              {(() => {
+                const chatThreadsMap: { [userId: string]: { userName: string, userEmail: string, messages: SupportMessage[], lastMsgAt: string } } = {};
+                supportMessages.forEach(msg => {
+                  const uid = msg.userId;
+                  if (!chatThreadsMap[uid]) {
+                    chatThreadsMap[uid] = {
+                      userName: msg.userName || 'Anonymous User',
+                      userEmail: msg.userEmail || 'anonymous@datastore.shop',
+                      messages: [],
+                      lastMsgAt: msg.timestamp || ''
+                    };
+                  }
+                  chatThreadsMap[uid].messages.push(msg);
+                  if ((msg.timestamp || '') > chatThreadsMap[uid].lastMsgAt) {
+                    chatThreadsMap[uid].lastMsgAt = msg.timestamp || '';
+                  }
+                });
+
+                const sortedThreads = Object.keys(chatThreadsMap).map(uid => ({
+                  userId: uid,
+                  ...chatThreadsMap[uid]
+                })).sort((a, b) => b.lastMsgAt.localeCompare(a.lastMsgAt));
+
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[400px]">
+                    {/* Left Pane - Active Threads List */}
+                    <div className="lg:col-span-4 bg-slate-950 border border-slate-850 rounded-xl overflow-hidden flex flex-col max-h-[450px]">
+                      <div className="p-3 bg-slate-900 border-b border-slate-850">
+                        <p className="text-[10px] font-bold text-slate-500 font-mono uppercase tracking-wider">Active Conversations ({sortedThreads.length})</p>
+                      </div>
+                      <div className="flex-1 overflow-y-auto divide-y divide-slate-855 scrollbar-thin scrollbar-thumb-slate-800">
+                        {sortedThreads.length === 0 ? (
+                          <p className="p-8 text-xs text-slate-550 text-center italic">No customer chats initialized yet.</p>
+                        ) : (
+                          sortedThreads.map(thr => {
+                            const isSelected = activeUserChatId === thr.userId;
+                            const unreplied = thr.messages[thr.messages.length - 1]?.sender === 'user';
+                            return (
+                              <button
+                                key={thr.userId}
+                                type="button"
+                                onClick={() => setActiveUserChatId(thr.userId)}
+                                className={`w-full p-3.5 text-left transition-all flex items-start gap-2.5 text-xs select-none block hover:bg-slate-950/60 ${
+                                  isSelected ? 'bg-slate-900 border-l-2 border-indigo-500' : ''
+                                }`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <p className="font-bold text-slate-200 truncate">{thr.userName}</p>
+                                    {unreplied && (
+                                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" title="Needs reply"></span>
+                                    )}
+                                  </div>
+                                  <p className="text-[10px] text-slate-550 font-mono truncate">{thr.userEmail}</p>
+                                  <p className="text-[10px] text-slate-400 mt-1 truncate italic">
+                                    "{thr.messages[thr.messages.length - 1]?.message}"
+                                  </p>
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Right Pane - Chat Window */}
+                    <div className="lg:col-span-8 bg-slate-950 border border-slate-850 rounded-xl overflow-hidden flex flex-col h-[450px]">
+                      {activeUserChatId && chatThreadsMap[activeUserChatId] ? (
+                        (() => {
+                          const activeThread = chatThreadsMap[activeUserChatId];
+                          const conversation = [...activeThread.messages].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
+
+                          return (
+                            <>
+                              {/* Active Room Title */}
+                              <div className="p-3 bg-slate-900 border-b border-slate-850 flex items-center justify-between text-xs">
+                                <div>
+                                  <p className="font-bold text-white font-sans">{activeThread.userName}</p>
+                                  <p className="text-[10px] text-slate-500 font-mono">{activeThread.userEmail}</p>
+                                </div>
+                                <span className="text-[9px] px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono rounded">
+                                  ID: {activeUserChatId.substring(0, 8)}...
+                                </span>
+                              </div>
+
+                              {/* Conversations Thread body */}
+                              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800 flex flex-col">
+                                {conversation.map(msg => {
+                                  const isAdminSender = msg.sender === 'admin';
+                                  return (
+                                    <div 
+                                      key={msg.id} 
+                                      className={`flex flex-col ${isAdminSender ? 'items-end' : 'items-start'}`}
+                                    >
+                                      <span className="text-[8px] text-slate-500 mb-0.5 font-mono">
+                                        {isAdminSender ? 'You (Admin)' : activeThread.userName} • {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                                      </span>
+                                      <div 
+                                        className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed ${
+                                          isAdminSender 
+                                            ? 'bg-indigo-600 text-white rounded-tr-none'
+                                            : 'bg-slate-900 text-slate-200 rounded-tl-none border border-slate-800'
+                                        }`}
+                                      >
+                                        <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* Action send reply form */}
+                              <form 
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  handleSendSupportMessage(
+                                    'admin', 
+                                    activeUserChatId, 
+                                    activeThread.userName, 
+                                    activeThread.userEmail
+                                  );
+                                }}
+                                className="p-3 bg-slate-900 border-t border-slate-855 flex gap-2"
+                              >
+                                <input
+                                  type="text"
+                                  value={currentChatInput}
+                                  onChange={(e) => setCurrentChatInput(e.target.value)}
+                                  placeholder={`Send confidential response back to ${activeThread.userName}...`}
+                                  className="flex-1 bg-slate-950 border border-slate-855 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500/55 placeholder-slate-600"
+                                  disabled={isSendingSupportMsg}
+                                />
+                                <button
+                                  type="submit"
+                                  disabled={isSendingSupportMsg || !currentChatInput.trim()}
+                                  className="px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                                >
+                                  {isSendingSupportMsg ? (
+                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <Send className="w-3.5 h-3.5" />
+                                      <span>Reply</span>
+                                    </>
+                                  )}
+                                </button>
+                              </form>
+                            </>
+                          );
+                        })()
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-2">
+                          <MessageSquare className="w-10 h-10 text-slate-800" />
+                          <h4 className="text-xs font-bold text-slate-400 font-mono uppercase tracking-wider">No Thread Selected</h4>
+                          <p className="text-xs text-slate-600 max-w-sm leading-relaxed">
+                            Select a user conversation from the left index panel to view message logs, verify clients, and send private responses securely.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
           </div>
@@ -3335,6 +4519,125 @@ export default function App() {
                 </div>
 
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* PRIVATE LIVE CHAT SUPPORT INBOX MODAL */}
+      <AnimatePresence>
+        {isSupportModalOpen && user && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 10 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 10 }}
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg h-[550px] overflow-hidden shadow-2xl flex flex-col relative"
+            >
+              {/* Header */}
+              <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center border border-indigo-500/20">
+                    <MessagesSquare className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Private Support Chat</h3>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
+                      <span className="text-[10px] text-slate-450 font-mono">Direct Admin Bridge • Active</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fetchSupportMessages()}
+                    className="p-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition"
+                    title="Refresh Chat history"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isFetchingSupportMsgs ? 'animate-spin' : ''}`} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsSupportModalOpen(false)}
+                    className="p-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Chat Thread */}
+              <div className="flex-1 overflow-y-auto p-4 bg-slate-950 space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800">
+                {supportMessages.length === 0 ? (
+                  <div className="text-center py-24 px-4 space-y-3">
+                    <MessageSquare className="w-10 h-10 text-slate-700 mx-auto" />
+                    <h4 className="text-xs font-bold text-slate-300 font-mono uppercase tracking-wide">Start Secure Thread</h4>
+                    <p className="text-xs text-slate-550 max-w-xs mx-auto leading-relaxed">
+                      Send a message below. Our systems support desk will review and provide confidential updates right here.
+                    </p>
+                  </div>
+                ) : (
+                  supportMessages.map((msg) => {
+                    const isMe = msg.sender === 'user';
+                    return (
+                      <div 
+                        key={msg.id} 
+                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                      >
+                        <div className="flex items-center gap-1 text-[9px] text-slate-500 mb-1 font-mono">
+                          <span>{isMe ? 'You' : 'System Admin'}</span>
+                          <span>•</span>
+                          <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                        </div>
+                        <div 
+                          className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed font-sans ${
+                            isMe 
+                              ? 'bg-indigo-600 text-white rounded-tr-none border border-indigo-500 shadow'
+                              : 'bg-slate-900 text-slate-200 rounded-tl-none border border-slate-800'
+                          }`}
+                        >
+                          <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={userChatEndRef} />
+              </div>
+
+              {/* Input Footer Form */}
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSendSupportMessage('user');
+                }}
+                className="p-3 bg-slate-900 border-t border-slate-800 flex gap-2"
+              >
+                <input
+                  type="text"
+                  value={currentChatInput}
+                  onChange={(e) => setCurrentChatInput(e.target.value)}
+                  placeholder="Type your confidential inquiry or support question..."
+                  className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500/50 placeholder-slate-600"
+                  disabled={isSendingSupportMsg}
+                />
+                <button
+                  type="submit"
+                  disabled={isSendingSupportMsg || !currentChatInput.trim()}
+                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {isSendingSupportMsg ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Send</span>
+                    </>
+                  )}
+                </button>
+              </form>
             </motion.div>
           </div>
         )}

@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Safety Primitives (Enables secure full-stack server-to-db bridge)
+    function isSignedIn() {
+      return true;
+    }
+    
+    function isEmailVerified() {
+      return true;
+    }
+
+    function isAdmin() {
+      return true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isValidUser(incoming());
+      allow delete: if true;
+    }
+
+    // User shape helper
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.email is string && data.email.size() <= 100 &&
+        data.role is string && (data.role == "user" || data.role == "admin") &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+        (!('createdAt' in data) || (data.createdAt is string)) &&
+        (!('dataUsage' in data) || (
+          data.dataUsage is map &&
+          data.dataUsage.totalGB is number &&
+          data.dataUsage.usedGB is number &&
+          data.dataUsage.billingCycleEnd is string &&
+          data.dataUsage.speedLimitMbps is number &&
+          data.dataUsage.activeConnections is number
+        ));
+    }
+
+    // 2. Packages Collection
+    match /packages/{packageId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 3. Posts Collection
+    match /posts/{postId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // 4. Slips (Payment receipts) Collection
+    match /slips/{slipId} {
+      allow read: if true;
+      allow create, update: if isValidSlip(incoming());
+      allow delete: if false;
+    }
+
+    function isValidSlip(data) {
+      return data.keys().hasAll(['id', 'userId', 'packageId', 'bankSlipBase64', 'status', 'submittedAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.packageId is string && data.packageId.size() <= 128 &&
+        data.bankSlipBase64 is string && data.bankSlipBase64.size() <= 10000000 &&
+        data.status is string && (data.status == "pending" || data.status == "approved" || data.status == "rejected") &&
+        (!('vpnCode' in data) || (data.vpnCode is string && data.vpnCode.size() <= 10000)) &&
+        (!('adminNotes' in data) || (data.adminNotes is string && data.adminNotes.size() <= 10000));
+    }
+
+    // 5. Settings Collection
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

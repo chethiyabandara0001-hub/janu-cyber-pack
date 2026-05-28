@@ -1,0 +1,136 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with role and calculated VPN simulation data usage",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "The unique Firebase Auth user ID" },
+        "email": { "type": "string", "description": "User email address" },
+        "displayName": { "type": "string", "description": "The user's display name" },
+        "photoURL": { "type": "string", "description": "Optional photo URL" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "dataUsage": {
+          "type": "object",
+          "properties": {
+            "totalGB": { "type": "number" },
+            "usedGB": { "type": "number" },
+            "billingCycleEnd": { "type": "string" },
+            "speedLimitMbps": { "type": "number" },
+            "activeConnections": { "type": "number" }
+          }
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Package": {
+      "title": "Package",
+      "description": "Available premium internet/VPN packages details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier of the package" },
+        "title": { "type": "string", "description": "Name of the package" },
+        "description": { "type": "string", "description": "Detailed description" },
+        "price": { "type": "number", "description": "In LKR or USD" },
+        "priceCurrency": { "type": "string", "enum": ["LKR", "USD"] },
+        "validityDays": { "type": "number" },
+        "bandwidthGB": { "type": "string", "description": "Total internet package bandwidth" },
+        "vpnTypeName": { "type": "string", "enum": ["WireGuard", "Vmess", "SSH", "Trojan", "V2Ray"] },
+        "imageURL": { "type": "string" },
+        "isFeatured": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["active", "inactive"] }
+      },
+      "required": ["id", "title", "price", "bandwidthGB", "vpnTypeName", "status"]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Announcement feed/blogs posted on home dashboard",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "excerpt": { "type": "string" },
+        "content": { "type": "string" },
+        "category": { "type": "string", "enum": ["featured", "recent", "news"] },
+        "author": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "imageURL": { "type": "string" }
+      },
+      "required": ["id", "title", "content", "category", "author", "date"]
+    },
+    "PaymentSlip": {
+      "title": "PaymentSlip",
+      "description": "Bank wire receipt uploaded by dynamic customers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "userName": { "type": "string" },
+        "packageId": { "type": "string" },
+        "packageTitle": { "type": "string" },
+        "vpnTypeName": { "type": "string" },
+        "price": { "type": "number" },
+        "currency": { "type": "string" },
+        "bankSlipBase64": { "type": "string", "description": "Base64 bank payment receipt data" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "verifiedAt": { "type": "string", "format": "date-time" },
+        "vpnCode": { "type": "string", "description": "Generated or overridden VPN configurations" },
+        "adminNotes": { "type": "string" }
+      },
+      "required": ["id", "userId", "packageId", "bankSlipBase64", "status", "submittedAt"]
+    },
+    "ContactDetails": {
+      "title": "ContactDetails",
+      "description": "Admin contact coordinates",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "telegramChannel": { "type": "string" },
+        "telegramBotUser": { "type": "string" },
+        "address": { "type": "string" },
+        "workingHours": { "type": "string" }
+      }
+    },
+    "HomeAnnouncement": {
+      "title": "HomeAnnouncement",
+      "description": "Top marquee alert/banner on dynamic storefront",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "announcementText": { "type": "string" },
+        "showAnnouncement": { "type": "boolean" }
+      }
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profiles database"
+    },
+    "packages/{packageId}": {
+      "schema": "Package",
+      "description": "Available internet hosting packs"
+    },
+    "posts/{postId}": {
+      "schema": "Post",
+      "description": "Storefront feeds/bulletins"
+    },
+    "slips/{slipId}": {
+      "schema": "PaymentSlip",
+      "description": "Bank receipts payment verification queue"
+    },
+    "settings/contact": {
+      "schema": "ContactDetails",
+      "description": "Singleton configuration document for admin details"
+    },
+    "settings/announcement": {
+      "schema": "HomeAnnouncement",
+      "description": "Singleton configuration document for top alert marquee"
+    }
+  }
+}

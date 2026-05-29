@@ -641,6 +641,30 @@ export async function createExpressApp() {
         return res.status(404).json({ error: "Selected Internet Package not found" });
       }
 
+      let resolvedPrice = selectedPkg.price;
+      let resolvedCurrency = selectedPkg.priceCurrency;
+
+      if (tier) {
+        const normalized = tier.toLowerCase();
+        if (normalized.includes("1000lkr")) {
+          resolvedPrice = 1000;
+        } else if (normalized.includes("200lkr")) {
+          resolvedPrice = 200;
+        } else if (normalized.includes("300lkr")) {
+          resolvedPrice = 300;
+        } else if (normalized.includes("400lkr")) {
+          resolvedPrice = 400;
+        } else if (normalized.includes("500lkr")) {
+          resolvedPrice = 500;
+        } else {
+          const match = normalized.match(/for\s+(\d+)\s*lkr/);
+          if (match) {
+            resolvedPrice = Number(match[1]);
+          }
+        }
+        resolvedCurrency = "LKR";
+      }
+
       const slipId = "slip_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
       const newSlip: PaymentSlip = {
         id: slipId,
@@ -650,12 +674,12 @@ export async function createExpressApp() {
         packageId,
         packageTitle: selectedPkg.title,
         vpnTypeName: selectedPkg.vpnTypeName,
-        price: selectedPkg.price,
-        currency: selectedPkg.priceCurrency,
+        price: resolvedPrice,
+        currency: resolvedCurrency,
         bankSlipBase64,
         status: "pending",
         submittedAt: new Date().toISOString(),
-        tier: tier || "LITE - 100GB"
+        tier: tier || "Lite 100gb for 200lkr"
       };
 
       await setDoc(doc(db, "slips", slipId), newSlip);

@@ -12,6 +12,21 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User, FreePackage, FreeRequest, SupportMessage } from './types';
 
+const getTierPriceDisplay = (tierInput: string): string => {
+  const normalized = (tierInput || '').trim().toLowerCase();
+  if (normalized.includes('1000lkr')) return 'LKR 1,000';
+  if (normalized.includes('200lkr')) return 'LKR 200';
+  if (normalized.includes('300lkr')) return 'LKR 300';
+  if (normalized.includes('400lkr')) return 'LKR 400';
+  if (normalized.includes('500lkr')) return 'LKR 500';
+
+  const match = normalized.match(/for\s+(\d+)\s*lkr/);
+  if (match) {
+    return `LKR ${Number(match[1]).toLocaleString()}`;
+  }
+  return 'LKR 200';
+};
+
 export default function App() {
   // Theme state: 'cyberpunk-dark' | 'cyberpunk-light' | 'acid-volt' | 'neon-blue'
   const [theme, setTheme] = useState<'cyberpunk-dark' | 'cyberpunk-light' | 'acid-volt' | 'neon-blue'>(() => {
@@ -101,17 +116,12 @@ export default function App() {
   const [loginName, setLoginName] = useState<string>('');
   const [loginPassword, setLoginPassword] = useState<string>('');
   const [authError, setAuthError] = useState<string>('');
-  const [loginProvider, setLoginProvider] = useState<'google' | 'facebook' | 'email'>('email');
+  const [loginProvider, setLoginProvider] = useState<'google' | 'email'>('email');
   const [emailAuthMode, setEmailAuthMode] = useState<'login' | 'register'>('login');
   const [isLoginLoading, setIsLoginLoading] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   
-  // Custom High-Fidelity Google & Facebook login form dialog controls
-  const [showGoogleForm, setShowGoogleForm] = useState<boolean>(false);
-  const [showFacebookForm, setShowFacebookForm] = useState<boolean>(false);
-  const [socialEmail, setSocialEmail] = useState<string>('');
-  const [socialPassword, setSocialPassword] = useState<string>('');
-  const [socialName, setSocialName] = useState<string>('');
+
 
   // Admin Dashboard stats & controls
   const [adminStats, setAdminStats] = useState<any>(null);
@@ -719,39 +729,46 @@ export default function App() {
     }
   };
 
-  // Auth execution using API for Google & Facebook logins
-  const handleSocialFormSubmit = async (provider: 'google' | 'facebook', emailInput: string, nameInput: string) => {
-    setAuthError('');
-    setIsLoginLoading(true);
-    setLoginProvider(provider);
-
-    const finalEmail = emailInput.trim();
-    const finalName = nameInput.trim() || finalEmail.split('@')[0];
-
+  // Real Google Sign-In Identity callback JWT decoder and authenticator
+  const handleGoogleCredentialResponse = async (response: any) => {
     try {
-      const response = await fetch('/api/auth/sign-in', {
+      const token = response.credential;
+      if (!token) return;
+
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const decoded = JSON.parse(jsonPayload);
+      if (!decoded.email) {
+        setAuthError("Google account has no associated email address.");
+        return;
+      }
+
+      setIsLoginLoading(true);
+      setAuthError('');
+
+      const res = await fetch('/api/auth/sign-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: finalEmail,
-          displayName: finalName,
-          provider: provider
+          email: decoded.email,
+          displayName: decoded.name || decoded.given_name,
+          provider: 'google'
         })
       });
-      const data = await response.json();
-      if (data.status === 'success') {
+
+      const data = await res.json();
+      if (res.ok && data.status === 'success' && data.user) {
         setUser(data.user);
+        localStorage.setItem('janu-cyber-user', JSON.stringify(data.user));
         loadUserSlips(data.user.uid);
         setShowLoginModal(false);
-        setShowGoogleForm(false);
-        setShowFacebookForm(false);
-        // Reset inputs
         setLoginEmail('');
         setLoginName('');
         setLoginPassword('');
-        setSocialEmail('');
-        setSocialPassword('');
-        setSocialName('');
         setAuthError('');
         
         // Redirect standard users or admin to their preferred spaces
@@ -761,15 +778,55 @@ export default function App() {
           setActiveTab('home');
         }
       } else {
-        setAuthError(data.error || 'Authentication failed');
+        setAuthError(data.error || 'Google login verification failed on server.');
       }
-    } catch (error) {
-      console.error("Auth server error", error);
-      setAuthError('Could not reach secure authentication servers.');
+    } catch (e: any) {
+      console.error(e);
+      setAuthError('Error decoding secure google identity keys.');
     } finally {
       setIsLoginLoading(false);
     }
   };
+
+  // Initialize and render standard Google Sign-In button
+  useEffect(() => {
+    const initAndRenderGoogleBtn = () => {
+      const googleObj = (window as any).google;
+      if (googleObj?.accounts?.id) {
+        googleObj.accounts.id.initialize({
+          client_id: "1081766323785-i7nanvfia4atg8unv82l9lkvf6mi5u3g.apps.googleusercontent.com",
+          callback: handleGoogleCredentialResponse,
+        });
+
+        // Try to render standard button on landing page if element exists
+        const btnLanding = document.getElementById("google-signin-btn");
+        if (btnLanding) {
+          googleObj.accounts.id.renderButton(btnLanding, {
+            theme: "filled_dark",
+            size: "large",
+            width: 320,
+            text: "signin_with"
+          });
+        }
+
+        // Try to render standard button on login modal if element exists
+        const btnModal = document.getElementById("google-signin-btn-modal");
+        if (btnModal) {
+          googleObj.accounts.id.renderButton(btnModal, {
+            theme: "filled_dark",
+            size: "large",
+            width: 320,
+            text: "signin_with"
+          });
+        }
+      }
+    };
+
+    // Run immediately and also set a slight timeout to ensure components are painted
+    initAndRenderGoogleBtn();
+    const timer = setTimeout(initAndRenderGoogleBtn, 300);
+    return () => clearTimeout(timer);
+  }, [user, showLoginModal]);
 
   // Drag and drop setup for slip
   const handleDrag = (e: React.DragEvent) => {
@@ -1257,49 +1314,22 @@ export default function App() {
               </button>
             </form>
 
-            {/* Quick social authentication section */}
+            {/* Clean, standard direct Google authentication container */}
             <div className="relative flex py-2 items-center">
               <div className="flex-grow border-t border-slate-800"></div>
               <span className="flex-shrink mx-4 text-slate-500 text-[10px] tracking-widest uppercase font-mono">Or connect with</span>
               <div className="flex-grow border-t border-slate-800"></div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                disabled={isLoginLoading}
-                onClick={() => {
-                  setSocialEmail(loginEmail || '');
-                  setSocialPassword('');
-                  setSocialName('');
-                  setAuthError('');
-                  setShowGoogleForm(true);
-                }}
-                className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/30 rounded-xl text-xs font-semibold text-slate-200 transition cursor-pointer disabled:opacity-50"
-              >
-                <Globe className="w-4 h-4 text-emerald-400" />
-                <span>Google Account</span>
-              </button>
-
-              <button
-                type="button"
-                disabled={isLoginLoading}
-                onClick={() => {
-                  setSocialEmail(loginEmail || '');
-                  setSocialPassword('');
-                  setSocialName('');
-                  setAuthError('');
-                  setShowFacebookForm(true);
-                }}
-                className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/30 rounded-xl text-xs font-semibold text-slate-200 transition cursor-pointer disabled:opacity-50"
-              >
-                <Globe className="w-4 h-4 text-blue-400" />
-                <span>Facebook Identity</span>
-              </button>
+            <div className="flex flex-col items-center justify-center p-3 bg-slate-950 border border-slate-850 rounded-xl space-y-3.5">
+              <p className="text-[10px] text-slate-400 font-semibold font-mono text-center tracking-wider">CONTINUE WITH SECURE GOOGLE ACCOUNT:</p>
+              <div className="flex justify-center w-full max-w-xs overflow-hidden rounded-lg shadow-md hover:scale-[1.01] transition-transform duration-200">
+                <div id="google-signin-btn" className="w-[320px] h-[40px]" style={{ minHeight: '40px' }}></div>
+              </div>
             </div>
 
             <div className="p-3 bg-slate-950/60 rounded-xl text-[10px] text-slate-400 leading-normal text-center font-mono border border-slate-800/50">
-              💡 <span className="text-slate-300">Form Gateway</span>: Click Google or Facebook to load their respective secure access input flows. Passwords are encrypted on-the-fly for optimal connection confidentiality.
+              💡 <span className="text-indigo-400">Security Guard</span>: This app uses Google Standard Identity Services. Simply click the Google Sign-In button above to authenticate instantly.
             </div>
           </div>
 
@@ -1309,245 +1339,13 @@ export default function App() {
             </p>
           </div>
         </motion.div>
+        </div>
+      )
+    }
 
-        {/* GOOGLE SIGN-IN INTERACTIVE MOCK FORM */}
-        <AnimatePresence>
-          {showGoogleForm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-md bg-white text-slate-800 rounded-lg shadow-2xl border border-slate-200 overflow-hidden font-sans p-8 sm:p-10 flex flex-col relative"
-              >
-                <button 
-                  onClick={() => setShowGoogleForm(false)}
-                  className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-100 rounded-full transition cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
 
-                <div className="flex flex-col items-center text-center space-y-4">
-                  {/* Google Logo */}
-                  <svg className="w-8 h-8" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
 
-                  <div>
-                    <h2 className="text-xl font-medium text-slate-900 tracking-tight font-sans">Sign in with Google</h2>
-                    <p className="text-xs text-slate-500 mt-1 font-sans">to continue to Janu Cyber Pack Platform</p>
-                  </div>
-                </div>
 
-                {authError && (
-                  <div className="mt-4 p-3 bg-red-50 text-red-650 rounded-lg text-xs font-semibold leading-normal border border-red-200">
-                    {authError}
-                  </div>
-                )}
-
-                <form 
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!socialEmail.trim()) {
-                      setAuthError('Please enter an email address');
-                      return;
-                    }
-                    handleSocialFormSubmit('google', socialEmail, socialName);
-                  }}
-                  className="mt-8 space-y-5"
-                >
-                  <div className="space-y-1">
-                    <div className="relative border border-slate-300 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] bg-white rounded-lg px-3 py-2 transition-all">
-                      <label className="block text-[10px] text-slate-500 font-medium select-none uppercase tracking-wide">
-                        Email or phone
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        placeholder="e.g. user@gmail.com"
-                        value={socialEmail}
-                        onChange={(e) => setSocialEmail(e.target.value)}
-                        className="w-full bg-transparent border-0 outline-none text-[13px] text-slate-800 focus:ring-0 p-0"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="relative border border-slate-300 focus-within:border-[#1a73e8] focus-within:ring-1 focus-within:ring-[#1a73e8] bg-white rounded-lg px-3 py-2 transition-all">
-                      <label className="block text-[10px] text-slate-500 font-medium select-none uppercase tracking-wide">
-                        Enter your password
-                      </label>
-                      <input
-                        type="password"
-                        required
-                        placeholder="••••••••"
-                        value={socialPassword}
-                        onChange={(e) => setSocialPassword(e.target.value)}
-                        className="w-full bg-transparent border-0 outline-none text-[13px] text-slate-800 focus:ring-0 p-0"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="relative border border-slate-200 hover:border-slate-300 bg-white rounded-lg px-3 py-1.5 transition-all">
-                      <label className="block text-[9px] text-slate-400 font-medium select-none uppercase">
-                        Profile Name (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Guest User"
-                        value={socialName}
-                        onChange={(e) => setSocialName(e.target.value)}
-                        className="w-full bg-transparent border-0 outline-none text-[12px] text-slate-700 focus:ring-0 p-0"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs font-semibold text-[#1a73e8] hover:text-[#175cc0] transition cursor-pointer">
-                      Forgot email?
-                    </span>
-
-                    <button
-                      type="submit"
-                      disabled={isLoginLoading}
-                      className="bg-[#1a73e8] hover:bg-[#155fc4] disabled:bg-slate-400 text-white font-medium text-xs px-6 py-2.5 rounded shadow hover:shadow-md transition cursor-pointer flex items-center gap-2"
-                    >
-                      {isLoginLoading ? (
-                        <>
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        'Next'
-                      )}
-                    </button>
-                  </div>
-                </form>
-
-                <div className="mt-8 pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
-                  <span className="hover:text-slate-700 transition cursor-pointer">Create account</span>
-                  <span className="flex gap-3">
-                    <span className="hover:text-slate-700 transition cursor-pointer">Help</span>
-                    <span className="hover:text-slate-700 transition cursor-pointer">Privacy</span>
-                  </span>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {/* FACEBOOK SIGN-IN INTERACTIVE MOCK FORM */}
-        <AnimatePresence>
-          {showFacebookForm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="w-full max-w-md bg-[#f0f2f5] text-slate-800 rounded-xl shadow-2xl border border-slate-350 overflow-hidden font-sans flex flex-col relative"
-              >
-                <button 
-                  onClick={() => setShowFacebookForm(false)}
-                  className="absolute top-4 right-4 p-2 text-slate-400 hover:bg-slate-200 rounded-full transition cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-
-                {/* Blue header mimicking Facebook identity */}
-                <div className="bg-[#1877f2] p-4 text-center">
-                  <h1 className="text-2xl font-black text-white tracking-tight">facebook</h1>
-                </div>
-
-                <div className="p-6 sm:p-8 space-y-6">
-                  <div className="text-center space-y-1">
-                    <h2 className="text-md font-semibold text-slate-800">Log in to Facebook</h2>
-                    <p className="text-xs text-slate-500">To secure connection with Janu Cyber Pack service</p>
-                  </div>
-
-                  {authError && (
-                    <div className="p-3 bg-red-105 border border-red-300 rounded text-xs text-red-700 leading-normal font-semibold">
-                      {authError}
-                    </div>
-                  )}
-
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      if (!socialEmail.trim()) {
-                        setAuthError('Email or mobile number is required.');
-                        return;
-                      }
-                      handleSocialFormSubmit('facebook', socialEmail, socialName);
-                    }}
-                    className="space-y-4"
-                  >
-                    <input
-                      type="email"
-                      required
-                      placeholder="Email address or phone number"
-                      value={socialEmail}
-                      onChange={(e) => setSocialEmail(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] rounded-lg px-3 py-3 text-sm text-slate-900 shadow-sm outline-none transition"
-                    />
-
-                    <input
-                      type="password"
-                      required
-                      placeholder="Password"
-                      value={socialPassword}
-                      onChange={(e) => setSocialPassword(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] rounded-lg px-3 py-3 text-sm text-slate-900 shadow-sm outline-none transition"
-                    />
-
-                    <input
-                      type="text"
-                      placeholder="Full Name / Display Nickname (Optional)"
-                      value={socialName}
-                      onChange={(e) => setSocialName(e.target.value)}
-                      className="w-full bg-white border border-slate-300 focus:border-[#1877f2] focus:ring-1 focus:ring-[#1877f2] rounded-lg px-3 py-2 text-xs text-slate-700 shadow-sm outline-none transition"
-                    />
-
-                    <button
-                      type="submit"
-                      disabled={isLoginLoading}
-                      className="w-full bg-[#1877f2] hover:bg-[#166fe5] disabled:bg-slate-400 text-white font-bold py-3 px-4 rounded-lg tracking-wide text-sm transition shadow cursor-pointer flex items-center justify-center gap-2"
-                    >
-                      {isLoginLoading ? (
-                        <>
-                          <RefreshCw className="w-4 h-4 animate-spin" />
-                          Logging In...
-                        </>
-                      ) : (
-                        'Log In'
-                      )}
-                    </button>
-
-                    <div className="text-center pt-2">
-                      <span className="text-[#1877f2] hover:underline cursor-pointer text-xs">Forgotten password?</span>
-                    </div>
-                  </form>
-
-                  <div className="pt-4 border-t border-slate-200 text-center">
-                    <button
-                      type="button"
-                      className="bg-[#42b72a] hover:bg-[#36a420] text-white font-bold text-xs px-4 py-2.5 rounded-md transition shadow cursor-pointer"
-                    >
-                      Create New Account
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-      </div>
-    )
-  }
-  
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
       {/* SIDEBAR NAVIGATION - VISIBLE ON DESKTOP */}
@@ -2198,8 +1996,8 @@ export default function App() {
                       <div className="mt-6 flex items-baseline justify-between pt-2">
                         <div>
                           <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Monthly Service Fee</p>
-                          <p className="text-2xl font-bold text-indigo-400 font-mono mt-0.5">
-                            {pkg.priceCurrency} {pkg.price.toLocaleString()}
+                          <p className="text-xs font-semibold text-slate-400 mt-1 uppercase font-mono tracking-wider">
+                            Select in Checkout
                           </p>
                         </div>
                         
@@ -2809,10 +2607,10 @@ export default function App() {
 
         {/* TAB 4: ADMINISTRATIVE COMMAND CENTER */}
         {activeTab === 'admin' && user?.role === 'admin' && (
-          <div className="space-y-8 animate-fade-in">
+          <div className="space-y-8 animate-fade-in px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
             <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
                   <Database className="w-5 h-5 text-indigo-400" />
                   DATA STORE CONTROL PANEL
                 </h2>
@@ -2863,19 +2661,19 @@ export default function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                   <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Estimated Users Total</p>
-                  <p className="text-3xl font-bold text-white mt-1">{adminStats.totalUsers}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-white mt-1">{adminStats.totalUsers}</p>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                   <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Total Sales Approved</p>
-                  <p className="text-3xl font-bold text-emerald-400 mt-1">LKR {adminStats.totalSales.toLocaleString()}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-emerald-400 mt-1">LKR {adminStats.totalSales.toLocaleString()}</p>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                   <p className="text-[10px] text-amber-400 font-mono uppercase tracking-wider">Pending Slips Queue</p>
-                  <p className="text-3xl font-bold text-amber-400 mt-1">{adminStats.pendingCount}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-amber-400 mt-1">{adminStats.pendingCount}</p>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                   <p className="text-[10px] text-indigo-450 text-indigo-400 font-mono uppercase tracking-wider">Approved Deliveries</p>
-                  <p className="text-3xl font-bold text-indigo-400 mt-1">{adminStats.approvedCount}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-indigo-400 mt-1">{adminStats.approvedCount}</p>
                 </div>
               </div>
             )}
@@ -2888,7 +2686,7 @@ export default function App() {
                 </h3>
 
                 {/* Filter pills */}
-                <div className="flex space-x-1.5 font-mono">
+                <div className="flex flex-wrap gap-1.5 font-mono">
                   {(['all', 'pending', 'approved', 'rejected'] as const).map((opt) => (
                     <button
                       key={opt}
@@ -2910,10 +2708,10 @@ export default function App() {
                   {adminStats.slips
                     .filter((s: any) => slipVerificationFilter === 'all' || s.status === slipVerificationFilter)
                     .map((slip: any) => (
-                      <div key={slip.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                      <div key={slip.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
                         
                         {/* Slip Image Thumbnail */}
-                        <div className="lg:col-span-3">
+                        <div className="md:col-span-3">
                           <p className="text-slate-500 text-[10px] font-mono uppercase tracking-wider mb-2 font-semibold">Uploaded Receipt Image</p>
                           <a href={slip.bankSlipBase64} target="_blank" rel="noreferrer" className="block relative h-48 sm:h-56 bg-slate-900 rounded-lg border border-slate-800 overflow-hidden group">
                             <img src={slip.bankSlipBase64} alt="Slip" className="w-full h-full object-contain group-hover:scale-105 transition" />
@@ -2924,23 +2722,27 @@ export default function App() {
                         </div>
 
                         {/* Slip analytical data fields */}
-                        <div className="lg:col-span-4 space-y-2 text-xs font-mono">
+                        <div className="md:col-span-4 space-y-2 text-xs font-mono">
                           <p className="text-slate-500 text-[10px] uppercase tracking-wider font-bold">Transaction Attributes</p>
                           <div className="flex justify-between py-1 border-b border-slate-800/40">
-                            <span className="text-slate-400 font-sans">Slip ID:</span>
-                            <span className="text-white hover:underline">{slip.id}</span>
+                            <span className="text-slate-400 font-sans min-w-[80px]">Slip ID:</span>
+                            <span className="text-white hover:underline break-all ml-2 text-right">{slip.id}</span>
                           </div>
                           <div className="flex justify-between py-1 border-b border-slate-800/40">
-                            <span className="text-slate-400 font-sans">User Client:</span>
-                            <span className="text-indigo-400 font-sans font-semibold">{slip.userName} ({slip.userEmail})</span>
+                            <span className="text-slate-400 font-sans min-w-[80px]">User Client:</span>
+                            <span className="text-indigo-400 font-sans font-semibold break-all ml-2 text-right">{slip.userName} ({slip.userEmail})</span>
                           </div>
                           <div className="flex justify-between py-1 border-b border-slate-800/40">
                             <span className="text-slate-400 font-sans">Target Package:</span>
                             <span className="text-white font-sans font-medium">{slip.packageTitle} ({slip.vpnTypeName})</span>
                           </div>
                           <div className="flex justify-between py-1 border-b border-slate-800/40">
+                            <span className="text-slate-400 font-sans">Selected Tier:</span>
+                            <span className="text-amber-400 font-bold">{slip.tier || 'Not specified'}</span>
+                          </div>
+                          <div className="flex justify-between py-1 border-b border-slate-800/40">
                             <span className="text-slate-400 font-sans">Cost check:</span>
-                            <span className="text-[#3ee260] font-black">{slip.currency} {slip.price}</span>
+                            <span className="text-indigo-400 font-black">{slip.currency} {(slip.price || 0).toLocaleString()}</span>
                           </div>
                           <div className="flex justify-between py-1">
                             <span className="text-slate-400 font-sans">Submitted at:</span>
@@ -2949,7 +2751,7 @@ export default function App() {
                         </div>
 
                         {/* Decision & verification workflow actions */}
-                        <div className="lg:col-span-5 space-y-4">
+                        <div className="md:col-span-5 space-y-4">
                           <p className="text-slate-500 text-[10px] font-mono uppercase tracking-wider font-bold">Actions & Output config</p>
 
                           {slip.status === 'pending' ? (
@@ -3127,19 +2929,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <label className="block text-slate-400 mb-1 font-semibold">Fee Price Rate:</label>
-                      <input
-                        type="number"
-                        required
-                        min="0"
-                        value={editingPack.price || 0}
-                        onChange={(e) => setEditingPack({ ...editingPack, price: Number(e.target.value) })}
-                        className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-slate-400 mb-1 font-semibold">Currency Code:</label>
                       <input
@@ -4437,14 +4227,8 @@ export default function App() {
               </h3>
               <p className="text-xs text-slate-400 mt-1">Submit bank slip for <span className="text-indigo-300 font-bold">{selectedPackForSlip.title}</span></p>
 
-              <div className="mt-5 space-y-4">
+              <div className="mt-5 space-y-4 font-sans">
                 
-                {/* Cost Tag */}
-                <div className="bg-slate-950 p-3 rounded-xl flex justify-between items-center text-xs font-mono border border-slate-800">
-                  <span className="text-slate-400">Service Fee Due:</span>
-                  <span className="text-lg font-black text-white">{selectedPackForSlip.priceCurrency} {selectedPackForSlip.price.toLocaleString()}</span>
-                </div>
-
                 {/* Package Tier Dropdown Selection */}
                 <div className="space-y-1.5">
                   <label className="block text-[11px] text-slate-400 font-semibold font-mono uppercase tracking-wider">Select VPN Subscription Tier:</label>
@@ -4459,6 +4243,12 @@ export default function App() {
                     <option value="Prime 500gb for 500lkr">Prime 500gb for 500lkr</option>
                     <option value="Premium 1000gb for 1000lkr">Premium 1000gb for 1000lkr</option>
                   </select>
+                </div>
+
+                {/* Cost Tag */}
+                <div className="bg-slate-950 p-3 rounded-xl flex justify-between items-center text-xs font-mono border border-slate-800 animate-fade-in">
+                  <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Service Fee Due:</span>
+                  <span className="text-lg font-black text-indigo-400 font-mono">{getTierPriceDisplay(selectedTier)}</span>
                 </div>
 
                 {/* Bank transfer coordinates display */}
@@ -4730,7 +4520,7 @@ export default function App() {
               </div>
 
               <div className="mt-6 grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
-                {(['email', 'google', 'facebook'] as const).map((prov) => (
+                {(['email', 'google'] as const).map((prov) => (
                   <button
                     key={prov}
                     type="button"
@@ -4740,9 +4530,6 @@ export default function App() {
                       if (prov === 'google') {
                         setLoginEmail('gmail-user@gmail.com');
                         setLoginName('Google Account Client');
-                      } else if (prov === 'facebook') {
-                        setLoginEmail('fb-user@facebook.com');
-                        setLoginName('Facebook Identity Account');
                       } else {
                         setLoginEmail('');
                         setLoginName('');

@@ -187,3 +187,7 @@
 [data-theme="cyberpunk-light"] .border-slate-900 {
   border-color: #efe4fc !important;
 }
+
+html {
+  scroll-behavior: smooth;
+}

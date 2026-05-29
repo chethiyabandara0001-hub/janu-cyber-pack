@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
-  ChevronRight, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare
+  ChevronRight, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -116,6 +116,7 @@ export default function App() {
   // Admin Dashboard stats & controls
   const [adminStats, setAdminStats] = useState<any>(null);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
   const [slipVerificationFilter, setSlipVerificationFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [adminNotes, setAdminNotes] = useState<string>('');
   const [customVpnCode, setCustomVpnCode] = useState<string>('');
@@ -566,6 +567,25 @@ export default function App() {
       const res = await fetch('/api/admin/dashboard-stats');
       const data = await res.json();
       setAdminStats(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Reset metrics / stats on backend
+  const handleResetStats = async () => {
+    setAdminLoading(true);
+    try {
+      const res = await fetch('/api/admin/reset-stats', {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowResetConfirm(false);
+        await fetchAdminStats();
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -2801,11 +2821,40 @@ export default function App() {
 
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={fetchAdminStats}
                   className="px-3 py-1.5 text-xs font-bold text-slate-300 bg-slate-900 border border-slate-850 hover:bg-slate-800 rounded-lg flex items-center gap-1 transition cursor-pointer"
                 >
-                  <RefreshCw className="w-3.5 h-3.5" /> Reload Stats
+                  <RefreshCw className={`w-3.5 h-3.5 ${adminLoading ? 'animate-spin' : ''}`} /> Reload Stats
                 </button>
+
+                {!showResetConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowResetConfirm(true)}
+                    className="px-3 py-1.5 text-xs font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/20 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Reset Stats
+                  </button>
+                ) : (
+                  <div className="flex gap-1.5 items-center bg-rose-950/20 border border-rose-500/20 rounded-lg px-2 py-0.5">
+                    <span className="text-[10px] text-rose-400 font-mono">Reset?</span>
+                    <button
+                      type="button"
+                      onClick={handleResetStats}
+                      className="px-2 py-1 text-[10px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded transition cursor-pointer"
+                    >
+                      Yes, Clear
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowResetConfirm(false)}
+                      className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -4355,11 +4404,9 @@ export default function App() {
           </div>
 
           <div className="pt-8 mt-8 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>© 2026 Janu Cyber Pack Network. Implemented with extreme cybernetics. All Rights Reserved.</p>
+            <p>©️Janu Cyber Pack and created by Melagents AI solutions</p>
             <div className="flex gap-4 font-mono text-[10px]">
               <span className="text-emerald-500">🛡️ SECURITY COMPLIANT CERTIFICATE</span>
-              <span className="text-slate-600">|</span>
-              <span className="text-indigo-400">BOT API TELEGRAM SECURED</span>
             </div>
           </div>
         </div>

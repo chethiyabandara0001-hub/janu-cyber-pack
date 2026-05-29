@@ -754,6 +754,33 @@ export async function createExpressApp() {
     }
   });
 
+  // Reset Estimated Users Total and Total Sales Approved statistics
+  app.post("/api/admin/reset-stats", async (req, res) => {
+    try {
+      // 1. Delete all slips in Firestore slips collection
+      const slipsSnap = await getDocs(collection(db, "slips"));
+      for (const d of slipsSnap.docs) {
+        await deleteDoc(doc(db, "slips", d.id));
+      }
+
+      // 2. Delete non-admin users in Firestore users collection
+      const usersSnap = await getDocs(collection(db, "users"));
+      for (const d of usersSnap.docs) {
+        const u = d.data();
+        if (u.role !== "admin" && u.uid !== "admin-master-account") {
+          await deleteDoc(doc(db, "users", d.id));
+        }
+      }
+
+      // 3. Mark seeded so that seed logic doesn't trigger unexpectedly
+      await markSeeded();
+
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   // Admin approves/verifies the payment and calls simulate Telegram Bot API
   app.post("/api/admin/slips/:slipId/verify", async (req, res) => {
     try {

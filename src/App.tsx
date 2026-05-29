@@ -25,7 +25,23 @@ export default function App() {
 
   // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin' | 'free-vpn'
   const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn'>('home');
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('janu-cyber-user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.error("Failed to parse saved user state", e);
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('janu-cyber-user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('janu-cyber-user');
+    }
+  }, [user]);
   
   // App Data States
   const [packages, setPackages] = useState<Package[]>([]);
@@ -74,7 +90,7 @@ export default function App() {
   
   // Slip upload popup settings
   const [selectedPackForSlip, setSelectedPackForSlip] = useState<Package | null>(null);
-  const [selectedTier, setSelectedTier] = useState<string>('LITE - 100GB');
+  const [selectedTier, setSelectedTier] = useState<string>('Lite 100gb for 200lkr');
   const [dragActive, setDragActive] = useState<boolean>(false);
   const [base64Slip, setBase64Slip] = useState<string>('');
   const [isSubmittingSlip, setIsSubmittingSlip] = useState<boolean>(false);
@@ -1509,9 +1525,9 @@ export default function App() {
           )}
         </AnimatePresence>
       </div>
-    );
+    )
   }
-
+  
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
       {/* SIDEBAR NAVIGATION - VISIBLE ON DESKTOP */}
@@ -1786,7 +1802,7 @@ export default function App() {
         )}
 
       {/* APP CONTENT BODY */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* TAB 1: OVERVIEW & NEW POSTS */}
         {activeTab === 'home' && (
@@ -2681,51 +2697,89 @@ export default function App() {
                 📋 SUBMITTED TRANSACTIONS HISTORY
               </h3>
 
-              <div className="mt-6 overflow-x-auto">
+              <div className="mt-6">
                 {userSlips.length === 0 ? (
                   <p className="text-xs text-slate-400 py-4">No bank slips submitted from your user account yet.</p>
                 ) : (
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="text-slate-500 border-b border-slate-800 font-mono">
-                        <th className="pb-3 font-semibold">Slip ID</th>
-                        <th className="pb-3 font-semibold">Package Selection</th>
-                        <th className="pb-3 font-semibold">Price</th>
-                        <th className="pb-3 font-semibold">Submitted Date</th>
-                        <th className="pb-3 font-semibold text-center">Status</th>
-                        <th className="pb-3 font-semibold text-right">View Attachment</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-800/40 font-mono">
+                  <>
+                    {/* Desktop table view */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full text-left text-xs">
+                        <thead>
+                          <tr className="text-slate-500 border-b border-slate-800 font-mono">
+                            <th className="pb-3 font-semibold">Slip ID</th>
+                            <th className="pb-3 font-semibold">Package Selection</th>
+                            <th className="pb-3 font-semibold">Price</th>
+                            <th className="pb-3 font-semibold">Submitted Date</th>
+                            <th className="pb-3 font-semibold text-center">Status</th>
+                            <th className="pb-3 font-semibold text-right">View Attachment</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800/40 font-mono">
+                          {userSlips.map((s) => (
+                            <tr key={s.id} className="hover:bg-white/[0.01]">
+                              <td className="py-4 text-indigo-400 font-bold">{s.id.split('_')[1]}</td>
+                              <td className="py-4 font-sans text-slate-200 font-medium">{s.packageTitle}</td>
+                              <td className="py-4 font-bold text-slate-350">{s.currency} {s.price}</td>
+                              <td className="py-4 text-slate-400">{new Date(s.submittedAt).toLocaleDateString()}</td>
+                              <td className="py-4 text-center">
+                                <span className={`px-2.5 py-0.5 rounded text-[10px] uppercase font-black ${
+                                  s.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
+                                  s.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
+                                  'bg-rose-500/10 text-rose-400'
+                                }`}>
+                                  {s.status}
+                                </span>
+                              </td>
+                              <td className="py-4 text-right">
+                                <a 
+                                  href={s.bankSlipBase64} 
+                                  target="_blank" 
+                                  rel="noreferrer" 
+                                  className="text-indigo-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                                >
+                                  Open Slip File <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile responsive card list */}
+                    <div className="block sm:hidden space-y-4">
                       {userSlips.map((s) => (
-                        <tr key={s.id} className="hover:bg-white/[0.01]">
-                          <td className="py-4 text-indigo-400 font-bold">{s.id.split('_')[1]}</td>
-                          <td className="py-4 font-sans text-slate-200 font-medium">{s.packageTitle}</td>
-                          <td className="py-4 font-bold text-slate-350">{s.currency} {s.price}</td>
-                          <td className="py-4 text-slate-400">{new Date(s.submittedAt).toLocaleDateString()}</td>
-                          <td className="py-4 text-center">
-                            <span className={`px-2.5 py-0.5 rounded text-[10px] uppercase font-black ${
+                        <div key={s.id} className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-3 text-xs font-sans">
+                          <div className="flex justify-between items-center">
+                            <span className="text-slate-500 font-mono text-[10px]">ID: {s.id.split('_')[1] || s.id}</span>
+                            <span className={`px-2.5 py-0.5 rounded text-[9px] uppercase font-bold text-[10px] ${
                               s.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
                               s.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
                               'bg-rose-500/10 text-rose-400'
                             }`}>
                               {s.status}
                             </span>
-                          </td>
-                          <td className="py-4 text-right">
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-white text-sm">{s.packageTitle}</h4>
+                            <p className="text-[10px] text-slate-400 font-mono mt-1">Submitted: {new Date(s.submittedAt).toLocaleDateString()}</p>
+                          </div>
+                          <div className="flex justify-between items-center pt-2.5 border-t border-slate-900 text-xs text-slate-300">
+                            <p className="font-bold text-emerald-400 font-mono">{s.currency} {s.price}</p>
                             <a 
                               href={s.bankSlipBase64} 
                               target="_blank" 
                               rel="noreferrer" 
-                              className="text-indigo-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+                              className="text-indigo-400 hover:underline text-[11px] font-mono inline-flex items-center gap-1 cursor-pointer"
                             >
                               Open Slip File <ExternalLink className="w-3 h-3" />
                             </a>
-                          </td>
-                        </tr>
+                          </div>
+                        </div>
                       ))}
-                    </tbody>
-                  </table>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -3253,81 +3307,44 @@ export default function App() {
               )}
 
               {/* Package admin row list */}
-              <div className="mt-6 overflow-x-auto">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                 <table className="w-full text-left text-xs font-mono">
-                  <thead>
-                    <tr className="text-slate-500 border-b border-slate-800">
-                      <th className="pb-3">Title ID</th>
-                      <th className="pb-3">Type</th>
-                      <th className="pb-3">Bandwidth</th>
-                      <th className="pb-3">Validity</th>
-                      <th className="pb-3">Fee Price</th>
-                      <th className="pb-3 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/30">
-                    {packages.map((p) => (
-                      <tr key={p.id}>
-                        <td className="py-3 font-sans">
-                          <p className="font-semibold text-white">{p.title}</p>
-                          <p className="text-[10px] text-slate-500 mt-0.5 flex gap-1.5">
-                            <span>ISP: <strong className="text-slate-400">{p.isp || 'Dialog'}</strong></span>
-                            <span>•</span>
-                            <span>Type: <strong className="text-slate-400">{p.packageType || 'Mobile'}</strong></span>
-                          </p>
-                        </td>
-                        <td className="py-3 text-indigo-400">{p.vpnTypeName}</td>
-                        <td className="py-3 text-slate-350">{p.bandwidthGB}</td>
-                        <td className="py-3 text-slate-400">{p.validityDays} Days</td>
-                        <td className="py-3 text-emerald-450 text-emerald-400 font-bold">{p.priceCurrency} {p.price}</td>
-                        <td className="py-3 text-right">
-                          <div className="inline-flex gap-2">
-                            <button
-                              onClick={() => setEditingPack(p)}
-                              className="px-2.5 py-1.5 bg-indigo-500/10 hover:bg-indigo-500 text-indigo-300 hover:text-white rounded border border-indigo-500/20 text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
-                              title="Edit Package details, price or validity"
-                            >
-                              <Edit2 className="w-3 h-3" /> Edit
-                            </button>
-                            {confirmDeletePackId === p.id ? (
-                              <div className="inline-flex gap-1 bg-rose-950/25 border border-rose-500/20 rounded p-0.5">
-                                <button
-                                  onClick={() => {
-                                    handleDeletePackage(p.id);
-                                    setConfirmDeletePackId(null);
-                                  }}
-                                  className="px-1.5 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[9px] font-bold transition cursor-pointer"
-                                  title="Confirm delete"
-                                >
-                                  Yes
-                                </button>
-                                <button
-                                  onClick={() => setConfirmDeletePackId(null)}
-                                  className="px-1.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[9px] font-medium transition cursor-pointer"
-                                  title="Cancel delete"
-                                >
-                                  No
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setConfirmDeletePackId(p.id)}
-                                className="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white rounded border border-rose-500/20 text-[10px] font-bold transition cursor-pointer flex items-center gap-1"
-                                title="Delete VPN Package entirely"
-                              >
-                                <Trash2 className="w-3 h-3" /> Delete
-                              </button>
-                            )}
-                          </div>
-                        </td>
+                    <thead>
+                      <tr className="text-slate-500 border-b border-slate-800">
+                        <th className="pb-3">Title ID</th>
+                        <th className="pb-3">Type</th>
+                        <th className="pb-3">Bandwidth</th>
+                        <th className="pb-3">Validity</th>
+                        <th className="pb-3">Fee Price</th>
+                        <th className="pb-3 text-right">Actions</th>
                       </tr>
-                    ))}
-                  </tbody>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/30">
+                      {packages.map((pkg) => (
+                        <tr key={pkg.id} className="border-b border-slate-850/40 hover:bg-slate-950/20 text-slate-300">
+                          <td className="py-2.5 font-sans font-bold text-white max-w-[140px] truncate" title={pkg.title}>{pkg.title}</td>
+                          <td className="py-2.5">
+                            <span className="text-[9px] bg-slate-850 px-1.5 py-0.5 rounded text-indigo-400 font-bold uppercase">{pkg.vpnTypeName}</span>
+                          </td>
+                          <td className="py-2.5">{pkg.bandwidthGB}</td>
+                          <td className="py-2.5">{pkg.validityDays} Days</td>
+                          <td className="py-2.5 text-emerald-400 font-bold">{pkg.priceCurrency} {pkg.price}</td>
+                          <td className="py-2.5 text-right">
+                            <button
+                              type="button"
+                              onClick={() => { setEditingPack(pkg); setConfirmDeletePackId(null); }}
+                              className="p-1 text-indigo-455 text-indigo-405 hover:text-indigo-300 transition inline-block text-indigo-400"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
                 </table>
               </div>
             </div>
 
-            {/* 3. DYNAMIC POSTS EDITOR */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
@@ -4298,11 +4315,9 @@ export default function App() {
                 );
               })()}
             </div>
-
           </div>
         )}
-
-      </main>
+      </div>
 
       {/* FOOTER METADATA AND COPYRIGHT COGNIZANT */}
       <footer className="bg-slate-900 border-t border-slate-800 py-12 mt-20 shrink-0">
@@ -4313,7 +4328,7 @@ export default function App() {
                 <Shield className="w-5 h-5 text-indigo-400" /> DATA STORE PLATFORMS
               </span>
               <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-                Cloned as specified from unlimiteddata.shop, integrating full stack high speed tunnel verifiers, dynamic automated Telegram Bot state simulators mapping 10Gbps uplinks.
+
               </p>
               <p className="text-[10px] text-slate-500 font-mono">
                 System Time UTC: 2026-05-27 • Server: Active Node Gateway
@@ -4350,17 +4365,17 @@ export default function App() {
         </div>
       </footer>
 
-      </div> {/* CLOSE RIGHT SIDE MAIN VIEW WRAPPER */}
+      </div>{/* CLOSE RIGHT SIDE MAIN VIEW WRAPPER */}
 
       {/* POPUP 1: BANK SLIPS FILE UPLOAD ATTACHMENT MODAL */}
       <AnimatePresence>
         {selectedPackForSlip && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-905 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl p-6 relative bg-slate-900"
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg my-auto shadow-2xl p-6 relative"
             >
               <button 
                 onClick={() => { setSelectedPackForSlip(null); setBase64Slip(''); setSlipFeedback(null); }}
@@ -4389,13 +4404,13 @@ export default function App() {
                   <select
                     value={selectedTier}
                     onChange={(e) => setSelectedTier(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-indigo-500/50 font-sans"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-indigo-500/50 font-sans cursor-pointer"
                   >
-                    <option value="LITE - 100GB">LITE - 100GB</option>
-                    <option value="GO - 200GB">GO - 200GB</option>
-                    <option value="PRO - 300GB">PRO - 300GB</option>
-                    <option value="PRIME - 500GB">PRIME - 500GB</option>
-                    <option value="PREMIUM - 100GB">PREMIUM - 100GB</option>
+                    <option value="Lite 100gb for 200lkr">Lite 100gb for 200lkr</option>
+                    <option value="Go 200gb for 300lkr">Go 200gb for 300lkr</option>
+                    <option value="Pro 300gb for 400lkr">Pro 300gb for 400lkr</option>
+                    <option value="Prime 500gb for 500lkr">Prime 500gb for 500lkr</option>
+                    <option value="Premium 1000gb for 1000lkr">Premium 1000gb for 1000lkr</option>
                   </select>
                 </div>
 

@@ -84,6 +84,7 @@ export default function App() {
   const [isAdminSavingFree, setIsAdminSavingFree] = useState<boolean>(false);
   const [adminFreeError, setAdminFreeError] = useState<string>('');
   const [confirmDeleteFreeId, setConfirmDeleteFreeId] = useState<string | null>(null);
+  const [confirmDeleteFreeRequestId, setConfirmDeleteFreeRequestId] = useState<string | null>(null);
 
   // Administrative Ad Codes configuration states
   const [adminDayTimeAdCode, setAdminDayTimeAdCode] = useState<string>('');
@@ -355,6 +356,26 @@ export default function App() {
       setConfirmDeleteFreeId(null);
     } catch (err: any) {
       setAdminFreeError(err.message || 'An error occurred while deleting.');
+    }
+  };
+
+  // Admin delete Free VPN user request log
+  const handleDeleteFreeRequest = async (id: string) => {
+    try {
+      setAdminFreeError('');
+      const response = await fetch(`/api/admin/free-requests/${id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete free request log.');
+      }
+
+      setFreeRequests(data.freeRequests || []);
+      setConfirmDeleteFreeRequestId(null);
+    } catch (err: any) {
+      setAdminFreeError(err.message || 'An error occurred while deleting request log.');
     }
   };
 
@@ -1461,7 +1482,7 @@ export default function App() {
       </aside>
 
       {/* RIGHT SIDE MAIN VIEW WRAPPER */}
-      <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-50 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden w-full">
         
         {/* HEADER BAR */}
         <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 sm:px-8 bg-slate-950 sticky top-0 z-40 shrink-0 backdrop-blur">
@@ -1620,7 +1641,7 @@ export default function App() {
         )}
 
       {/* APP CONTENT BODY */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full overflow-x-auto lg:overflow-x-visible scrollbar-thin scrollbar-thumb-slate-800">
         
         {/* TAB 1: OVERVIEW & NEW POSTS */}
         {activeTab === 'home' && (
@@ -2395,8 +2416,8 @@ export default function App() {
                   You have not claimed any complimentary VPN packages yet. Try picking your local ISP toClaim your first!
                 </p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs font-mono text-slate-300 border-collapse">
+                <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-slate-800">
+                  <table className="w-full text-left text-xs font-mono text-slate-300 border-collapse min-w-[650px]">
                     <thead>
                       <tr className="border-b border-slate-800 text-slate-500 text-[10px] uppercase">
                         <th className="py-2.5">Date</th>
@@ -2521,8 +2542,8 @@ export default function App() {
                 ) : (
                   <>
                     {/* Desktop table view */}
-                    <div className="hidden sm:block overflow-x-auto">
-                      <table className="w-full text-left text-xs">
+                    <div className="hidden sm:block overflow-x-auto w-full scrollbar-thin scrollbar-thumb-slate-800">
+                      <table className="w-full text-left text-xs min-w-[700px]">
                         <thead>
                           <tr className="text-slate-500 border-b border-slate-800 font-mono">
                             <th className="pb-3 font-semibold">Slip ID</th>
@@ -2607,7 +2628,7 @@ export default function App() {
 
         {/* TAB 4: ADMINISTRATIVE COMMAND CENTER */}
         {activeTab === 'admin' && user?.role === 'admin' && (
-          <div className="space-y-8 animate-fade-in px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+          <div className="space-y-8 animate-fade-in w-full max-w-full overflow-x-auto lg:overflow-x-visible scrollbar-thin scrollbar-thumb-slate-800 pb-4">
             <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
@@ -2617,7 +2638,7 @@ export default function App() {
                 <p className="text-xs text-slate-400 mt-0.5">Track analytical user logs, verify slip triggers, create dynamic news and manager packages</p>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <button
                   type="button"
                   onClick={fetchAdminStats}
@@ -2679,7 +2700,7 @@ export default function App() {
             )}
 
             {/* 1. VERIFY SLIPS QUEUE */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider font-sans">
                   🚨 Bank Slips Queue for Manual Check
@@ -2708,13 +2729,13 @@ export default function App() {
                   {adminStats.slips
                     .filter((s: any) => slipVerificationFilter === 'all' || s.status === slipVerificationFilter)
                     .map((slip: any) => (
-                      <div key={slip.id} className="bg-slate-950 border border-slate-850 rounded-xl p-5 grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                      <div key={slip.id} className="bg-slate-950 border border-slate-850 rounded-xl p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start">
                         
                         {/* Slip Image Thumbnail */}
-                        <div className="md:col-span-3">
+                        <div className="lg:col-span-3 col-span-1">
                           <p className="text-slate-500 text-[10px] font-mono uppercase tracking-wider mb-2 font-semibold">Uploaded Receipt Image</p>
-                          <a href={slip.bankSlipBase64} target="_blank" rel="noreferrer" className="block relative h-48 sm:h-56 bg-slate-900 rounded-lg border border-slate-800 overflow-hidden group">
-                            <img src={slip.bankSlipBase64} alt="Slip" className="w-full h-full object-contain group-hover:scale-105 transition" />
+                          <a href={slip.bankSlipBase64} target="_blank" rel="noreferrer" className="block relative h-48 bg-slate-900 rounded-lg border border-slate-800 overflow-hidden group">
+                            <img src={slip.bankSlipBase64} alt="Slip" className="w-full h-full object-contain" />
                             <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-xs font-bold text-white transition">
                               Click to fullsize <ExternalLink className="w-3.5 h-3.5 ml-1" />
                             </div>
@@ -2722,36 +2743,36 @@ export default function App() {
                         </div>
 
                         {/* Slip analytical data fields */}
-                        <div className="md:col-span-4 space-y-2 text-xs font-mono">
+                        <div className="lg:col-span-4 col-span-1 space-y-2 text-xs font-mono">
                           <p className="text-slate-500 text-[10px] uppercase tracking-wider font-bold">Transaction Attributes</p>
-                          <div className="flex justify-between py-1 border-b border-slate-800/40">
+                          <div className="flex flex-col sm:flex-row justify-between py-1 border-b border-slate-800/40 gap-1 sm:gap-4">
                             <span className="text-slate-400 font-sans min-w-[80px]">Slip ID:</span>
-                            <span className="text-white hover:underline break-all ml-2 text-right">{slip.id}</span>
+                            <span className="text-white hover:underline break-all sm:text-right">{slip.id}</span>
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-800/40">
+                          <div className="flex flex-col sm:flex-row justify-between py-1 border-b border-slate-800/40 gap-1 sm:gap-4">
                             <span className="text-slate-400 font-sans min-w-[80px]">User Client:</span>
-                            <span className="text-indigo-400 font-sans font-semibold break-all ml-2 text-right">{slip.userName} ({slip.userEmail})</span>
+                            <span className="text-indigo-400 font-sans font-semibold break-all sm:text-right">{slip.userName} ({slip.userEmail})</span>
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-800/40">
+                          <div className="flex flex-col sm:flex-row justify-between py-1 border-b border-slate-800/40 gap-1 sm:gap-4">
                             <span className="text-slate-400 font-sans">Target Package:</span>
-                            <span className="text-white font-sans font-medium">{slip.packageTitle} ({slip.vpnTypeName})</span>
+                            <span className="text-white font-sans font-medium sm:text-right">{slip.packageTitle} ({slip.vpnTypeName})</span>
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-800/40">
+                          <div className="flex flex-col sm:flex-row justify-between py-1 border-b border-slate-800/40 gap-1 sm:gap-4">
                             <span className="text-slate-400 font-sans">Selected Tier:</span>
-                            <span className="text-amber-400 font-bold">{slip.tier || 'Not specified'}</span>
+                            <span className="text-amber-400 font-bold sm:text-right">{slip.tier || 'Not specified'}</span>
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-800/40">
+                          <div className="flex flex-col sm:flex-row justify-between py-1 border-b border-slate-800/40 gap-1 sm:gap-4">
                             <span className="text-slate-400 font-sans">Cost check:</span>
-                            <span className="text-indigo-400 font-black">{slip.currency} {(slip.price || 0).toLocaleString()}</span>
+                            <span className="text-indigo-400 font-black sm:text-right">{slip.currency} {(slip.price || 0).toLocaleString()}</span>
                           </div>
-                          <div className="flex justify-between py-1">
+                          <div className="flex flex-col sm:flex-row justify-between py-1 gap-1 sm:gap-4">
                             <span className="text-slate-400 font-sans">Submitted at:</span>
-                            <span className="text-slate-400 font-sans">{new Date(slip.submittedAt).toLocaleString()}</span>
+                            <span className="text-slate-400 font-sans sm:text-right">{new Date(slip.submittedAt).toLocaleString()}</span>
                           </div>
                         </div>
 
                         {/* Decision & verification workflow actions */}
-                        <div className="md:col-span-5 space-y-4">
+                        <div className="lg:col-span-5 col-span-1 space-y-4">
                           <p className="text-slate-500 text-[10px] font-mono uppercase tracking-wider font-bold">Actions & Output config</p>
 
                           {slip.status === 'pending' ? (
@@ -2777,16 +2798,16 @@ export default function App() {
                                 />
                               </div>
 
-                              <div className="flex gap-2">
+                              <div className="flex flex-col sm:flex-row gap-2">
                                 <button
                                   onClick={() => handleVerifySlip(slip.id, 'approved')}
-                                  className="flex-1 py-2 text-xs font-bold bg-indigo-500 hover:bg-slate-100 hover:text-slate-950 text-white rounded flex items-center justify-center gap-1 cursor-pointer transition shadow-lg shadow-indigo-500/10"
+                                  className="flex-grow py-2.5 px-3 text-xs font-bold bg-indigo-500 hover:bg-slate-100 hover:text-slate-950 text-white rounded flex items-center justify-center gap-1 cursor-pointer transition shadow-lg shadow-indigo-500/10"
                                 >
                                   <Check className="w-4 h-4" /> Approve & Activation Config
                                 </button>
                                 <button
                                   onClick={() => handleVerifySlip(slip.id, 'rejected')}
-                                  className="py-2 px-4 text-xs font-bold bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 rounded cursor-pointer transition-all"
+                                  className="py-2.5 px-4 text-xs font-bold bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white border border-rose-500/20 rounded cursor-pointer transition-all"
                                 >
                                   Reject
                                 </button>
@@ -2819,7 +2840,7 @@ export default function App() {
             </div>
 
                 {/* 2. DYNAMIC PACKAGE DETAILS EDITOR */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                   📦 Modify & Add New Packages Details
@@ -2844,7 +2865,7 @@ export default function App() {
               </div>
 
               {editingPack && (
-                <form onSubmit={handleSavePackage} className="mt-6 p-6 bg-slate-950 border border-slate-800 rounded-xl space-y-5 text-xs animate-fade-in text-left">
+                <form onSubmit={handleSavePackage} className="mt-6 p-4 sm:p-6 bg-slate-950 border border-slate-800 rounded-xl space-y-5 text-xs animate-fade-in text-left">
                   <div className="flex items-center justify-between">
                     <p className="font-bold text-indigo-400 uppercase font-mono tracking-wide">
                       🛡️ Configurator Panel: {editingPack.id ? 'Modify Existing Package' : 'Create New Package'}
@@ -2858,7 +2879,7 @@ export default function App() {
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-slate-400 mb-1 font-semibold">Title Name / Label:</label>
                       <input
@@ -3146,15 +3167,16 @@ export default function App() {
               )}
 
               {/* Package admin row list */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                <table className="w-full text-left text-xs font-mono">
+              <div className="bg-slate-950 border border-slate-850 rounded-xl p-3 sm:p-4 mt-4">
+              <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-slate-800">
+                <table className="w-full text-left text-xs font-mono min-w-[650px]">
                     <thead>
                       <tr className="text-slate-500 border-b border-slate-800">
-                        <th className="pb-3">Title ID</th>
-                        <th className="pb-3">Type</th>
-                        <th className="pb-3">Bandwidth</th>
-                        <th className="pb-3">Validity</th>
-                        <th className="pb-3">Fee Price</th>
+                        <th className="pb-3 min-w-[150px]">Title ID</th>
+                        <th className="pb-3 min-w-[80px]">Type</th>
+                        <th className="pb-3 min-w-[100px]">Bandwidth</th>
+                        <th className="pb-3 min-w-[80px]">Validity</th>
+                        <th className="pb-3 min-w-[80px]">Fee Price</th>
                         <th className="pb-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -3182,9 +3204,10 @@ export default function App() {
                     </tbody>
                 </table>
               </div>
+              </div>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
                   ✍️ Blog, Guides and Featured Home News Panel
@@ -3205,10 +3228,10 @@ export default function App() {
               </div>
 
               {editingPost && (
-                <form onSubmit={handleSavePost} className="mt-6 p-5 bg-slate-950 border border-slate-850 rounded-xl space-y-4 text-xs animate-fade-in">
+                <form onSubmit={handleSavePost} className="mt-6 p-4 sm:p-5 bg-slate-950 border border-slate-850 rounded-xl space-y-4 text-xs animate-fade-in">
                   <p className="font-bold text-indigo-400 uppercase font-mono">Writing desk</p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-slate-400 mb-1">Post Title:</label>
                       <input
@@ -3326,7 +3349,7 @@ export default function App() {
             </div>
 
             {/* 4.5 ADMIN ACCESS CONTROL & ROLE DELEGATION */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 🔑 Admin Credentials & Role Delegation Control
               </h3>
@@ -3347,18 +3370,18 @@ export default function App() {
                   <p className="text-[11px] text-slate-400">
                     Input a client's email address below to grant them full administrator privileges. If their account does not exist yet, they will automatically receive full administrator access immediately upon sign up.
                   </p>
-                  <div className="flex gap-2 text-xs">
+                  <div className="flex flex-col sm:flex-row gap-2 text-xs">
                     <input
                       type="email"
                       required
                       placeholder="e.g. member@datastore.shop"
                       value={promoteEmail}
                       onChange={(e) => setPromoteEmail(e.target.value)}
-                      className="flex-1 bg-slate-950 border border-slate-850 rounded p-2 text-white outline-none focus:border-indigo-500/50"
+                      className="flex-1 bg-slate-950 border border-slate-850 rounded p-2.5 text-white outline-none focus:border-indigo-500/50"
                     />
                     <button
                       type="submit"
-                      className="px-3.5 py-2 bg-indigo-500 hover:bg-indigo-600 font-bold text-white rounded cursor-pointer transition shadow"
+                      className="px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 font-bold text-white rounded-lg cursor-pointer transition shadow grid place-items-center"
                     >
                       Grant Admin Privilege
                     </button>
@@ -3409,7 +3432,7 @@ export default function App() {
             {/* 5. CONTACT & GLOBAL METADATA EDITORS */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
                   📞 Configure Store Public Contact Details
                 </h3>
@@ -3568,7 +3591,7 @@ export default function App() {
                 )}
               </div>
 
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
                   📢 Home Announcement Banner
                 </h3>
@@ -3629,7 +3652,7 @@ export default function App() {
             </div>
 
             {/* 6. FREE DATA SETTINGS & UPLOAD VOUCHER CODES */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6">
               <div className="border-b border-slate-800 pb-3">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-emerald-400" />
@@ -3731,13 +3754,13 @@ export default function App() {
                     Live Uploaded Free Configs (Active database catalog)
                   </p>
 
-                  <div className="max-h-[350px] overflow-y-auto border border-slate-850 rounded-xl bg-slate-950 p-4 space-y-3">
+              <div className="max-h-[500px] lg:max-h-[400px] overflow-y-auto border border-slate-850 rounded-xl bg-slate-950 p-3 sm:p-4 space-y-3">
                     {freePackages.length === 0 ? (
                       <p className="text-xs text-slate-400 font-mono text-center py-12 select-none">No active free packages loaded in your Database.</p>
                     ) : (
                       freePackages.map((pkg) => (
-                        <div key={pkg.id} className="p-3 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between gap-4 font-mono text-xs">
-                          <div className="space-y-1 truncate">
+                        <div key={pkg.id} className="p-3 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between gap-4 font-mono text-xs overflow-hidden">
+                          <div className="space-y-1 min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-[10px] text-white font-bold bg-indigo-500/10 px-1.5 py-0.5 border border-indigo-500/20 rounded font-sans uppercase">
                                 {pkg.isp}
@@ -3795,53 +3818,154 @@ export default function App() {
                   {freeRequests.length === 0 ? (
                     <p className="text-xs text-slate-400 font-mono text-center py-12 select-none">No requests logs submitted by customers yet.</p>
                   ) : (
-                    <div className="overflow-x-auto text-xs font-mono">
-                      <table className="w-full text-left font-mono text-slate-350 border-collapse">
-                        <thead>
-                          <tr className="bg-slate-900 border-b border-slate-850 text-slate-400 text-[10px] uppercase font-bold">
-                            <th className="p-3">Claim Request ID</th>
-                            <th className="p-3">User Operator Info</th>
-                            <th className="p-3">ISP Target</th>
-                            <th className="p-3">Interface Match</th>
-                            <th className="p-3">Package Category</th>
-                            <th className="p-3">Voucher Delivered</th>
-                            <th className="p-3 text-right">Claims Date</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {freeRequests.map((req) => (
-                            <tr key={req.id} className="border-b border-slate-855 hover:bg-slate-900/40 transition">
-                              <td className="p-3 text-slate-400 text-[11px] font-sans">
-                                {req.id}
-                              </td>
-                              <td className="p-3">
-                                <div>
-                                  <p className="text-white font-sans font-bold leading-normal">{req.userName}</p>
-                                  <p className="text-[10px] text-slate-500 font-mono">{req.userEmail}</p>
-                                </div>
-                              </td>
-                              <td className="p-3">
-                                <span className="text-white font-bold">{req.isp}</span>
-                              </td>
-                              <td className="p-3 text-slate-400">
-                                {req.packageType}
-                              </td>
-                              <td className="p-3 font-sans font-semibold text-slate-300">
-                                {req.packageName}
-                              </td>
-                              <td className="p-3">
-                                <code className="text-emerald-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 text-[10px]">
+                    <>
+                      {/* Desktop layout: Hidden on screens smaller than large (approx 1024px) */}
+                      <div className="hidden lg:block overflow-x-auto w-full text-xs font-mono scrollbar-thin scrollbar-thumb-slate-800">
+                        <table className="w-full text-left font-mono text-slate-350 border-collapse min-w-[850px]">
+                          <thead>
+                            <tr className="bg-slate-900 border-b border-slate-850 text-slate-400 text-[10px] uppercase font-bold">
+                              <th className="p-3">Claim Request ID</th>
+                              <th className="p-3">User Operator Info</th>
+                              <th className="p-3">ISP Target</th>
+                              <th className="p-3">Interface Match</th>
+                              <th className="p-3">Package Category</th>
+                              <th className="p-3">Voucher Delivered</th>
+                              <th className="p-3">Claims Date</th>
+                              <th className="p-3 text-right">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {freeRequests.map((req) => (
+                              <tr key={req.id} className="border-b border-slate-855 hover:bg-slate-900/40 transition">
+                                <td className="p-3 text-slate-400 text-[11px] font-sans">
+                                  {req.id}
+                                </td>
+                                <td className="p-3">
+                                  <div>
+                                    <p className="text-white font-sans font-bold leading-normal">{req.userName}</p>
+                                    <p className="text-[10px] text-slate-500 font-mono">{req.userEmail}</p>
+                                  </div>
+                                </td>
+                                <td className="p-3">
+                                  <span className="text-white font-bold">{req.isp}</span>
+                                </td>
+                                <td className="p-3 text-slate-400">
+                                  {req.packageType}
+                                </td>
+                                <td className="p-3 font-sans font-semibold text-slate-300">
+                                  {req.packageName}
+                                </td>
+                                <td className="p-3">
+                                  <code className="text-emerald-400 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 text-[10px]">
+                                    {req.codeReceived}
+                                  </code>
+                                </td>
+                                <td className="p-3 text-slate-400 text-[11px]">
+                                  {new Date(req.requestedAt).toLocaleString()}
+                                </td>
+                                <td className="p-3 text-right">
+                                  {confirmDeleteFreeRequestId === req.id ? (
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteFreeRequest(req.id)}
+                                        className="px-2 py-1 bg-red-600 hover:bg-red-700 text-slate-950 font-bold rounded text-[10px] uppercase font-mono cursor-pointer"
+                                      >
+                                        Delete
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmDeleteFreeRequestId(null)}
+                                        className="px-2 py-1 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded text-[10px] uppercase font-mono cursor-pointer"
+                                      >
+                                        No
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteFreeRequestId(req.id)}
+                                      className="p-1.5 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition inline-flex cursor-pointer"
+                                      title="Delete Log Entry"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile / Portrait / Tablet layout: Displayed as interactive cards */}
+                      <div className="block lg:hidden divide-y divide-slate-850">
+                        {freeRequests.map((req) => (
+                          <div key={req.id} className="p-4 space-y-3 text-xs font-mono">
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-[10px] text-indigo-400 font-sans tracking-wide">ID: {req.id}</span>
+                              <span className="text-[10px] text-slate-500">
+                                {new Date(req.requestedAt).toLocaleString()}
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 pb-2.5">
+                              <div>
+                                <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1 font-sans">User Operator</p>
+                                <p className="font-sans font-bold text-white text-[12px] truncate">{req.userName}</p>
+                                <p className="text-[10px] text-slate-400 truncate">{req.userEmail}</p>
+                              </div>
+                              <div>
+                                <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1 font-sans">Config Mapped</p>
+                                <p className="font-sans font-semibold text-slate-200 text-[12px] truncate">{req.packageName}</p>
+                                <p className="text-[11px] text-[#3ee260] font-bold">
+                                  {req.isp} ({req.packageType})
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[9px] text-slate-500 uppercase font-sans mb-1 font-bold">Voucher / Config String</p>
+                                <code className="text-emerald-400 bg-slate-950 p-1 rounded font-mono text-[11.5px] select-all block truncate border border-slate-850">
                                   {req.codeReceived}
                                 </code>
-                              </td>
-                              <td className="p-3 text-slate-400 text-right text-[11px]">
-                                {new Date(req.requestedAt).toLocaleString()}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                              </div>
+
+                              <div className="shrink-0 pt-2 sm:pt-0">
+                                {confirmDeleteFreeRequestId === req.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteFreeRequest(req.id)}
+                                      className="px-2 py-1 bg-red-600 hover:bg-red-700 text-slate-950 font-bold rounded text-[10px] uppercase cursor-pointer"
+                                    >
+                                      Confirm Delete
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteFreeRequestId(null)}
+                                      className="px-2 py-1 bg-slate-850 text-slate-300 rounded text-[10px] uppercase cursor-pointer"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteFreeRequestId(req.id)}
+                                    className="p-2 text-red-400 hover:text-red-500 hover:bg-red-500/10 rounded transition cursor-pointer"
+                                    title="Delete Log Entry"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -3849,7 +3973,7 @@ export default function App() {
             </div>
 
             {/* 7. ADVERTISEMENT PORTALS & BYPASS REDIRECTION CONFIGURATOR */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 mt-8">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6 mt-8">
               {user?.email && (
                 (() => {
                   const isSuperAdmin = user.email.toLowerCase() === "chethiyabandara0001@gmail.com";
@@ -3888,7 +4012,7 @@ export default function App() {
                           )}
 
                           {isSuperAdmin ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                               {/* Day Time Ad Box */}
                               <div className="bg-slate-950 p-5 rounded-xl border border-slate-850 space-y-3">
                                 <div className="flex items-center justify-between">
@@ -3969,7 +4093,7 @@ export default function App() {
             </div>
 
             {/* 8. CLIENT PRIVATE SUPPORT CHATS DECK */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 mt-8">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6 mt-8">
               <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">

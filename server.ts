@@ -413,6 +413,18 @@ export async function createExpressApp() {
     }
   });
 
+  // Delete Free VPN Request/Voucher details (Admin Only)
+  app.delete("/api/admin/free-requests/:id", async (req, res) => {
+    const { id } = req.params;
+    try {
+      await deleteDoc(doc(db, "free_requests", id));
+      const updated = await getFreeRequests();
+      res.json({ status: "success", freeRequests: updated });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   // Get active advertisement redirection code depending on day/night hours
   app.get("/api/ad-settings/active", async (req, res) => {
     try {

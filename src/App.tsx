@@ -823,7 +823,8 @@ export default function App() {
         const btnLanding = document.getElementById("google-signin-btn");
         if (btnLanding) {
           googleObj.accounts.id.renderButton(btnLanding, {
-            theme: "filled_dark",
+            theme: "outline",
+            shape: "pill",
             size: "large",
             width: 320,
             text: "signin_with"
@@ -834,7 +835,8 @@ export default function App() {
         const btnModal = document.getElementById("google-signin-btn-modal");
         if (btnModal) {
           googleObj.accounts.id.renderButton(btnModal, {
-            theme: "filled_dark",
+            theme: "outline",
+            shape: "pill",
             size: "large",
             width: 320,
             text: "signin_with"
@@ -846,8 +848,12 @@ export default function App() {
     // Run immediately and also set a slight timeout to ensure components are painted
     initAndRenderGoogleBtn();
     const timer = setTimeout(initAndRenderGoogleBtn, 300);
-    return () => clearTimeout(timer);
-  }, [user, showLoginModal]);
+    const interval = setInterval(initAndRenderGoogleBtn, 1000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [user, showLoginModal, loginProvider]);
 
   // Drag and drop setup for slip
   const handleDrag = (e: React.DragEvent) => {
@@ -1404,15 +1410,8 @@ export default function App() {
               <div className="flex-grow border-t border-slate-800"></div>
             </div>
 
-            <div className="flex flex-col items-center justify-center p-3 bg-slate-950 border border-slate-850 rounded-xl space-y-3.5">
-              <p className="text-[10px] text-slate-400 font-semibold font-mono text-center tracking-wider">CONTINUE WITH SECURE GOOGLE ACCOUNT:</p>
-              <div className="flex justify-center w-full max-w-xs overflow-hidden rounded-lg shadow-md hover:scale-[1.01] transition-transform duration-200">
-                <div id="google-signin-btn" className="w-[320px] h-[40px]" style={{ minHeight: '40px' }}></div>
-              </div>
-            </div>
-
-            <div className="p-3 bg-slate-950/60 rounded-xl text-[10px] text-slate-400 leading-normal text-center font-mono border border-slate-800/50">
-              💡 <span className="text-indigo-400">Security Guard</span>: This app uses Google Standard Identity Services. Simply click the Google Sign-In button above to authenticate instantly.
+            <div className="flex justify-center w-full py-4">
+              <div id="google-signin-btn" className="w-[320px] h-[40px]" style={{ minHeight: '40px' }}></div>
             </div>
           </div>
 
@@ -4730,20 +4729,26 @@ export default function App() {
                 ))}
               </div>
 
-              <form onSubmit={handleAuthSignIn} className="mt-5 space-y-4 text-xs font-mono">
-                <div>
-                  <label className="block text-slate-400 mb-1">EMAIL ID ADDRESS:</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="e.g. user@domain.com"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none"
-                  />
+              {loginProvider === 'google' ? (
+                <div className="mt-5 space-y-4 text-center flex flex-col items-center justify-center w-full">
+                  <div className="flex justify-center w-full py-4">
+                    <div id="google-signin-btn-modal" className="w-[320px] h-[40px]" style={{ minHeight: '40px' }}></div>
+                  </div>
                 </div>
+              ) : (
+                <form onSubmit={handleAuthSignIn} className="mt-5 space-y-4 text-xs font-mono">
+                  <div>
+                    <label className="block text-slate-400 mb-1">EMAIL ID ADDRESS:</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. user@domain.com"
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none"
+                    />
+                  </div>
 
-                {loginProvider === 'email' && (
                   <div>
                     <label className="block text-slate-400 mb-1 font-mono">SECURE ACCESS PASSWORD:</label>
                     <input
@@ -4755,24 +4760,24 @@ export default function App() {
                       className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none"
                     />
                   </div>
-                )}
 
-                <button
-                  type="submit"
-                  disabled={isLoginLoading}
-                  className="w-full py-3 font-bold bg-indigo-500 hover:bg-indigo-600 text-white text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {isLoginLoading ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" /> Verifying Keys...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="w-4 h-4" /> Sign In {loginProvider.toUpperCase()}
-                    </>
-                  )}
-                </button>
-              </form>
+                  <button
+                    type="submit"
+                    disabled={isLoginLoading}
+                    className="w-full py-3 font-bold bg-indigo-500 hover:bg-indigo-600 text-white text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    {isLoginLoading ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" /> Verifying Keys...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="w-4 h-4" /> Sign In EMAIL
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
             </motion.div>
           </div>
         )}

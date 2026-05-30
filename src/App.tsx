@@ -815,7 +815,7 @@ export default function App() {
       const googleObj = (window as any).google;
       if (googleObj?.accounts?.id) {
         googleObj.accounts.id.initialize({
-          client_id: "1081766323785-i7nanvfia4atg8unv82l9lkvf6mi5u3g.apps.googleusercontent.com",
+          client_id: "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
           callback: handleGoogleCredentialResponse,
         });
 
@@ -870,6 +870,52 @@ export default function App() {
     }
   };
 
+  // Helper to compress and downscale images on the client side before saving to Firestore (guards against 1MB document limit)
+  const compressClientImage = (file: File, maxWidth: number, maxHeight: number, quality: number, callback: (base64: string) => void) => {
+    if (!file.type.startsWith('image/')) {
+      callback('');
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressed = canvas.toDataURL("image/jpeg", quality);
+          callback(compressed);
+        } else {
+          callback(event.target?.result as string);
+        }
+      };
+    };
+    reader.onerror = () => {
+      console.error("Image compression failure");
+    };
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       processFile(e.target.files[0]);
@@ -877,14 +923,19 @@ export default function App() {
   };
 
   const processFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      setBase64Slip(reader.result as string);
-    };
-    reader.onerror = () => {
-      console.error("File processing error");
-    };
-    reader.readAsDataURL(file);
+    // Compress bank slips down matching ideal client footprint (<100KB)
+    compressClientImage(file, 800, 800, 0.7, (compressedBase64) => {
+      if (compressedBase64) {
+        setBase64Slip(compressedBase64);
+      } else {
+        // Fallback
+        const reader = new FileReader();
+        reader.onload = () => {
+          setBase64Slip(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
   };
 
   // User submits Slip to backend
@@ -960,16 +1011,27 @@ export default function App() {
       alert("Please upload a valid image file. (Web PNG, JPG or WEBP formats)");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target && event.target.result && editingPack) {
+    // Compress packages images dynamically to prevent exceeding 1MB limit in Firestore collection
+    compressClientImage(file, 600, 600, 0.65, (compressedBase64) => {
+      if (compressedBase64 && editingPack) {
         setEditingPack({
           ...editingPack,
-          imageURL: event.target.result as string
+          imageURL: compressedBase64
         });
+      } else if (editingPack) {
+        // Fallback if compression is bypassed or failed
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target && event.target.result) {
+            setEditingPack({
+              ...editingPack,
+              imageURL: event.target.result as string
+            });
+          }
+        };
+        reader.readAsDataURL(file);
       }
-    };
-    reader.readAsDataURL(file);
+    });
   };
 
   // Admin save package API

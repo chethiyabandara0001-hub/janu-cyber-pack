@@ -668,8 +668,16 @@ export default function App() {
           provider: loginProvider
         })
       });
-      const data = await response.json();
-      if (data.status === 'success') {
+      
+      let data: any;
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        throw new Error(`Invalid JSON response from server. Status: ${response.status}. Response: ${text.substring(0, 150)}`);
+      }
+
+      if (response.ok && data.status === 'success') {
         setUser(data.user);
         loadUserSlips(data.user.uid);
         setShowLoginModal(false);
@@ -688,9 +696,9 @@ export default function App() {
       } else {
         setAuthError(data.error || 'Authentication failed');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auth server error", error);
-      setAuthError('Could not reach secure authentication servers.');
+      setAuthError(`Could not reach secure authentication servers: ${error?.message || error || 'Unknown network error'}`);
     } finally {
       setIsLoginLoading(false);
     }
@@ -722,8 +730,16 @@ export default function App() {
           displayName: loginName || loginEmail.split('@')[0]
         })
       });
-      const data = await response.json();
-      if (data.status === 'success') {
+
+      let data: any;
+      const text = await response.text();
+      try {
+        data = JSON.parse(text);
+      } catch (jsonErr) {
+        throw new Error(`Invalid JSON response from server. Status: ${response.status}. Response: ${text.substring(0, 150)}`);
+      }
+
+      if (response.ok && data.status === 'success') {
         setUser(data.user);
         loadUserSlips(data.user.uid);
         setShowLoginModal(false);
@@ -743,9 +759,9 @@ export default function App() {
       } else {
         setAuthError(data.error || 'Registration failed');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auth server error", error);
-      setAuthError('Could not reach secure authentication servers.');
+      setAuthError(`Could not reach secure authentication servers: ${error?.message || error || 'Unknown network error'}`);
     } finally {
       setIsLoginLoading(false);
     }
@@ -757,15 +773,22 @@ export default function App() {
       const token = response.credential;
       if (!token) return;
 
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const padLength = (4 - (base64.length % 4)) % 4;
-      const paddedBase64 = base64 + '='.repeat(padLength);
-      const jsonPayload = decodeURIComponent(window.atob(paddedBase64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-      }).join(''));
+      let decoded: any;
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const padLength = (4 - (base64.length % 4)) % 4;
+        const paddedBase64 = base64 + '='.repeat(padLength);
+        const jsonPayload = decodeURIComponent(window.atob(paddedBase64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        decoded = JSON.parse(jsonPayload);
+      } catch (jwtErr: any) {
+        console.error("Google token decode error", jwtErr);
+        setAuthError(`Error decoding secure google identity keys: ${jwtErr.message}`);
+        return;
+      }
 
-      const decoded = JSON.parse(jsonPayload);
       if (!decoded.email) {
         setAuthError("Google account has no associated email address.");
         return;
@@ -774,18 +797,38 @@ export default function App() {
       setIsLoginLoading(true);
       setAuthError('');
 
-      const res = await fetch('/api/auth/sign-in', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: decoded.email,
-          displayName: decoded.name || decoded.given_name,
-          provider: 'google'
-        })
-      });
+      let resObj: Response;
+      try {
+        resObj = await fetch('/api/auth/sign-in', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: decoded.email,
+            displayName: decoded.name || decoded.given_name,
+            provider: 'google'
+          })
+        });
+      } catch (netErr: any) {
+        console.error("Auth routing network error", netErr);
+        setAuthError(`Could not reach secure authentication servers: ${netErr.message}`);
+        return;
+      }
 
-      const data = await res.json();
-      if (res.ok && data.status === 'success' && data.user) {
+      let data: any;
+      try {
+        const text = await resObj.text();
+        try {
+          data = JSON.parse(text);
+        } catch (jsonErr) {
+          throw new Error(`Invalid JSON response from server. Status: ${resObj.status}. Response: ${text.substring(0, 150)}`);
+        }
+      } catch (parseErr: any) {
+        console.error("Server return parsing error", parseErr);
+        setAuthError(`Authentication verification error: ${parseErr.message}`);
+        return;
+      }
+
+      if (resObj.ok && data.status === 'success' && data.user) {
         setUser(data.user);
         localStorage.setItem('janu-cyber-user', JSON.stringify(data.user));
         loadUserSlips(data.user.uid);
@@ -805,8 +848,8 @@ export default function App() {
         setAuthError(data.error || 'Google login verification failed on server.');
       }
     } catch (e: any) {
-      console.error(e);
-      setAuthError('Error decoding secure google identity keys.');
+      console.error("Unhandled auth error", e);
+      setAuthError(`Secure login error: ${e?.message || String(e)}`);
     } finally {
       setIsLoginLoading(false);
     }

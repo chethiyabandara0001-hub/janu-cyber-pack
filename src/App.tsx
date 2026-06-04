@@ -20,6 +20,7 @@ import { BankSlipUpload } from './components/BankSlipUpload';
 import { HomeView } from './components/HomeView';
 import { PackagesView } from './components/PackagesView';
 import { UserDashboardView } from './components/UserDashboardView';
+import { AdBanner } from './components/AdBanner';
 import { FreeVpnView } from './components/FreeVpnView';
 
 const getTierPriceDisplay = (tierInput: string): string => {
@@ -1644,6 +1645,9 @@ export default function App() {
       {/* APP CONTENT BODY */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full overflow-x-auto lg:overflow-x-visible scrollbar-thin scrollbar-thumb-slate-800">
         
+        {/* GLOBAL AD BANNER */}
+        <AdBanner />
+
         {/* TAB 1: OVERVIEW & NEW POSTS */}
         {activeTab === 'home' && (
           <HomeView

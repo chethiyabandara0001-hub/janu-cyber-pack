@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User, FreePackage, FreeRequest, SupportMessage } from './types';
+import { firebaseService } from './services/firebaseService';
+import { AdminContactDetails, AdminCustomerChats } from './components/AdminPanels';
 
 const getTierPriceDisplay = (tierInput: string): string => {
   const normalized = (tierInput || '').trim().toLowerCase();
@@ -28,9 +30,9 @@ const getTierPriceDisplay = (tierInput: string): string => {
 };
 
 export default function App() {
-  // Theme state: 'cyberpunk-dark' | 'cyberpunk-light' | 'acid-volt' | 'neon-blue'
-  const [theme, setTheme] = useState<'cyberpunk-dark' | 'cyberpunk-light' | 'acid-volt' | 'neon-blue'>(() => {
-    return (localStorage.getItem('janu-cyber-theme') as 'cyberpunk-dark' | 'cyberpunk-light' | 'acid-volt' | 'neon-blue') || 'cyberpunk-dark';
+  // Theme state: 'cyberpunk-dark' | 'cyberpunk-light'
+  const [theme, setTheme] = useState<'cyberpunk-dark' | 'cyberpunk-light'>(() => {
+    return (localStorage.getItem('janu-cyber-theme') as 'cyberpunk-dark' | 'cyberpunk-light') || 'cyberpunk-dark';
   });
 
   useEffect(() => {
@@ -134,7 +136,6 @@ export default function App() {
   
   // Admin Editing state hooks
   const [editingPack, setEditingPack] = useState<Partial<Package> | null>(null);
-  const [isPackDragOver, setIsPackDragOver] = useState<boolean>(false);
   const [editingPost, setEditingPost] = useState<Partial<Post> | null>(null);
   const [editingContact, setEditingContact] = useState<Partial<ContactDetails> | null>(null);
   const [editingAnnounce, setEditingAnnounce] = useState<Partial<HomeAnnouncement> | null>(null);
@@ -758,7 +759,9 @@ export default function App() {
 
       const base64Url = token.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      const padLength = (4 - (base64.length % 4)) % 4;
+      const paddedBase64 = base64 + '='.repeat(padLength);
+      const jsonPayload = decodeURIComponent(window.atob(paddedBase64).split('').map(function(c) {
           return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
       }).join(''));
 
@@ -815,7 +818,7 @@ export default function App() {
       const googleObj = (window as any).google;
       if (googleObj?.accounts?.id) {
         googleObj.accounts.id.initialize({
-          client_id: "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
+          client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
           callback: handleGoogleCredentialResponse,
         });
 
@@ -956,19 +959,18 @@ export default function App() {
     setSlipFeedback(null);
 
     try {
-      const res = await fetch('/api/slips/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.uid,
-          userEmail: user.email,
-          userName: user.displayName,
-          packageId: selectedPackForSlip.id,
-          bankSlipBase64: base64Slip,
-          tier: selectedTier
-        })
+      // Direct Firebase Storage upload: convert base64 representation back to a cloud asset
+      const publicStorageUrl = await firebaseService.uploadIfBase64(base64Slip, "slips");
+
+      const data = await firebaseService.submitPaymentSlip({
+        userId: user.uid,
+        userEmail: user.email,
+        userName: user.displayName,
+        packageId: selectedPackForSlip.id,
+        bankSlipBase64: publicStorageUrl, // save only the clean cloud text URL string
+        tier: selectedTier
       });
-      const data = await res.json();
+
       if (data.status === 'success') {
         setSlipFeedback({ type: 'success', message: 'Bank payment slip submitted to administrative queue successfully! Automatic bot check processing.' });
         setBase64Slip('');
@@ -1011,47 +1013,13 @@ export default function App() {
     }
   };
 
-  // Convert custom package images to base64
-  const handlePackImageUpload = (file: File) => {
-    if (!file.type.startsWith('image/')) {
-      alert("Please upload a valid image file. (Web PNG, JPG or WEBP formats)");
-      return;
-    }
-    // Compress packages images dynamically to prevent exceeding 1MB limit in Firestore collection
-    compressClientImage(file, 600, 600, 0.65, (compressedBase64) => {
-      if (compressedBase64 && editingPack) {
-        setEditingPack({
-          ...editingPack,
-          imageURL: compressedBase64
-        });
-      } else if (editingPack) {
-        // Fallback if compression is bypassed or failed
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target && event.target.result) {
-            setEditingPack({
-              ...editingPack,
-              imageURL: event.target.result as string
-            });
-          }
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-  };
-
   // Admin save package API
   const handleSavePackage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPack) return;
 
     try {
-      const res = await fetch('/api/admin/packages/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingPack)
-      });
-      const data = await res.json();
+      const data = await firebaseService.savePackage(editingPack);
       if (data.status === 'success') {
         setEditingPack(null);
         fetchAdminStats();
@@ -1246,23 +1214,9 @@ export default function App() {
     }
   };
 
-  // Simple VPN image path matcher state machine
-  const getVpnBanner = (typeName: string) => {
-    switch (typeName) {
-      case 'WireGuard':
-        return 'https://images.unsplash.com/photo-1601597111158-2fceff270190?auto=format&fit=crop&w=600&q=80';
-      case 'Vmess':
-        return 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?auto=format&fit=crop&w=600&q=80';
-      case 'SSH':
-        return 'https://images.unsplash.com/photo-1629654297299-c8506221ca97?auto=format&fit=crop&w=600&q=80';
-      default:
-        return 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80';
-    }
-  };
-
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col justify-center items-center p-4 relative overflow-hidden selection:bg-indigo-500 selection:text-white">
+      <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col justify-center items-center p-4 relative overflow-hidden selection:bg-indigo-500 selection:text-white gpu-optimize">
         {/* Glow ambient design backdrops */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -1415,8 +1369,16 @@ export default function App() {
             </div>
           </div>
 
-          <div className="text-center">
-            <p className="text-[11px] text-slate-500 font-sans">
+          <div className="text-center space-y-4">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-[11px] text-slate-400 text-left space-y-1.5 shadow-md">
+              <span className="font-bold text-indigo-400 font-mono block">📡 CUSTOM HOSTS & GOOGLE OAUTH SECURITY:</span>
+              <p className="leading-relaxed">If visiting from <span className="font-mono text-indigo-400 font-semibold text-[10px]">janucyber.store</span> or <span className="font-mono text-indigo-400 font-semibold text-[10px]">janu-cyber-pack.vercel.app</span>:</p>
+              <ul className="list-decimal pl-4 space-y-1.5 mt-1 text-[10px] text-slate-400 font-sans leading-relaxed">
+                <li>Configure your credentials inside Google Cloud Console and add these new domains as <strong className="text-slate-200">Authorized JavaScript Origins</strong>.</li>
+                <li>Declare and deploy your personal <strong className="text-slate-200">VITE_GOOGLE_CLIENT_ID</strong> to match your own Cloud client credential set.</li>
+              </ul>
+            </div>
+            <p className="text-[11px] text-slate-550 font-sans">
               🔒 Encrypted authentication keys. Secure Sandbox Client.
             </p>
           </div>
@@ -1429,7 +1391,7 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white gpu-optimize">
       {/* SIDEBAR NAVIGATION - VISIBLE ON DESKTOP */}
       <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col shrink-0 min-h-screen text-slate-400">
         <div className="p-6">
@@ -1543,7 +1505,7 @@ export default function App() {
       </aside>
 
       {/* RIGHT SIDE MAIN VIEW WRAPPER */}
-      <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden w-full">
+      <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden w-full gpu-optimize">
         
         {/* HEADER BAR */}
         <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 sm:px-8 bg-slate-950 sticky top-0 z-40 shrink-0 backdrop-blur">
@@ -1584,28 +1546,6 @@ export default function App() {
                 title="Cyberpunk Light Mode"
               >
                 ☀️ <span className="hidden sm:inline">Light</span>
-              </button>
-              <button
-                onClick={() => setTheme('acid-volt')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer text-[10px] uppercase font-mono font-bold flex items-center gap-1 ${
-                  theme === 'acid-volt'
-                    ? 'bg-indigo-500 text-white shadow shadow-indigo-500/20'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Radioactive Acid Volt Theme"
-              >
-                ☣️ <span className="hidden sm:inline">Volt</span>
-              </button>
-              <button
-                onClick={() => setTheme('neon-blue')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer text-[10px] uppercase font-mono font-bold flex items-center gap-1 ${
-                  theme === 'neon-blue'
-                    ? 'bg-indigo-500 text-white shadow shadow-indigo-500/20'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-                title="Cosmic Tron Neon Blue Theme"
-              >
-                🌐 <span className="hidden sm:inline">Blue</span>
               </button>
             </div>
 
@@ -1863,12 +1803,6 @@ export default function App() {
                       <div className="mt-4 p-4 bg-slate-950 rounded-xl text-xs text-slate-300 space-y-2 whitespace-pre-wrap font-sans border-l-3 border-indigo-500">
                         {post.content}
                       </div>
-
-                      {post.imageURL && (
-                        <div className="mt-4 rounded-xl overflow-hidden max-h-48 border border-slate-800">
-                          <img src={post.imageURL} alt={post.title} className="w-full object-cover" />
-                        </div>
-                      )}
                     </article>
                   ))}
                 </div>
@@ -2031,18 +1965,8 @@ export default function App() {
                       </span>
                     </div>
 
-                    {/* Image section */}
-                    <div className="h-44 relative bg-slate-950 overflow-hidden">
-                      <img 
-                        src={pkg.imageURL || getVpnBanner(pkg.vpnTypeName)} 
-                        alt={pkg.title} 
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-                    </div>
-
                     {/* Package details body */}
-                    <div className="p-6 flex-1 flex flex-col">
+                    <div className="p-6 flex-1 flex flex-col pt-12">
                       <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors mt-1 line-clamp-1">
                         {pkg.title}
                       </h3>
@@ -2915,7 +2839,6 @@ export default function App() {
                     validityDays: 30,
                     bandwidthGB: 'Unlimited',
                     vpnTypeName: 'WireGuard',
-                    imageURL: '',
                     isFeatured: true,
                     status: 'active'
                   })}
@@ -3049,9 +2972,9 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 pt-2">
+                  <div className="pt-2">
                     {/* Featured toggle option */}
-                    <div className="md:col-span-4 select-none">
+                    <div className="select-none">
                       <label className="block text-slate-400 mb-2 font-semibold">Promote on Home tab:</label>
                       <label className="flex items-center gap-2 cursor-pointer p-3 bg-slate-900 hover:bg-slate-850 rounded-xl border border-slate-800 transition">
                         <input
@@ -3065,97 +2988,6 @@ export default function App() {
                           <p className="text-[10px] text-slate-500">Highlight badge for clients</p>
                         </div>
                       </label>
-                    </div>
-
-                    {/* Integrated dual-mode secure Image uploader */}
-                    <div className="md:col-span-8">
-                      <label className="block text-slate-400 mb-1.5 font-semibold">Custom Banner Image (Upload graphics OR paste Direct Link):</label>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div 
-                          onDragOver={(e) => { e.preventDefault(); setIsPackDragOver(true); }}
-                          onDragLeave={() => setIsPackDragOver(false)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setIsPackDragOver(false);
-                            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                              handlePackImageUpload(e.dataTransfer.files[0]);
-                            }
-                          }}
-                          onClick={() => document.getElementById('pack-image-input-file')?.click()}
-                          className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center cursor-pointer transition select-none min-h-[90px] ${
-                            isPackDragOver 
-                              ? 'border-indigo-500 bg-indigo-500/10 text-white' 
-                              : 'border-slate-800 hover:border-indigo-500/30 bg-slate-900 text-slate-400 hover:bg-slate-850'
-                          }`}
-                        >
-                          <input
-                            type="file"
-                            id="pack-image-input-file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => {
-                              if (e.target.files && e.target.files[0]) {
-                                handlePackImageUpload(e.target.files[0]);
-                              }
-                            }}
-                          />
-                          {editingPack.imageURL && (editingPack.imageURL.startsWith('data:') || editingPack.imageURL.length > 200) ? (
-                            <div className="flex items-center gap-3">
-                              <img 
-                                src={editingPack.imageURL} 
-                                alt="Package display preview" 
-                                referrerPolicy="no-referrer"
-                                className="w-12 h-12 object-cover rounded-lg border border-slate-700 shadow-sm"
-                              />
-                              <div className="text-left">
-                                <p className="text-[11px] font-bold text-emerald-400">File loaded successfully</p>
-                                <button 
-                                  type="button"
-                                  className="text-[10px] text-rose-450 text-rose-400 font-semibold hover:underline block" 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditingPack({ ...editingPack, imageURL: '' });
-                                  }}
-                                >
-                                  Clear Preview
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              <Upload className="w-4 h-4 mx-auto text-indigo-400 animate-pulse" />
-                              <p className="text-[11px] text-slate-300">Drag & drop / click to Upload File</p>
-                              <p className="text-[9px] text-slate-500">Local formats: JPG, WEBP, PNG</p>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex flex-col justify-center space-y-1">
-                          <p className="text-[10px] text-slate-400 font-medium">Or input standard web HTTP graphic file link:</p>
-                          <input
-                            type="text"
-                            placeholder="https://images.unsplash.com/promo..."
-                            value={editingPack.imageURL || ''}
-                            onChange={(e) => setEditingPack({ ...editingPack, imageURL: e.target.value })}
-                            className="w-full bg-slate-900 border border-slate-800 rounded p-2 text-[11px] text-white font-mono outline-none focus:border-indigo-500/50"
-                          />
-                          {editingPack.imageURL && !editingPack.imageURL.startsWith('data:') && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <img 
-                                src={editingPack.imageURL} 
-                                alt="Remote preview" 
-                                referrerPolicy="no-referrer"
-                                className="w-6 h-6 object-cover rounded border border-slate-700"
-                                onError={(e) => {
-                                  // fallback graceful handler
-                                  (e.target as any).src = 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=100&q=80';
-                                }}
-                              />
-                              <span className="text-[10px] text-indigo-400 font-medium font-sans">Remote asset link connected.</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
                     </div>
                   </div>
 
@@ -3268,6 +3100,27 @@ export default function App() {
               </div>
             </div>
 
+            {/* 3. CONFIGURE STORE PUBLIC CONTACT DETAILS */}
+            <AdminContactDetails
+              contact={contact}
+              editingContact={editingContact}
+              setEditingContact={setEditingContact}
+              handleSaveContactDetails={handleSaveContactDetails}
+            />
+
+            {/* 4. CLIENT PRIVATE SUPPORT CHATS DECK */}
+            <AdminCustomerChats
+              supportMessages={supportMessages}
+              activeUserChatId={activeUserChatId}
+              setActiveUserChatId={setActiveUserChatId}
+              currentChatInput={currentChatInput}
+              setCurrentChatInput={setCurrentChatInput}
+              isFetchingSupportMsgs={isFetchingSupportMsgs}
+              isSendingSupportMsg={isSendingSupportMsg}
+              fetchSupportMessages={fetchSupportMessages}
+              handleSendSupportMessage={handleSendSupportMessage}
+            />
+
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
@@ -3279,8 +3132,7 @@ export default function App() {
                     excerpt: '',
                     content: '',
                     category: 'recent',
-                    author: 'Admin Support',
-                    imageURL: ''
+                    author: 'Admin Support'
                   })}
                   className="px-3 py-1.5 text-xs font-bold text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg flex items-center gap-1 cursor-pointer transition shadow-md shadow-indigo-500/10"
                 >
@@ -3490,226 +3342,64 @@ export default function App() {
               </div>
             </div>
 
-            {/* 5. CONTACT & GLOBAL METADATA EDITORS */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
-                  📞 Configure Store Public Contact Details
-                </h3>
+            {/* 5. GLOBAL HOME ANNOUNCEMENT BANNER */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
+                📢 Home Announcement Banner
+              </h3>
 
-                {!editingContact && contact && (
-                  <div className="mt-4 p-4 rounded-xl bg-slate-950 border border-slate-850 space-y-4 text-xs">
-                    <div>
-                      <p className="font-bold text-indigo-400 font-mono uppercase tracking-wider mb-2 flex items-center gap-1.5 pb-1 border-b border-slate-850 text-[11px]">
-                        📞 Core Public Support Info
-                      </p>
-                      <div className="space-y-1.5 font-sans">
-                        <div className="flex justify-between py-1 border-b border-slate-850/40">
-                          <span className="text-slate-400">Phone Support:</span>
-                          <span className="text-white font-mono font-semibold">{contact.phone || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between py-1 border-b border-slate-850/40">
-                          <span className="text-slate-400">Admin Email:</span>
-                          <span className="text-white font-mono font-semibold">{contact.email || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between py-1 border-b border-slate-850/40">
-                          <span className="text-slate-400">Telegram Channel:</span>
-                          <span className="text-indigo-400 font-mono font-semibold truncate max-w-[150px]" title={contact.telegramChannel}>{contact.telegramChannel || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between py-1">
-                          <span className="text-slate-400">Telegram Bot USER:</span>
-                          <span className="text-indigo-400 font-mono font-bold">@{contact.telegramBotUser || 'N/A'}</span>
-                        </div>
-                      </div>
-                    </div>
+              <button
+                type="button"
+                onClick={() => setEditingAnnounce(announcement || {title: '', subtitle: '', announcementText: '', showAnnouncement: true})}
+                className="mt-4 px-4 py-2 font-bold text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-lg hover:bg-indigo-550/20 transition cursor-pointer"
+              >
+                Configure Global Announcement Popups
+              </button>
 
-                    <div>
-                      <p className="font-bold text-yellow-500 font-mono uppercase tracking-wider mb-2 flex items-center gap-1.5 pb-1 border-b border-slate-850 text-[11px]">
-                        🏦 Registered Store Bank Accounts
-                      </p>
-                      <div className="space-y-1.5 font-sans">
-                        <div className="flex justify-between py-1 border-b border-slate-850/40">
-                          <span className="text-slate-400">Bank Name:</span>
-                          <span className="text-slate-200 font-semibold">{contact.bankName || 'Commercial Bank Of Ceylon'}</span>
-                        </div>
-                        <div className="flex justify-between py-1 border-b border-slate-850/40">
-                          <span className="text-slate-400">Branch Name:</span>
-                          <span className="text-slate-200 font-semibold">{contact.bankBranch || 'Colombo Fort'}</span>
-                        </div>
-                        <div className="flex justify-between py-1 border-b border-slate-850/40">
-                          <span className="text-slate-400">Account Owner Name:</span>
-                          <span className="text-slate-200 font-semibold">{contact.bankAccountName || 'DataStore VPN Router Group'}</span>
-                        </div>
-                        <div className="flex justify-between py-1">
-                          <span className="text-slate-400">Account Number:</span>
-                          <span className="text-indigo-400 font-mono font-bold text-sm bg-slate-900 px-2 py-0.5 rounded border border-slate-800">{contact.bankAccountNo || '800021398'}</span>
-                        </div>
-                      </div>
-                    </div>
+              {editingAnnounce && (
+                <form onSubmit={handleSaveAnnouncement} className="mt-4 space-y-3 text-xs animate-fade-in text-left">
+                  <div>
+                    <label className="block text-slate-400">Main Title Headline:</label>
+                    <input
+                      type="text"
+                      value={editingAnnounce.title || ''}
+                      onChange={(e) => setEditingAnnounce({...editingAnnounce, title: e.target.value})}
+                      className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="block text-slate-400">Accent subtitle:</label>
+                    <input
+                      type="text"
+                      value={editingAnnounce.subtitle || ''}
+                      onChange={(e) => setEditingAnnounce({...editingAnnounce, subtitle: e.target.value})}
+                      className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-400">Detailed popup text:</label>
+                    <textarea
+                      value={editingAnnounce.announcementText || ''}
+                      onChange={(e) => setEditingAnnounce({...editingAnnounce, announcementText: e.target.value})}
+                      className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white h-16 outline-none focus:border-indigo-500/50"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={editingAnnounce.showAnnouncement || false}
+                      onChange={(e) => setEditingAnnounce({...editingAnnounce, showAnnouncement: e.target.checked})}
+                      className="w-4 h-4 bg-slate-950 border border-slate-850 text-indigo-500 rounded outline-none"
+                    />
+                    <label className="text-slate-400 text-xs">Show notification bar on home screen</label>
+                  </div>
 
-                <button
-                  onClick={() => setEditingContact(contact || {phone: '', email: '', telegramChannel: '', telegramBotUser: '', address: '', workingHours: '', bankName: '', bankBranch: '', bankAccountNo: '', bankAccountName: ''})}
-                  className="mt-4 w-full px-4 py-2.5 font-bold text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-lg hover:bg-slate-850 transition cursor-pointer text-center block"
-                >
-                  {editingContact ? 'Cancel & Close Settings' : '✏️ Configure Company Contacts & Banking Credentials'}
-                </button>
-
-                {editingContact && (
-                  <form onSubmit={handleSaveContactDetails} className="mt-4 space-y-3 text-xs animate-fade-in">
-                    <div>
-                      <label className="block text-slate-400">Phone Hotline:</label>
-                      <input
-                        type="text"
-                        value={editingContact.phone || ''}
-                        onChange={(e) => setEditingContact({...editingContact, phone: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400">Public Administrative Email:</label>
-                      <input
-                        type="text"
-                        value={editingContact.email || ''}
-                        onChange={(e) => setEditingContact({...editingContact, email: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400">Telegram Channel link:</label>
-                      <input
-                        type="text"
-                        value={editingContact.telegramChannel || ''}
-                        onChange={(e) => setEditingContact({...editingContact, telegramChannel: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400">Telegram Verification Bot username:</label>
-                      <input
-                        type="text"
-                        value={editingContact.telegramBotUser || ''}
-                        onChange={(e) => setEditingContact({...editingContact, telegramBotUser: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-
-                    {/* Copied and styled secure admin configurations as per guidelines */}
-                    <div className="border-t border-slate-800 pt-3 mt-3">
-                      <p className="font-bold text-indigo-300 mb-2 font-mono uppercase tracking-wide">🏦 Store Admin Bank Transfer Coordinates</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-slate-400">Bank Name:</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Commercial Bank"
-                            value={editingContact.bankName || ''}
-                            onChange={(e) => setEditingContact({...editingContact, bankName: e.target.value})}
-                            className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-slate-400">Branch Name:</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Colombo Fort"
-                            value={editingContact.bankBranch || ''}
-                            onChange={(e) => setEditingContact({...editingContact, bankBranch: e.target.value})}
-                            className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-slate-400">Account Owner Name:</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. DataStore VPN (Pvt) Ltd"
-                            value={editingContact.bankAccountName || ''}
-                            onChange={(e) => setEditingContact({...editingContact, bankAccountName: e.target.value})}
-                            className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-slate-400">Account Number:</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. 800021398"
-                            value={editingContact.bankAccountNo || ''}
-                            onChange={(e) => setEditingContact({...editingContact, bankAccountNo: e.target.value})}
-                            className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-2">
-                      <button type="submit" className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded cursor-pointer transition shadow">
-                        Save Contacts & Bank Details
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
-                  📢 Home Announcement Banner
-                </h3>
-
-                <button
-                  onClick={() => setEditingAnnounce(announcement || {title: '', subtitle: '', announcementText: '', showAnnouncement: true})}
-                  className="mt-4 px-4 py-2 font-bold text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-lg hover:bg-indigo-550/20 transition cursor-pointer"
-                >
-                  Configure Global Announcement Popups
-                </button>
-
-                {editingAnnounce && (
-                  <form onSubmit={handleSaveAnnouncement} className="mt-4 space-y-3 text-xs animate-fade-in">
-                    <div>
-                      <label className="block text-slate-400">Main Title Headline:</label>
-                      <input
-                        type="text"
-                        value={editingAnnounce.title || ''}
-                        onChange={(e) => setEditingAnnounce({...editingAnnounce, title: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400">Accent subtitle:</label>
-                      <input
-                        type="text"
-                        value={editingAnnounce.subtitle || ''}
-                        onChange={(e) => setEditingAnnounce({...editingAnnounce, subtitle: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400">Detailed popup text:</label>
-                      <textarea
-                        value={editingAnnounce.announcementText || ''}
-                        onChange={(e) => setEditingAnnounce({...editingAnnounce, announcementText: e.target.value})}
-                        className="w-full bg-slate-950 border border-slate-850 rounded p-1.5 text-white h-16 outline-none focus:border-indigo-500/50"
-                      />
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={editingAnnounce.showAnnouncement || false}
-                        onChange={(e) => setEditingAnnounce({...editingAnnounce, showAnnouncement: e.target.checked})}
-                        className="w-4 h-4 bg-slate-950 border border-slate-850 text-indigo-500 rounded outline-none"
-                      />
-                      <label className="text-slate-400 text-xs">Show notification bar on home screen</label>
-                    </div>
-
-                    <button type="submit" className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded cursor-pointer mt-2 transition shadow">
-                      Save Announcement
-                    </button>
-                  </form>
-                )}
-              </div>
-
+                  <button type="submit" className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded cursor-pointer mt-2 transition shadow">
+                    Save Announcement
+                  </button>
+                </form>
+              )}
             </div>
 
             {/* 6. FREE DATA SETTINGS & UPLOAD VOUCHER CODES */}
@@ -4151,193 +3841,6 @@ export default function App() {
                   );
                 })()
               )}
-            </div>
-
-            {/* 8. CLIENT PRIVATE SUPPORT CHATS DECK */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6 mt-8">
-              <div className="border-b border-slate-800 pb-3 flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
-                    <MessagesSquare className="w-4 h-4 text-indigo-400" />
-                    💬 8. CUSTOMER CHATS & PRIVACY SUPPORT LOGS
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-1">
-                    Read and reply privately of direct support inquiries submitted by registered customers and guest clients.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => fetchSupportMessages(activeUserChatId || undefined)}
-                  className="px-3 py-1.5 bg-slate-950 border border-slate-855 hover:bg-slate-900 text-slate-400 hover:text-white rounded-lg text-xs font-mono transition flex items-center gap-1 cursor-pointer"
-                >
-                  <RefreshCw className={`w-3 h-3 ${isFetchingSupportMsgs ? 'animate-spin' : ''}`} />
-                  <span>Refresh Chats</span>
-                </button>
-              </div>
-
-              {(() => {
-                const chatThreadsMap: { [userId: string]: { userName: string, userEmail: string, messages: SupportMessage[], lastMsgAt: string } } = {};
-                supportMessages.forEach(msg => {
-                  const uid = msg.userId;
-                  if (!chatThreadsMap[uid]) {
-                    chatThreadsMap[uid] = {
-                      userName: msg.userName || 'Anonymous User',
-                      userEmail: msg.userEmail || 'anonymous@datastore.shop',
-                      messages: [],
-                      lastMsgAt: msg.timestamp || ''
-                    };
-                  }
-                  chatThreadsMap[uid].messages.push(msg);
-                  if ((msg.timestamp || '') > chatThreadsMap[uid].lastMsgAt) {
-                    chatThreadsMap[uid].lastMsgAt = msg.timestamp || '';
-                  }
-                });
-
-                const sortedThreads = Object.keys(chatThreadsMap).map(uid => ({
-                  userId: uid,
-                  ...chatThreadsMap[uid]
-                })).sort((a, b) => b.lastMsgAt.localeCompare(a.lastMsgAt));
-
-                return (
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-[400px]">
-                    {/* Left Pane - Active Threads List */}
-                    <div className="lg:col-span-4 bg-slate-950 border border-slate-850 rounded-xl overflow-hidden flex flex-col max-h-[450px]">
-                      <div className="p-3 bg-slate-900 border-b border-slate-850">
-                        <p className="text-[10px] font-bold text-slate-500 font-mono uppercase tracking-wider">Active Conversations ({sortedThreads.length})</p>
-                      </div>
-                      <div className="flex-1 overflow-y-auto divide-y divide-slate-855 scrollbar-thin scrollbar-thumb-slate-800">
-                        {sortedThreads.length === 0 ? (
-                          <p className="p-8 text-xs text-slate-550 text-center italic">No customer chats initialized yet.</p>
-                        ) : (
-                          sortedThreads.map(thr => {
-                            const isSelected = activeUserChatId === thr.userId;
-                            const unreplied = thr.messages[thr.messages.length - 1]?.sender === 'user';
-                            return (
-                              <button
-                                key={thr.userId}
-                                type="button"
-                                onClick={() => setActiveUserChatId(thr.userId)}
-                                className={`w-full p-3.5 text-left transition-all flex items-start gap-2.5 text-xs select-none block hover:bg-slate-950/60 ${
-                                  isSelected ? 'bg-slate-900 border-l-2 border-indigo-500' : ''
-                                }`}
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center justify-between gap-1">
-                                    <p className="font-bold text-slate-200 truncate">{thr.userName}</p>
-                                    {unreplied && (
-                                      <span className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse" title="Needs reply"></span>
-                                    )}
-                                  </div>
-                                  <p className="text-[10px] text-slate-550 font-mono truncate">{thr.userEmail}</p>
-                                  <p className="text-[10px] text-slate-400 mt-1 truncate italic">
-                                    "{thr.messages[thr.messages.length - 1]?.message}"
-                                  </p>
-                                </div>
-                              </button>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right Pane - Chat Window */}
-                    <div className="lg:col-span-8 bg-slate-950 border border-slate-850 rounded-xl overflow-hidden flex flex-col h-[450px]">
-                      {activeUserChatId && chatThreadsMap[activeUserChatId] ? (
-                        (() => {
-                          const activeThread = chatThreadsMap[activeUserChatId];
-                          const conversation = [...activeThread.messages].sort((a, b) => (a.timestamp || '').localeCompare(b.timestamp || ''));
-
-                          return (
-                            <>
-                              {/* Active Room Title */}
-                              <div className="p-3 bg-slate-900 border-b border-slate-850 flex items-center justify-between text-xs">
-                                <div>
-                                  <p className="font-bold text-white font-sans">{activeThread.userName}</p>
-                                  <p className="text-[10px] text-slate-500 font-mono">{activeThread.userEmail}</p>
-                                </div>
-                                <span className="text-[9px] px-2 py-0.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-mono rounded">
-                                  ID: {activeUserChatId.substring(0, 8)}...
-                                </span>
-                              </div>
-
-                              {/* Conversations Thread body */}
-                              <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800 flex flex-col">
-                                {conversation.map(msg => {
-                                  const isAdminSender = msg.sender === 'admin';
-                                  return (
-                                    <div 
-                                      key={msg.id} 
-                                      className={`flex flex-col ${isAdminSender ? 'items-end' : 'items-start'}`}
-                                    >
-                                      <span className="text-[8px] text-slate-500 mb-0.5 font-mono">
-                                        {isAdminSender ? 'You (Admin)' : activeThread.userName} • {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
-                                      </span>
-                                      <div 
-                                        className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed ${
-                                          isAdminSender 
-                                            ? 'bg-indigo-600 text-white rounded-tr-none'
-                                            : 'bg-slate-900 text-slate-200 rounded-tl-none border border-slate-800'
-                                        }`}
-                                      >
-                                        <p className="whitespace-pre-wrap break-words">{msg.message}</p>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-
-                              {/* Action send reply form */}
-                              <form 
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  handleSendSupportMessage(
-                                    'admin', 
-                                    activeUserChatId, 
-                                    activeThread.userName, 
-                                    activeThread.userEmail
-                                  );
-                                }}
-                                className="p-3 bg-slate-900 border-t border-slate-855 flex gap-2"
-                              >
-                                <input
-                                  type="text"
-                                  value={currentChatInput}
-                                  onChange={(e) => setCurrentChatInput(e.target.value)}
-                                  placeholder={`Send confidential response back to ${activeThread.userName}...`}
-                                  className="flex-1 bg-slate-950 border border-slate-855 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500/55 placeholder-slate-600"
-                                  disabled={isSendingSupportMsg}
-                                />
-                                <button
-                                  type="submit"
-                                  disabled={isSendingSupportMsg || !currentChatInput.trim()}
-                                  className="px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
-                                >
-                                  {isSendingSupportMsg ? (
-                                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                  ) : (
-                                    <>
-                                      <Send className="w-3.5 h-3.5" />
-                                      <span>Reply</span>
-                                    </>
-                                  )}
-                                </button>
-                              </form>
-                            </>
-                          );
-                        })()
-                      ) : (
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-2">
-                          <MessageSquare className="w-10 h-10 text-slate-800" />
-                          <h4 className="text-xs font-bold text-slate-400 font-mono uppercase tracking-wider">No Thread Selected</h4>
-                          <p className="text-xs text-slate-600 max-w-sm leading-relaxed">
-                            Select a user conversation from the left index panel to view message logs, verify clients, and send private responses securely.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })()}
             </div>
           </div>
         )}

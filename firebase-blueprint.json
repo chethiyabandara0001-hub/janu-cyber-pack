@@ -37,7 +37,6 @@
         "validityDays": { "type": "number" },
         "bandwidthGB": { "type": "string", "description": "Total internet package bandwidth" },
         "vpnTypeName": { "type": "string", "enum": ["WireGuard", "Vmess", "SSH", "Trojan", "V2Ray"] },
-        "imageURL": { "type": "string" },
         "isFeatured": { "type": "boolean" },
         "status": { "type": "string", "enum": ["active", "inactive"] }
       },
@@ -54,8 +53,7 @@
         "content": { "type": "string" },
         "category": { "type": "string", "enum": ["featured", "recent", "news"] },
         "author": { "type": "string" },
-        "date": { "type": "string", "format": "date-time" },
-        "imageURL": { "type": "string" }
+        "date": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "content", "category", "author", "date"]
     },

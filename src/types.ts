@@ -28,7 +28,6 @@ export interface Package {
   validityDays: number;
   bandwidthGB: string; // e.g. "Unlimited" or "100 GB"
   vpnTypeName: 'WireGuard' | 'Vmess' | 'SSH' | 'Trojan' | 'V2Ray';
-  imageURL: string; // If empty, can use fallback based on vpnTypeName
   isFeatured: boolean;
   status: 'active' | 'inactive';
   isp?: 'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel' | 'SLT';
@@ -43,7 +42,6 @@ export interface Post {
   category: 'featured' | 'recent' | 'news';
   author: string;
   date: string;
-  imageURL: string;
 }
 
 export interface PaymentSlip {

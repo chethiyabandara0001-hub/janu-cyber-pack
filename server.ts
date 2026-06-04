@@ -13,8 +13,41 @@ import {
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection 
 } from "firebase/firestore";
 
-const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
-const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
+let firebaseConfig: any;
+try {
+  const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
+  if (fs.existsSync(firebaseConfigPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
+  } else {
+    let currentDirName = ".";
+    try {
+      currentDirName = __dirname;
+    } catch (e) {
+      currentDirName = ".";
+    }
+    const localPath = path.join(currentDirName, "firebase-applet-config.json");
+    const parentPath = path.join(currentDirName, "..", "firebase-applet-config.json");
+    if (fs.existsSync(localPath)) {
+      firebaseConfig = JSON.parse(fs.readFileSync(localPath, "utf8"));
+    } else if (fs.existsSync(parentPath)) {
+      firebaseConfig = JSON.parse(fs.readFileSync(parentPath, "utf8"));
+    } else {
+      throw new Error("File not found");
+    }
+  }
+} catch (err) {
+  // Robust hardcoded fallback of the production keys to prevent Vercel boot failures
+  firebaseConfig = {
+    projectId: "gen-lang-client-0008438867",
+    appId: "1:796923319104:web:5408ce4861d12aec6460a5",
+    apiKey: "AIzaSyClstsLmizDZJ6OD_WnKaSE06yIwHdtq-8",
+    authDomain: "gen-lang-client-0008438867.firebaseapp.com",
+    firestoreDatabaseId: "ai-studio-05efdffc-31e5-48da-b96f-d2964f93684b",
+    storageBucket: "gen-lang-client-0008438867.firebasestorage.app",
+    messagingSenderId: "796923319104",
+    measurementId: ""
+  };
+}
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);

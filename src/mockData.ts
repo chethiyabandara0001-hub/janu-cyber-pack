@@ -13,7 +13,6 @@ export const INITIAL_PACKAGES: Package[] = [
     validityDays: 30,
     bandwidthGB: 'Unlimited',
     vpnTypeName: 'WireGuard',
-    imageURL: '',
     isFeatured: true,
     status: 'active'
   },
@@ -26,7 +25,6 @@ export const INITIAL_PACKAGES: Package[] = [
     validityDays: 30,
     bandwidthGB: '100 GB',
     vpnTypeName: 'Vmess',
-    imageURL: '',
     isFeatured: true,
     status: 'active'
   },
@@ -39,7 +37,6 @@ export const INITIAL_PACKAGES: Package[] = [
     validityDays: 30,
     bandwidthGB: '75 GB',
     vpnTypeName: 'SSH',
-    imageURL: '',
     isFeatured: false,
     status: 'active'
   },
@@ -52,7 +49,6 @@ export const INITIAL_PACKAGES: Package[] = [
     validityDays: 30,
     bandwidthGB: 'Unlimited',
     vpnTypeName: 'V2Ray',
-    imageURL: '',
     isFeatured: true,
     status: 'active'
   }
@@ -74,8 +70,7 @@ WireGuard is an extremely simple yet fast and modern VPN that utilizes state-of-
 No logs are kept, and speeds are up to 6x faster than standard OpenVPN!`,
     category: 'featured',
     author: 'Admin Support',
-    date: '2026-05-24',
-    imageURL: ''
+    date: '2026-05-24'
   },
   {
     id: 'post-2',
@@ -90,8 +85,7 @@ VMess is a state-space network protocol designed for clients to proxy connection
 * **Multi-Node Fallbacks**: Intelligently tests and swaps servers if network latency rises.`,
     category: 'recent',
     author: 'Network Team',
-    date: '2026-05-26',
-    imageURL: ''
+    date: '2026-05-26'
   },
   {
     id: 'post-3',
@@ -107,8 +101,7 @@ All customers holding active **WireGuard** and **VMess** subscriptions will auto
 Thank you for trusting **Data Store** as your primary premium VPN network provider!`,
     category: 'news',
     author: 'Engineering',
-    date: '2026-05-27',
-    imageURL: ''
+    date: '2026-05-27'
   }
 ];
 

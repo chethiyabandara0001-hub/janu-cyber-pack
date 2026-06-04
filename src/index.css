@@ -103,72 +103,6 @@
   --slate-950: #faf8ff; /* Soft violet-tinted off-white background */
 }
 
-/* THEME 3: Acid Volt (Toxic Green / High Voltage Atomic Biohazard) */
-[data-theme="acid-volt"] {
-  --indigo-50: #f0fff4;
-  --indigo-100: #dcffe4;
-  --indigo-200: #99ffa4;
-  --indigo-300: #47ff5f;
-  --indigo-400: #39ff14; /* Radioactive lime green */
-  --indigo-500: #10e030; /* Electric green active status */
-  --indigo-600: #08bd23;
-  --indigo-700: #06941b;
-  --indigo-800: #057315;
-  --indigo-900: #034f0e;
-  --indigo-950: #012907;
-
-  --emerald-300: #fff533; /* Atomic yellow indicator */
-  --emerald-400: #ffd400;
-  --emerald-500: #e3bc00;
-  --emerald-600: #b39400;
-
-  --slate-50: #f7fee7;
-  --slate-100: #ecfccb;
-  --slate-200: #d9f99d;
-  --slate-300: #bef264;
-  --slate-400: #a3e635; /* Crisp toxic lime */
-  --slate-500: #65a30d;
-  --slate-600: #427c0f;
-  --slate-700: #2d5a10;
-  --slate-800: #052207; /* Highlight border dark green-black */
-  --slate-850: #021703; /* Border biohazard atomic */
-  --slate-900: #010d02; /* Bio-containment dark room slate */
-  --slate-950: #000501; /* Ultra deep toxic space black */
-}
-
-/* THEME 4: Neon Blue & grid (Cosmic Tron Legacy Deep Blue Theme) */
-[data-theme="neon-blue"] {
-  --indigo-50: #f0f9ff;
-  --indigo-100: #e0f2fe;
-  --indigo-200: #bae6fd;
-  --indigo-300: #7dd3fc;
-  --indigo-400: #00f0ff; /* TRON cyan */
-  --indigo-500: #00a8ff; /* Pure cyber neon blue */
-  --indigo-600: #007acd;
-  --indigo-700: #005f9e;
-  --indigo-800: #004573;
-  --indigo-900: #002d4d;
-  --indigo-950: #001729;
-
-  --emerald-300: #ff33a1; /* Cyber rose pink backup */
-  --emerald-400: #f43f8e;
-  --emerald-500: #e11d6d;
-  --emerald-600: #be1254;
-
-  --slate-50: #e0f2fe;
-  --slate-100: #bae6fd;
-  --slate-200: #7dd3fc;
-  --slate-300: #38bdf8;
-  --slate-400: #0ea5e9;
-  --slate-500: #0284c7;
-  --slate-600: #0369a1;
-  --slate-700: #075985;
-  --slate-800: #081d33; /* Deep Grid line border highlight */
-  --slate-850: #04101d; /* Borders in Deep-blue tech grid */
-  --slate-900: #020813; /* Digital grid cyber deck cell background */
-  --slate-950: #000308; /* Infinite deep sky block background */
-}
-
 /* INJECT EXTRA PROTECTION RULES TO ENSURE LEGIBILITY ON LIGHT THEME (Prevents any text-white from vanishing) */
 [data-theme="cyberpunk-light"] input,
 [data-theme="cyberpunk-light"] select,
@@ -188,6 +122,35 @@
   border-color: #efe4fc !important;
 }
 
-html {
+html, body {
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: none;
 }
+
+/* Momentum / inertia scrolling optimization across all overflow segments */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto,
+main,
+section,
+div {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modals and sidebar internal scrollables shouldn't trigger scroll-chaining on the underlying page */
+.overflow-y-auto {
+  overscroll-behavior-y: contain;
+}
+.overflow-x-auto {
+  overscroll-behavior-x: contain;
+}
+
+/* GPU hardware acceleration utility definitions */
+.gpu-optimize {
+  transform: translate3d(0, 0, 0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+

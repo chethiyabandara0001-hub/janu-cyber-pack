@@ -11,9 +11,16 @@ import {
   Sun, Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User, FreePackage, FreeRequest, SupportMessage } from './types';
+import { User, Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, SupportMessage } from './types';
 import { firebaseService } from './services/firebaseService';
 import { AdminContactDetails, AdminCustomerChats } from './components/AdminPanels';
+import { Sidebar } from './components/Sidebar';
+import { LiveChatModal } from './components/LiveChatModal';
+import { BankSlipUpload } from './components/BankSlipUpload';
+import { HomeView } from './components/HomeView';
+import { PackagesView } from './components/PackagesView';
+import { UserDashboardView } from './components/UserDashboardView';
+import { FreeVpnView } from './components/FreeVpnView';
 
 const getTierPriceDisplay = (tierInput: string): string => {
   const normalized = (tierInput || '').trim().toLowerCase();
@@ -1483,171 +1490,15 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
       {/* SIDEBAR NAVIGATION - VISIBLE ON DESKTOP */}
-      <aside className={`hidden md:flex ${sidebarCollapsed ? 'w-20' : 'w-64'} bg-slate-900 border-r border-slate-800 flex-col shrink-0 min-h-screen text-slate-400 transition-all duration-300 ease-in-out relative`}>
-        {/* Toggle Collapse Button */}
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="absolute -right-3.5 top-8 z-50 bg-slate-900 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 p-1.5 rounded-full cursor-pointer transition-all duration-200 shadow-lg group"
-          id="sidebar-toggle-btn"
-          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-        >
-          {sidebarCollapsed ? (
-            <ChevronRight className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
-          ) : (
-            <ChevronLeft className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
-          )}
-        </button>
-
-        <div className={`p-6 ${sidebarCollapsed ? 'px-2 flex flex-col items-center justify-center' : ''}`} id="sidebar-header">
-          <div className="flex items-center gap-3 group/logo">
-            <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
-              <div className="absolute w-7 h-7 bg-indigo-600/40 rounded-lg border border-indigo-400/50 -rotate-12 transition-all duration-500 group-hover/logo:-rotate-[25deg] group-hover/logo:scale-110" />
-              <div className="absolute w-7 h-7 bg-purple-600/40 rounded-lg border border-purple-400/50 rotate-12 transition-all duration-500 group-hover/logo:rotate-[25deg] group-hover/logo:scale-110" />
-              <div className="relative z-10 w-8 h-8 bg-slate-900 rounded-lg border border-slate-700 flex items-center justify-center shadow-lg shadow-indigo-900/50 backdrop-blur-md">
-                <Globe className="w-4 h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.8)] animate-pulse" />
-              </div>
-            </div>
-            {!sidebarCollapsed && (
-              <div className="animate-fade-in whitespace-nowrap overflow-hidden">
-                <h1 className="text-lg font-extrabold tracking-tight text-white font-display">Janu Cyber Pack</h1>
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <nav className={`flex-1 px-4 space-y-1.5 ${sidebarCollapsed ? 'px-2 flex flex-col items-center' : ''}`} id="sidebar-nav">
-          <button
-            onClick={() => setActiveTab('home')}
-            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
-              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
-            } ${
-              activeTab === 'home' 
-                ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
-                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
-            }`}
-            title="DASHBOARD"
-          >
-            <Inbox className="w-4 h-4 shrink-0" />
-            {!sidebarCollapsed && <span className="animate-fade-in font-semibold tracking-wider">DASHBOARD</span>}
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('packages')}
-            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
-              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
-            } ${
-              activeTab === 'packages' 
-                ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
-                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
-            }`}
-            title="VPN PACKAGES"
-          >
-            <Layers className="w-4 h-4 shrink-0" />
-            {!sidebarCollapsed && <span className="animate-fade-in font-semibold tracking-wider">VPN PACKAGES</span>}
-          </button>
-
-          {user && (
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
-                sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
-              } ${
-                activeTab === 'dashboard' 
-                  ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
-                  : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
-              }`}
-              title="My Account"
-            >
-              <Server className="w-4 h-4 shrink-0" />
-              {!sidebarCollapsed && <span className="animate-fade-in">My Account</span>}
-            </button>
-          )}
-
-          <button
-            onClick={() => setActiveTab('free-vpn')}
-            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
-              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
-            } ${
-              activeTab === 'free-vpn' 
-                ? 'bg-emerald-550/10 text-emerald-400 font-bold border border-emerald-500/10 font-mono' 
-                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
-            }`}
-            title="Get Free VPN"
-          >
-            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-            {!sidebarCollapsed && <span className="animate-fade-in font-mono">get free vpn</span>}
-          </button>
-
-          {user?.role === 'admin' && (
-            <div className={`pt-6 ${sidebarCollapsed ? 'w-full flex flex-col items-center' : 'w-full'}`}>
-              {!sidebarCollapsed ? (
-                <p className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-fade-in">Admin Tools</p>
-              ) : (
-                <span className="block h-px w-8 bg-slate-800 my-2" />
-              )}
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
-                  sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
-                } ${
-                  activeTab === 'admin' 
-                    ? 'bg-amber-500/10 text-amber-400 font-bold border border-amber-500/10' 
-                    : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
-                }`}
-                title="Admin Control Panel"
-              >
-                <Database className="w-4 h-4 text-amber-500 shrink-0" />
-                {!sidebarCollapsed && <span className="animate-fade-in">Admin Panel ⭐</span>}
-              </button>
-            </div>
-          )}
-        </nav>
-
-        {/* Sidebar Footer User Info */}
-        <div className={`p-4 border-t border-slate-800 mt-auto ${sidebarCollapsed ? 'px-2 flex justify-center' : ''}`}>
-          {user ? (
-            <div className={`flex items-center px-2 ${sidebarCollapsed ? 'justify-center px-0' : 'gap-3'}`}>
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-200 text-xs uppercase shadow-sm shrink-0">
-                {user.displayName.substring(0, 2)}
-              </div>
-              {!sidebarCollapsed && (
-                <div className="min-w-0 flex-1 animate-fade-in">
-                  <p className="text-xs font-bold text-slate-200 truncate">{user.displayName}</p>
-                  <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className={`px-2 ${sidebarCollapsed ? 'px-0 text-center' : ''}`}>
-              {!sidebarCollapsed ? (
-                <>
-                  <p className="text-[10px] text-slate-500">Guest Session Mode</p>
-                  <button
-                    onClick={() => {
-                      setLoginProvider('email');
-                      setShowLoginModal(true);
-                    }}
-                    className="mt-1 text-xs text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-                  >
-                    <LogIn className="w-3.5 h-3.5" /> Sign in to start
-                  </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    setLoginProvider('email');
-                    setShowLoginModal(true);
-                  }}
-                  className="p-1 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/20 flex items-center justify-center cursor-pointer"
-                  title="Sign In"
-                >
-                  <LogIn className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </aside>
+      <Sidebar 
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        user={user}
+        setLoginProvider={setLoginProvider}
+        setShowLoginModal={setShowLoginModal}
+      />
 
       {/* RIGHT SIDE MAIN VIEW WRAPPER */}
       <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden w-full">
@@ -1729,39 +1580,39 @@ export default function App() {
         </header>
 
         {/* MOBILE NAVIGATION PILLS */}
-        <div className="md:hidden flex flex-wrap gap-1 px-4 py-2 bg-slate-900 border-b border-slate-800 justify-center">
+        <div className="md:hidden flex gap-2 px-4 py-3 bg-slate-900 border-b border-slate-800 overflow-x-auto scrollbar-hide snap-x items-center">
           <button 
             onClick={() => setActiveTab('home')}
-            className={`flex-1 text-center py-1.5 text-[9px] font-bold rounded-lg transition tracking-wide font-mono ${activeTab === 'home' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+            className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition tracking-wide font-mono snap-center ${activeTab === 'home' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-sm shadow-indigo-950/40' : 'text-slate-400 border border-transparent'}`}
           >
             DASHBOARD
           </button>
           <button 
             onClick={() => setActiveTab('packages')}
-            className={`flex-1 text-center py-1.5 text-[9px] font-bold rounded-lg transition tracking-wide font-mono ${activeTab === 'packages' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+            className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition tracking-wide font-mono snap-center ${activeTab === 'packages' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-sm shadow-indigo-950/40' : 'text-slate-400 border border-transparent'}`}
           >
-            VPN PACKAGES
+            PACKAGES
           </button>
           {user && (
             <button 
               onClick={() => setActiveTab('dashboard')}
-              className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'dashboard' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+              className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-semibold rounded-xl transition font-mono snap-center ${activeTab === 'dashboard' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-sm shadow-indigo-950/40' : 'text-slate-400 border border-transparent'}`}
             >
-              Account
+              ACCOUNT
             </button>
           )}
           <button 
             onClick={() => setActiveTab('free-vpn')}
-            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'free-vpn' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 font-mono' : 'text-slate-400'}`}
+            className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition font-mono snap-center ${activeTab === 'free-vpn' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-sm shadow-emerald-950/40' : 'text-slate-400 border border-transparent'}`}
           >
-            Free VPN
+            FREE VPN
           </button>
           {user?.role === 'admin' && (
             <button 
               onClick={() => setActiveTab('admin')}
-              className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'admin' ? 'bg-amber-500/10 text-amber-400' : 'text-amber-500'}`}
+              className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition snap-center font-mono ${activeTab === 'admin' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm shadow-amber-950/40' : 'text-amber-500/60 border border-transparent'}`}
             >
-              Admin ⭐
+              ADMIN ⭐
             </button>
           )}
         </div>
@@ -1795,906 +1646,60 @@ export default function App() {
         
         {/* TAB 1: OVERVIEW & NEW POSTS */}
         {activeTab === 'home' && (
-          <div className="space-y-6">
-            
-            {/* Active Subscriptions Validity Tracker */}
-            {user && (() => {
-              const activeSubscriptions = userSlips
-                .filter(slip => slip.status === 'approved' && slip.verifiedAt)
-                .map(slip => {
-                  const pkg = packages.find(p => p.id === slip.packageId);
-                  const validityDays = pkg?.validityDays || 30;
-                  const approvedTime = new Date(slip.verifiedAt!).getTime();
-                  const expiryTime = approvedTime + (validityDays * 24 * 60 * 60 * 1000);
-                  const currentTime = Date.now();
-                  const msRemaining = expiryTime - currentTime;
-                  const daysLeft = Math.max(0, Math.ceil(msRemaining / (24 * 60 * 60 * 1000)));
-                  const percentage = Math.max(0, Math.min(100, (daysLeft / validityDays) * 100));
-                  
-                  return {
-                    slipId: slip.id,
-                    title: slip.packageTitle,
-                    vpnTypeName: slip.vpnTypeName,
-                    validityDays,
-                    daysLeft,
-                    percentage,
-                    isActive: daysLeft > 0
-                  };
-                })
-                .filter(sub => sub.isActive);
-
-              if (activeSubscriptions.length === 0) return null;
-
-              return (
-                <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl animate-fade-in">
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-                    <div>
-                      <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse"></span>
-                        Active Subscription Validity Tracker
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-1">Circular responsive countdown representing validation days remaining on active purchases</p>
-                    </div>
-                    <span className="text-xs px-2.5 py-0.5 font-mono font-bold bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 rounded-full">
-                      {activeSubscriptions.length} Active Plan{activeSubscriptions.length > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {activeSubscriptions.map((sub) => {
-                      const radius = 24;
-                      const strokeWidth = 5;
-                      const circumference = 2 * Math.PI * radius;
-                      const strokeDashoffset = circumference - (sub.percentage / 100) * circumference;
-
-                      return (
-                        <div 
-                          key={sub.slipId} 
-                          className="bg-slate-950 p-4.5 rounded-xl flex items-center justify-between gap-3 border border-slate-850 hover:border-indigo-500/20 transition group"
-                        >
-                          <div className="flex-1 min-w-0">
-                            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest font-mono bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/15">
-                              {sub.vpnTypeName}
-                            </span>
-                            <h4 className="text-xs font-bold text-white mt-2 truncate" title={sub.title}>
-                              {sub.title}
-                            </h4>
-                            <p className="text-[10px] text-slate-400 mt-1">
-                              Duration: <span className="text-slate-200 font-semibold">{sub.validityDays} Days</span>
-                            </p>
-                            <p className="text-[9px] text-slate-500 mt-0.5 font-mono">
-                              {sub.daysLeft} days remaining ({Math.round(sub.percentage)}%)
-                            </p>
-                          </div>
-
-                          <div className="relative w-14 h-14 shrink-0 flex items-center justify-center">
-                            <svg className="w-full h-full transform -rotate-90">
-                              <circle
-                                cx="28"
-                                cy="28"
-                                r={radius}
-                                className="stroke-slate-850"
-                                strokeWidth={strokeWidth}
-                                fill="transparent"
-                              />
-                              <motion.circle
-                                cx="28"
-                                cy="28"
-                                r={radius}
-                                className="stroke-indigo-500 group-hover:stroke-indigo-400 transition-colors"
-                                strokeWidth={strokeWidth}
-                                fill="transparent"
-                                strokeDasharray={circumference}
-                                initial={{ strokeDashoffset: circumference }}
-                                animate={{ strokeDashoffset }}
-                                transition={{ duration: 1.2, ease: "easeOut" }}
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                            <div className="absolute flex flex-col items-center justify-center font-mono leading-none">
-                              <span className="text-xs font-black text-white">{sub.daysLeft}</span>
-                              <span className="text-[7px] text-slate-500 mt-0.5 uppercase tracking-tighter">Days</span>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            {/* Main posts sections (Featured, Recent, News) */}
-            <div className="lg:col-span-2 space-y-8">
-              
-              <div className="border-b border-slate-800 pb-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold tracking-tight text-white font-display">Latest Announcements & Guides</h2>
-                  <p className="text-xs text-slate-400">Discover setups, network updates, and Stealth tunnel configurations</p>
-                </div>
-                <span className="text-xs px-2.5 py-1 bg-slate-900 border border-slate-800 text-slate-400 rounded-lg">
-                  Total Posts: {posts.length}
-                </span>
-              </div>
-
-              {posts.length === 0 ? (
-                <div className="bg-slate-900 border border-slate-800 p-8 rounded-2xl text-center">
-                  <p className="text-slate-400 text-sm">No documentation published yet. Sign in as admin to push content.</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {posts.map((post) => (
-                    <article 
-                      key={post.id} 
-                      className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all p-6 group animate-fade-in"
-                    >
-                      <div className="flex flex-wrap items-center gap-2 mb-3">
-                        <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded uppercase ${
-                          post.category === 'featured' ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20' :
-                          post.category === 'recent' ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20' :
-                          'bg-amber-500/10 text-amber-300 border border-amber-500/20'
-                        }`}>
-                          {post.category}
-                        </span>
-                        <span className="text-xs text-slate-500 font-mono">{post.date}</span>
-                        <span className="text-xs text-slate-500">By {post.author}</span>
-                      </div>
-
-                      <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors mt-1">
-                        {post.title}
-                      </h3>
-                      <p className="text-sm text-slate-400 mt-2 leading-relaxed">
-                        {post.excerpt}
-                      </p>
-
-                      <div className="mt-4 p-4 bg-slate-950 rounded-xl text-xs text-slate-300 space-y-2 whitespace-pre-wrap font-sans border-l-3 border-indigo-500">
-                        {post.content}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Sidebar section: Quick Stats and secure contacts */}
-            <div className="space-y-6">
-              
-              {/* Secure Contact channels */}
-              {contact && (
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-                  <h4 className="text-sm font-bold text-white font-mono border-b border-slate-800 pb-2 uppercase tracking-wider">SECURE CONTACT CHANNELS</h4>
-                  
-                  <div className="space-y-4 text-xs text-slate-300">
-                    <div className="flex items-start gap-3">
-                      <Phone className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-semibold text-slate-200">Hotline Support</p>
-                        <p className="text-slate-400 font-mono">{contact.phone}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Send className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-semibold text-slate-200">Telegram Channel</p>
-                        <a 
-                          href={contact.telegramChannel} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className="text-indigo-400 font-mono flex items-center gap-1 hover:underline text-xs"
-                        >
-                          Channel Link <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    </div>
-
-
-                  </div>
-                </div>
-              )}
-
-              {/* FLOATING DIRECT DEEP CHAT ICON WIDGET */}
-              <div className="fixed bottom-6 right-6 z-40">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!user) {
-                      setShowLoginModal(true);
-                    } else {
-                      setIsSupportModalOpen(true);
-                    }
-                  }}
-                  className="flex items-center gap-2 px-4 py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full shadow-xl shadow-indigo-500/30 hover:scale-105 transition-all cursor-pointer font-sans text-xs font-bold font-mono tracking-wider"
-                  title="Chat Directly to Admin"
-                >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <MessagesSquare className="w-4 h-4 text-white" />
-                  <span>Support Line</span>
-                </button>
-              </div>
-
-            </div>
-
-          </div>
-
-          </div>
+          <HomeView
+            user={user}
+            userSlips={userSlips}
+            packages={packages}
+            posts={posts}
+            contact={contact}
+            setShowLoginModal={setShowLoginModal}
+            setIsSupportModalOpen={setIsSupportModalOpen}
+          />
         )}
 
         {/* TAB 2: VPN SUBSCRIPTIONS & PACKAGE CARDS */}
         {activeTab === 'packages' && (
-          <div className="space-y-8 animate-fade-in">
-            <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-1 font-display">Stealth Unlimited Data Subscriptions</h2>
-              <p className="text-xs text-slate-400">Guaranteed unthrottled downloads, high stability gaming lines, and encrypted stealth tunnels</p>
-            </div>
-
-            {packages.filter(pkg => pkg.status === 'active').length === 0 ? (
-              <div className="bg-slate-900 border border-slate-800 p-12 rounded-2xl text-center">
-                <p className="text-slate-400">No active internet packages available. Please contact administrator.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {packages.filter(pkg => pkg.status === 'active').map((pkg) => (
-                  <div 
-                    key={pkg.id} 
-                    className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-indigo-500/30 transition-all flex flex-col group relative"
-                  >
-                    {/* VPN Badge stamp */}
-                    <div className="absolute top-4 right-4 z-10">
-                      <span className="px-3 py-1 bg-slate-950/90 text-indigo-400 border border-indigo-500/20 rounded-full font-mono text-xs font-bold uppercase shadow-lg">
-                        {pkg.vpnTypeName}
-                      </span>
-                    </div>
-
-                    {/* Package details body */}
-                    <div className="p-6 flex-1 flex flex-col pt-12">
-                      <h3 className="text-lg font-bold text-white group-hover:text-indigo-400 transition-colors mt-1 line-clamp-1">
-                        {pkg.title}
-                      </h3>
-                      
-                      {/* ISP and package selection badges */}
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        <span className="px-2 py-0.5 bg-slate-950 text-indigo-300 font-bold rounded text-[9px] font-mono border border-indigo-500/10 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                          📶 {pkg.isp || 'Dialog'}
-                        </span>
-                        <span className="px-2 py-0.5 bg-slate-950 text-amber-300 font-bold rounded text-[9px] font-mono border border-amber-500/10 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
-                          ⚡ {pkg.packageType || 'Mobile'}
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-slate-400 mt-2.5 flex-1 line-clamp-3 leading-relaxed">
-                        {pkg.description}
-                      </p>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 text-xs font-mono pt-4 border-t border-slate-800/60">
-                        <div className="bg-slate-950 p-2.5 rounded-lg text-center border border-slate-800/40">
-                          <p className="text-slate-500 text-[9px]">CAPACITY/SPEED</p>
-                          <p className="text-slate-200 font-bold mt-0.5">{pkg.bandwidthGB}</p>
-                        </div>
-                        <div className="bg-slate-950 p-2.5 rounded-lg text-center border border-slate-800/40">
-                          <p className="text-slate-500 text-[9px]">VALIDITY</p>
-                          <p className="text-slate-200 font-bold mt-0.5">{pkg.validityDays} Days</p>
-                        </div>
-                      </div>
-
-                      {/* Cash Counter */}
-                      <div className="mt-6 flex items-baseline justify-between pt-2">
-                        <div>
-                          <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Monthly Service Fee</p>
-                          <p className="text-xs font-semibold text-slate-400 mt-1 uppercase font-mono tracking-wider">
-                            Select in Checkout
-                          </p>
-                        </div>
-                        
-                        <button
-                          onClick={() => {
-                            if (!user) {
-                              setShowLoginModal(true);
-                              return;
-                            }
-                            setSelectedPackForSlip(pkg);
-                          }}
-                          className="px-4 py-2 font-bold text-xs text-white bg-indigo-500 hover:bg-indigo-600 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer shadow-md shadow-indigo-500/10"
-                        >
-                          <Upload className="w-3.5 h-3.5" />
-                          Buy Package
-                        </button>
-                      </div>
-
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <PackagesView
+            packages={packages}
+            user={user}
+            setShowLoginModal={setShowLoginModal}
+            setSelectedPackForSlip={setSelectedPackForSlip}
+          />
         )}
 
         {/* TAB: GET FREE VPN INTERACTIVE GATEWAY */}
         {activeTab === 'free-vpn' && (
-          <div className="space-y-8 animate-fade-in font-sans">
-            <div className="border-b border-slate-800 pb-4">
-              <span className="text-[10px] text-emerald-400 font-mono tracking-widest uppercase font-bold bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-                ⚡ Complimentary bypass tunnel gateway
-              </span>
-              <h2 className="text-2xl font-bold tracking-tight text-white mt-3 mb-1">
-                Get Free Unlimited High-Speed VPN
-              </h2>
-              <p className="text-xs text-slate-400">
-                Choose your local Sri Lankan internet service provider (ISP), select your preferred connection interface, and unlock complimentary high-speed bypass codes configuration logs.
-              </p>
-            </div>
-
-            {/* MAIN SELECTIONS AND CLASSIFICATIONS */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              
-              {/* STEP 1: CHOOSE ISP & CONNECTION TYPES */}
-              <div className="lg:col-span-4 space-y-6">
-                
-                {/* ISP CHOOSER SELECTOR CARDS */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
-                    Line 1: Pick Telecom Operator ( श्रीलंका ISP )
-                  </p>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { name: 'Dialog' as const, color: 'border-red-500/40 text-red-400 bg-red-500/5', desc: 'Sri Lanka #1' },
-                      { name: 'Mobitel' as const, color: 'border-green-500/40 text-green-400 bg-green-500/5', desc: 'National Carrier' },
-                      { name: 'Hutch' as const, color: 'border-orange-500/40 text-orange-400 bg-orange-500/5', desc: 'True Unlimited' },
-                      { name: 'Airtel' as const, color: 'border-amber-500/40 text-amber-500 bg-amber-500/5', desc: 'High Speed 5G' }
-                    ].map((isp) => (
-                      <button
-                        key={isp.name}
-                        onClick={() => {
-                          setSelectedFreeIsp(isp.name);
-                          setSelectedFreePackageId('');
-                        }}
-                        className={`p-3 rounded-xl border flex flex-col text-left transition-all cursor-pointer relative ${
-                          selectedFreeIsp === isp.name
-                            ? 'border-indigo-500 text-indigo-400 bg-indigo-500/10 scale-[1.02] shadow-lg shadow-indigo-950/20 ring-1 ring-indigo-500/50'
-                            : 'border-slate-800 text-slate-400 bg-slate-950/40 hover:border-slate-750 hover:text-slate-300'
-                        }`}
-                      >
-                        <span className="font-bold text-xs">{isp.name}</span>
-                        <span className="text-[9px] text-slate-500 mt-0.5">{isp.desc}</span>
-                        
-                        {selectedFreeIsp === isp.name && (
-                          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* INTERFACE TYPE SELECTOR CARDS */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider font-bold">
-                    Line 2: Pick Interface Interface
-                  </p>
-
-                  <div className="space-y-2">
-                    {[
-                      { type: 'Mobile' as const, desc: 'Optimized for Mobile zoom, tik tok & social packets' },
-                      { type: 'Router' as const, desc: 'Bypass router restrictions with custom WAN tunnels' },
-                      { type: 'Fiber' as const, desc: 'Direct ultra-high speed Fiber optic configuration codes' }
-                    ].map((intf) => (
-                      <button
-                        key={intf.type}
-                        onClick={() => {
-                          setSelectedFreeType(intf.type);
-                          setSelectedFreePackageId('');
-                        }}
-                        className={`w-full p-3 rounded-xl border flex items-center justify-between transition text-left cursor-pointer ${
-                          selectedFreeType === intf.type
-                            ? 'border-emerald-500 text-emerald-400 bg-emerald-500/10 font-bold'
-                            : 'border-slate-800 text-slate-400 bg-slate-950/40 hover:border-slate-750'
-                        }`}
-                      >
-                        <div>
-                          <p className="text-xs font-mono">{intf.type}</p>
-                          <p className="text-[9px] text-slate-500 font-sans mt-0.5">{intf.desc}</p>
-                        </div>
-                        <ChevronRight className="w-3.5 h-3.5 opacity-60" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* STEP 2: SHOW MATCHING FREE PACKAGES */}
-              <div className="lg:col-span-8 space-y-6">
-                
-                {/* Guest Account Prompt */}
-                {!user && (
-                  <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex gap-4 items-start">
-                    <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-xs font-bold text-amber-400 uppercase tracking-wide">Client Session is Anonymous</h4>
-                      <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                        You can view all packages and operators, but you must be signed in to submit your request and view your personal free bypass credentials history. Unlocked credentials will sync automatically with your cloud profile.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setLoginProvider('email');
-                          setShowLoginModal(true);
-                        }}
-                        className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-[10px] font-bold text-slate-950 rounded-lg cursor-pointer transition uppercase"
-                      >
-                        🔑 Sign In Now
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Filter and Match list */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6">
-                  
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                    <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono">
-                      🌐 Match Result and Available VPN Bundles
-                    </h3>
-                    <span className="text-[10px] text-slate-400 bg-slate-950 px-2.5 py-0.5 rounded font-mono border border-slate-850">
-                      ISP: {selectedFreeIsp} • TYPE: {selectedFreeType}
-                    </span>
-                  </div>
-
-                  {/* Filtered lists of FreePackages */}
-                  {freePackages.filter(p => p.isp === selectedFreeIsp && p.packageType === selectedFreeType).length === 0 ? (
-                    <div className="text-center py-16 space-y-3 bg-slate-950/40 rounded-xl border border-slate-850/60 border-dashed">
-                      <Layers className="w-8 h-8 text-slate-600 mx-auto opacity-50" />
-                      <p className="text-xs text-slate-400 font-mono select-none">No free packages uploaded yet for this specific configurations combo.</p>
-                      {user?.role === 'admin' && (
-                        <p className="text-[10px] text-indigo-400 select-none">You can add codes below in administrative parameters!</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {freePackages
-                        .filter(p => p.isp === selectedFreeIsp && p.packageType === selectedFreeType)
-                        .map((pkg) => {
-                          const isSelected = selectedFreePackageId === pkg.id;
-                          return (
-                            <div
-                              key={pkg.id}
-                              onClick={() => {
-                                setSelectedFreePackageId(pkg.id);
-                                setClaimedFreeRequest(null);
-                                setFreeClaimError('');
-                              }}
-                              className={`p-4 rounded-xl border transition-all cursor-pointer relative flex flex-col justify-between ${
-                                isSelected
-                                  ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/30'
-                                  : 'border-slate-800/80 bg-slate-950/30 hover:border-slate-700 hover:bg-slate-950/50'
-                              }`}
-                            >
-                              <div className="space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                  <span className="text-[10px] text-emerald-400 font-mono font-bold uppercase py-0.5 px-2 bg-emerald-500/10 border border-emerald-500/20 rounded">
-                                    {pkg.price || 'Free'}
-                                  </span>
-                                  {isSelected && (
-                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 antialiased"></span>
-                                  )}
-                                </div>
-                                <h4 className="text-sm font-bold text-white mt-2">{pkg.packageName}</h4>
-                                <p className="text-[10px] text-slate-400">Sri Lankan ISP tunnel bypass protocols matched.</p>
-                              </div>
-
-                              <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between">
-                                <span className="text-[9px] text-slate-500 font-mono">Matched Core DB: {pkg.id}</span>
-                                <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1 font-mono">
-                                  LKR 0 LKR
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  )}
-
-                  {/* Submission and loading action center */}
-                  {selectedFreePackageId && (
-                    <div className="pt-4 border-t border-slate-800/60 space-y-4">
-                      
-                      {freeClaimError && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-400 font-mono flex items-center gap-2">
-                          <AlertCircle className="w-4 h-4 shrink-0" />
-                          {freeClaimError}
-                        </div>
-                      )}
-
-                      {/* Display successful claiming info */}
-                      {claimedFreeRequest && (
-                        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 space-y-3 animate-fade-in font-mono">
-                          <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase mb-1">
-                            <Check className="w-4 h-4" />
-                            Complementary Free VPN Activated Successfully!
-                          </div>
-                          <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
-                            Your server bypass config has been mapped. Copy this activation token and paste it directly inside your Shadowsocks, V2Ray or Wireguard Client application:
-                          </p>
-                          <div className="bg-slate-950 border border-slate-850 p-2.5 rounded-lg flex items-center justify-between gap-4">
-                            <span className="text-white text-xs select-all truncate break-all block flex-1 font-mono">{claimedFreeRequest.codeReceived}</span>
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText(claimedFreeRequest.codeReceived);
-                                alert('Activation code copied to clipboard!');
-                              }}
-                              className="px-2.5 py-1.5 bg-emerald-500 text-slate-950 hover:bg-emerald-400 font-bold rounded text-[10px] transition shrink-0 uppercase cursor-pointer"
-                            >
-                              Copy Code
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Advertisement redirection verification engine */}
-                      <div className="bg-slate-950/80 border border-slate-850 p-5 rounded-2xl space-y-4 font-mono text-[11px]">
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5">
-                            🛡️ Ads Redirection Verification
-                          </span>
-                          <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
-                            {adRedirectionCount} / 10 Completed
-                          </span>
-                        </div>
-
-                        <p className="text-slate-400 font-sans leading-relaxed">
-                          To authorize secure Sri Lankan telecom bypass keys and deliver configuration log protocols, please complete authentication by opening the active advertisement portal ten (10) times. Overriding limits triggers server sync instantly.
-                        </p>
-
-                        {/* Staggered progress grid nodes */}
-                        <div className="grid grid-cols-10 gap-1.5">
-                          {Array.from({ length: 10 }).map((_, idx) => {
-                            const isCompleted = idx < adRedirectionCount;
-                            const isActive = idx === adRedirectionCount;
-                            return (
-                              <div
-                                key={idx}
-                                className={`h-2 rounded transition-all duration-300 ${
-                                  isCompleted
-                                    ? 'bg-emerald-500 shadow-md shadow-emerald-500/20'
-                                    : isActive
-                                    ? 'bg-indigo-500 animate-pulse'
-                                    : 'bg-slate-800'
-                                }`}
-                                title={`Step ${idx + 1}`}
-                              />
-                            );
-                          })}
-                        </div>
-
-                        {/* Interactive Click triggers */}
-                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-                          <div className="space-y-1">
-                            <p className="text-[10px] text-slate-500">
-                              Current Mode: {new Date().getHours() >= 6 && new Date().getHours() < 18 ? '☀️ Day Time Ads Active' : '🌙 Night Time Ads Active'}
-                            </p>
-                            {adRedirectionCount > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, '0');
-                                  setAdRedirectionCount(0);
-                                }}
-                                className="text-[9px] text-red-400/80 hover:text-red-400 underline cursor-pointer"
-                              >
-                                Reset verification counter
-                              </button>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={handleTriggerAdRedirect}
-                            disabled={isLoadingActiveAd || adRedirectionCount >= 10}
-                            className={`px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center gap-1.5 transition cursor-pointer ${
-                              adRedirectionCount >= 10
-                                ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20'
-                                : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-950/40'
-                            }`}
-                          >
-                            {isLoadingActiveAd ? (
-                              <>
-                                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                Connecting Portal...
-                              </>
-                            ) : adRedirectionCount >= 10 ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                Ad Gate Cleared
-                              </>
-                            ) : (
-                              <>
-                                <ExternalLink className="w-3.5 h-3.5" />
-                                🚀 Redirect & Verify [Step {adRedirectionCount + 1}/10]
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Main activation trigger button */}
-                      <div className="flex items-center justify-between gap-4 pt-2">
-                        <p className="text-[10px] text-slate-500 font-mono max-w-sm">
-                          {adRedirectionCount < 10 
-                            ? `⚠️ Please complete all 10 redirections to unlock complementary VPN files. (Remaining: ${10 - adRedirectionCount})`
-                            : '⚡ Tunnel verified successfully! Click to fetch and deploy keys.'}
-                        </p>
-                        
-                        <button
-                          onClick={() => handleClaimFreeVpn(selectedFreePackageId)}
-                          disabled={isClaimingFree || adRedirectionCount < 10}
-                          className={`px-6 py-2.5 text-xs font-bold rounded-xl transition uppercase flex items-center gap-2 shrink-0 cursor-pointer shadow-lg ${
-                            isClaimingFree || adRedirectionCount < 10
-                              ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-750/30'
-                              : 'bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-emerald-950/30 font-extrabold'
-                          }`}
-                        >
-                          {isClaimingFree ? (
-                            <>
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                              activating Tunnels...
-                            </>
-                          ) : adRedirectionCount < 10 ? (
-                            <>
-                              <Lock className="w-3.5 h-3.5" />
-                              CONFIRM & GET CODE
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              CONFIRM & GET CODE
-                            </>
-                          )}
-                        </button>
-                      </div>
-
-                    </div>
-                  )}
-
-                </div>
-
-              </div>
-
-            </div>
-
-            {/* CLAIM HISTORY TRACKER (USER DATA COGNIZANT) */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-              <div className="border-b border-slate-800 pb-3">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-1.5">
-                  📁 Your Free Claims & Activation History
-                </h3>
-                <p className="text-[11px] text-slate-500 font-serif mt-0.5">
-                  Synchronous logs displaying all your claimed data packets. You can access previously claim vouchers anytime.
-                </p>
-              </div>
-
-              {!user ? (
-                <p className="text-xs text-slate-400 font-mono py-6 text-center">
-                  Anonymous Session. Please log in to view your claiming logs.
-                </p>
-              ) : freeRequests.filter(r => r.userId === user.uid).length === 0 ? (
-                <p className="text-xs text-slate-400 font-mono py-8 text-center">
-                  You have not claimed any complimentary VPN packages yet. Try picking your local ISP toClaim your first!
-                </p>
-              ) : (
-                <div className="overflow-x-auto w-full scrollbar-thin scrollbar-thumb-slate-800">
-                  <table className="w-full text-left text-xs font-mono text-slate-300 border-collapse min-w-[650px]">
-                    <thead>
-                      <tr className="border-b border-slate-800 text-slate-500 text-[10px] uppercase">
-                        <th className="py-2.5">Date</th>
-                        <th className="py-2.5">ISP</th>
-                        <th className="py-2.5">Type</th>
-                        <th className="py-2.5">Package</th>
-                        <th className="py-2.5">Delivered Voucher Code</th>
-                        <th className="py-2.5 text-right">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {freeRequests
-                        .filter(r => r.userId === user.uid)
-                        .map((req) => (
-                          <tr key={req.id} className="border-b border-slate-850/60 hover:bg-slate-950/20 transition-all">
-                            <td className="py-3 text-slate-400 text-[11px]">
-                              {new Date(req.requestedAt).toLocaleString()}
-                            </td>
-                            <td className="py-3">
-                              <span className="font-bold text-white">{req.isp}</span>
-                            </td>
-                            <td className="py-3 text-slate-400">
-                              {req.packageType}
-                            </td>
-                            <td className="py-3 font-sans font-medium text-slate-200">
-                              {req.packageName}
-                            </td>
-                            <td className="py-3">
-                              <code className="text-emerald-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-850 text-[11px]" title={req.codeReceived}>
-                                {req.codeReceived.substring(0, 16)}...
-                              </code>
-                            </td>
-                            <td className="py-3 text-right">
-                              <button
-                                onClick={() => {
-                                  navigator.clipboard.writeText(req.codeReceived);
-                                  alert('Copied claimed code to clipboard!');
-                                }}
-                                className="px-2 py-1 bg-slate-950 hover:bg-slate-850 border border-slate-850 hover:border-slate-750 text-indigo-400 text-[10px] rounded transition uppercase cursor-pointer"
-                              >
-                                Copy Code
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-          </div>
+          <FreeVpnView
+            user={user}
+            setLoginProvider={setLoginProvider}
+            setShowLoginModal={setShowLoginModal}
+            selectedFreeIsp={selectedFreeIsp}
+            setSelectedFreeIsp={setSelectedFreeIsp}
+            selectedFreeType={selectedFreeType}
+            setSelectedFreeType={setSelectedFreeType}
+            selectedFreePackageId={selectedFreePackageId}
+            setSelectedFreePackageId={setSelectedFreePackageId}
+            freePackages={freePackages}
+            freeRequests={freeRequests}
+            claimedFreeRequest={claimedFreeRequest}
+            setClaimedFreeRequest={setClaimedFreeRequest}
+            freeClaimError={freeClaimError}
+            setFreeClaimError={setFreeClaimError}
+            adRedirectionCount={adRedirectionCount}
+            setAdRedirectionCount={setAdRedirectionCount}
+            isLoadingActiveAd={isLoadingActiveAd}
+            handleTriggerAdRedirect={handleTriggerAdRedirect}
+            isClaimingFree={isClaimingFree}
+            handleClaimFreeVpn={handleClaimFreeVpn}
+          />
         )}
 
         {/* TAB 3: USER SUBSCRIPTIONS AND STATE MONITOR */}
         {activeTab === 'dashboard' && user && (
-          <div className="space-y-8 animate-fade-in">
-            <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-1 font-display">User Subscriptions & Usage Tracker</h2>
-              <p className="text-xs text-slate-400">Review your activated VPN config profiles, live simulation statistics, and slip status</p>
-            </div>
-
-            {/* Simulated Live VPN Telemetry Panel */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-              {/* Secure Configurations Inbox */}
-              <div className="lg:col-span-3 bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center justify-between">
-                  <span>📥 VPN INBOX & PROFILE KEYS</span>
-                  <span className="text-[10px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-2 py-0.5 rounded uppercase">SYSTEM DIRECT</span>
-                </h3>
-
-                <div className="mt-6 space-y-4">
-                  {userSlips.filter(s => s.status === 'approved').length === 0 ? (
-                    <div className="text-center py-12 text-xs text-slate-400/60 font-mono space-y-4">
-                      <Inbox className="w-10 h-10 mx-auto text-slate-705 mb-3" />
-                      <p>Your verified subscription keys and configuration profiles will appear here.</p>
-                      <p className="text-[11px] mt-1 text-indigo-400">Submit a bank slip receipt on packages tab and wait for approval.</p>
-                    </div>
-                  ) : (
-                    userSlips.filter(s => s.status === 'approved').map((approvedSlip) => (
-                      <div key={approvedSlip.id} className="bg-slate-950 border border-slate-800 rounded-xl p-5">
-                        <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="p-1 px-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded font-mono text-xs font-bold uppercase">
-                              {approvedSlip.vpnTypeName} Verified
-                            </span>
-                            <span className="text-xs font-bold text-slate-200 mt-0.5">{approvedSlip.packageTitle}</span>
-                          </div>
-                          <span className="text-[10px] text-slate-500 font-mono">Verified: {approvedSlip.verifiedAt ? new Date(approvedSlip.verifiedAt).toLocaleDateString() : 'N/A'}</span>
-                        </div>
-
-                        <p className="text-xs text-slate-400 mb-2">Copy the config configuration file code directly to your Wireguard or V2Ray agent application:</p>
-                        
-                        <div className="bg-slate-900 p-4 rounded-lg font-mono text-xs text-emerald-400 overflow-x-auto border border-slate-800/80 max-h-56 select-all">
-                          <pre>{approvedSlip.vpnCode}</pre>
-                        </div>
-
-                        <div className="mt-3 flex justify-between items-center text-[11px] text-slate-400 pt-3 border-t border-slate-800/50">
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <CheckCircle className="w-3.5 h-3.5" /> Bot Service Synced
-                          </span>
-                          <span>Admin notes: {approvedSlip.adminNotes || "Enjoy your premium VPN connection"}</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-            </div>
-
-            {/* Receipt and Slip histories */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">
-                📋 SUBMITTED TRANSACTIONS HISTORY
-              </h3>
-
-              <div className="mt-6">
-                {userSlips.length === 0 ? (
-                  <p className="text-xs text-slate-400 py-4">No bank slips submitted from your user account yet.</p>
-                ) : (
-                  <>
-                    {/* Desktop table view */}
-                    <div className="hidden sm:block overflow-x-auto w-full scrollbar-thin scrollbar-thumb-slate-800">
-                      <table className="w-full text-left text-xs min-w-[700px]">
-                        <thead>
-                          <tr className="text-slate-500 border-b border-slate-800 font-mono">
-                            <th className="pb-3 font-semibold">Slip ID</th>
-                            <th className="pb-3 font-semibold">Package Selection</th>
-                            <th className="pb-3 font-semibold">Price</th>
-                            <th className="pb-3 font-semibold">Submitted Date</th>
-                            <th className="pb-3 font-semibold text-center">Status</th>
-                            <th className="pb-3 font-semibold text-right">View Attachment</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-800/40 font-mono">
-                          {userSlips.map((s) => (
-                            <tr key={s.id} className="hover:bg-white/[0.01]">
-                              <td className="py-4 text-indigo-400 font-bold">{s.id.split('_')[1]}</td>
-                              <td className="py-4 font-sans text-slate-200 font-medium">{s.packageTitle}</td>
-                              <td className="py-4 font-bold text-slate-350">{s.currency} {s.price}</td>
-                              <td className="py-4 text-slate-400">{new Date(s.submittedAt).toLocaleDateString()}</td>
-                              <td className="py-4 text-center">
-                                <span className={`px-2.5 py-0.5 rounded text-[10px] uppercase font-black ${
-                                  s.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
-                                  s.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
-                                  'bg-rose-500/10 text-rose-400'
-                                }`}>
-                                  {s.status}
-                                </span>
-                              </td>
-                              <td className="py-4 text-right">
-                                <a 
-                                  href={s.bankSlipBase64} 
-                                  target="_blank" 
-                                  rel="noreferrer" 
-                                  className="text-indigo-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
-                                >
-                                  Open Slip File <ExternalLink className="w-3 h-3" />
-                                </a>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Mobile responsive card list */}
-                    <div className="block sm:hidden space-y-4">
-                      {userSlips.map((s) => (
-                        <div key={s.id} className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-3 text-xs font-sans">
-                          <div className="flex justify-between items-center">
-                            <span className="text-slate-500 font-mono text-[10px]">ID: {s.id.split('_')[1] || s.id}</span>
-                            <span className={`px-2.5 py-0.5 rounded text-[9px] uppercase font-bold text-[10px] ${
-                              s.status === 'pending' ? 'bg-amber-500/10 text-amber-400' :
-                              s.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400' :
-                              'bg-rose-500/10 text-rose-400'
-                            }`}>
-                              {s.status}
-                            </span>
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-white text-sm">{s.packageTitle}</h4>
-                            <p className="text-[10px] text-slate-400 font-mono mt-1">Submitted: {new Date(s.submittedAt).toLocaleDateString()}</p>
-                          </div>
-                          <div className="flex justify-between items-center pt-2.5 border-t border-slate-900 text-xs text-slate-300">
-                            <p className="font-bold text-emerald-400 font-mono">{s.currency} {s.price}</p>
-                            <a 
-                              href={s.bankSlipBase64} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="text-indigo-400 hover:underline text-[11px] font-mono inline-flex items-center gap-1 cursor-pointer"
-                            >
-                              Open Slip File <ExternalLink className="w-3 h-3" />
-                            </a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-          </div>
+          <UserDashboardView
+            user={user}
+            userSlips={userSlips}
+          />
         )}
 
         {/* TAB 4: ADMINISTRATIVE COMMAND CENTER */}
@@ -3966,302 +2971,50 @@ export default function App() {
 
       {/* POPUP 1: BANK SLIPS FILE UPLOAD ATTACHMENT MODAL */}
       <AnimatePresence>
-        {selectedPackForSlip && (
-          <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: -20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: -20 }}
-              transition={{ duration: 0.15 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md my-4 sm:my-8 shadow-2xl p-5 relative"
-            >
-              <button 
-                onClick={() => { setSelectedPackForSlip(null); setBase64Slip(''); setSlipFeedback(null); }}
-                className="absolute top-4 right-4 p-1 hover:bg-slate-800 text-slate-400 hover:text-white rounded-lg transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
-                <Upload className="w-4 h-4 text-indigo-400" />
-                Submit Verification Receipt Slip
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">Submit bank slip for <span className="text-indigo-300 font-bold">{selectedPackForSlip.title}</span></p>
-
-              <div className="mt-4 space-y-3 font-sans">
-                
-                {/* Package Tier Dropdown Selection */}
-                <div className="space-y-1">
-                  <label className="block text-[10px] text-slate-400 font-semibold font-mono uppercase tracking-wider">Select VPN Subscription Tier:</label>
-                  <select
-                    value={selectedTier}
-                    onChange={(e) => setSelectedTier(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-indigo-500/50 font-sans cursor-pointer"
-                  >
-                    <option value="Lite 100gb for 200lkr">Lite 100gb for 200lkr</option>
-                    <option value="Go 200gb for 300lkr">Go 200gb for 300lkr</option>
-                    <option value="Pro 300gb for 400lkr">Pro 300gb for 400lkr</option>
-                    <option value="Prime 500gb for 500lkr">Prime 500gb for 500lkr</option>
-                    <option value="Premium 1000gb for 1000lkr">Premium 1000gb for 1000lkr</option>
-                  </select>
-                </div>
-
-                {/* Cost Tag */}
-                <div className="bg-slate-950 px-3 py-2 rounded-lg flex justify-between items-center text-xs font-mono border border-slate-800 animate-fade-in">
-                  <span className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Service Fee Due:</span>
-                  <span className="text-md font-black text-indigo-400 font-mono">{getTierPriceDisplay(selectedTier)}</span>
-                </div>
-                <div className="bg-slate-950 p-3 rounded-lg border border-slate-850/85 text-xs">
-                  <p className="font-bold text-indigo-400 uppercase tracking-widest font-mono mb-1.5 flex items-center gap-1 text-[10px]">
-                    🏦 Bank Transfer Information
-                  </p>
-                  <p className="text-slate-400 mb-2 text-[9px] leading-normal font-sans">
-                    Please transfer the subscription fee to the official store banking coordinate details below, then upload the receipt/slip below.
-                  </p>
-                  <div className="grid grid-cols-2 gap-1.5 text-[9px] font-mono">
-                    <div className="bg-slate-900 p-1.5 rounded border border-slate-800/30">
-                      <span className="text-slate-500 block text-[7px] uppercase">Bank Name</span>
-                      <span className="text-slate-200 font-bold">{contact?.bankName || 'Commercial Bank Of Ceylon'}</span>
-                    </div>
-                    <div className="bg-slate-900 p-1.5 rounded border border-slate-800/30">
-                      <span className="text-slate-500 block text-[7px] uppercase">Branch</span>
-                      <span className="text-slate-200 font-bold">{contact?.bankBranch || 'Colombo Fort'}</span>
-                    </div>
-                    <div className="bg-slate-900 p-1.5 rounded col-span-2 border border-slate-800/30">
-                      <span className="text-slate-500 block text-[7px] uppercase">Account Owner Name</span>
-                      <span className="text-slate-200 font-bold">{contact?.bankAccountName || 'DataStore VPN Router Group'}</span>
-                    </div>
-                    <div className="bg-slate-900 p-1.5 rounded col-span-2 flex justify-between items-center pr-1.5 border border-slate-800/30">
-                      <div>
-                        <span className="text-slate-500 block text-[7px] uppercase">Account Number</span>
-                        <span className="text-indigo-400 font-bold text-[11px]">{contact?.bankAccountNo || '800021398'}</span>
-                      </div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const num = contact?.bankAccountNo || '800021398';
-                          navigator.clipboard.writeText(num);
-                        }}
-                        className="text-[8px] bg-slate-800 hover:bg-slate-750 hover:text-white text-slate-300 px-1.5 py-0.5 rounded transition cursor-pointer"
-                        type="button"
-                      >
-                        Copy No.
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Upload drag-n-drop panel as requested by Guidelines */}
-                <div 
-                  onDragEnter={handleDrag}
-                  onDragOver={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDrop={handleDrop}
-                  onClick={() => document.getElementById('slip-file-input')?.click()}
-                  className={`border border-dashed rounded-lg p-4 text-center cursor-pointer transition ${
-                    dragActive ? 'border-indigo-550 bg-indigo-500/[0.03]' : 'border-slate-850 bg-slate-950 hover:border-indigo-500/35'
-                  }`}
-                >
-                  <input 
-                    id="slip-file-input" 
-                    type="file" 
-                    accept="image/*" 
-                    className="hidden" 
-                    onChange={handleFileChange}
-                  />
-
-                  {base64Slip ? (
-                    <div className="space-y-1.5">
-                      <div className="h-16 w-fit mx-auto relative group flex justify-center">
-                        <img src={base64Slip} alt="Target slip thumbnail" className="h-full object-contain rounded border border-slate-800" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[8px] text-white">
-                          Change file
-                        </div>
-                      </div>
-                      <p className="text-xs text-emerald-400 font-mono flex items-center justify-center gap-1">
-                        <Check className="w-3.5 h-3.5" /> Slip attachment active!
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center mx-auto text-indigo-450 animate-pulse">
-                        <Upload className="w-4 h-4 text-indigo-400" />
-                      </div>
-                      <p className="text-xs text-slate-200 font-bold">Drag and drop bank receipt image here, or <span className="text-indigo-400 underline">browse</span></p>
-                      <p className="text-[9px] text-slate-500 font-mono">Accepts PNG, JPG format bank transfer screenshots</p>
-                    </div>
-                  )}
-                </div>
-
-                {slipFeedback && (
-                  <div className={`p-2.5 rounded-lg flex items-start gap-1.5 text-xs ${
-                    slipFeedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
-                  }`}>
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-                    <p>{slipFeedback.message}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    onClick={handleSlipSubmission}
-                    disabled={!base64Slip || isSubmittingSlip}
-                    className="flex-1 py-2.5 font-bold text-xs text-white bg-indigo-500 hover:bg-indigo-650 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
-                  >
-                    {isSubmittingSlip ? (
-                      <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Verifying...
-                      </>
-                    ) : (
-                      'Send Attachment to Backend'
-                    )}
-                  </button>
-                  <button
-                    onClick={() => { setSelectedPackForSlip(null); setBase64Slip(''); setSlipFeedback(null); }}
-                    className="px-3.5 py-2.5 text-xs text-slate-400 hover:text-white hover:bg-slate-850 rounded-lg transition cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                </div>
-
-                <div className="bg-slate-950 p-2 rounded-lg text-center text-[9px] text-slate-500 font-mono border border-slate-850">
-                  🔒 Encrypted attachment router keys compiled safe.
-                </div>
-
-              </div>
-            </motion.div>
-          </div>
-        )}
+      <BankSlipUpload 
+        selectedPackForSlip={selectedPackForSlip}
+        setSelectedPackForSlip={setSelectedPackForSlip}
+        selectedTier={selectedTier}
+        setSelectedTier={setSelectedTier}
+        contact={contact}
+        dragActive={dragActive}
+        handleDrag={handleDrag}
+        handleDrop={handleDrop}
+        handleFileChange={handleFileChange}
+        base64Slip={base64Slip}
+        setBase64Slip={setBase64Slip}
+        slipFeedback={slipFeedback}
+        setSlipFeedback={setSlipFeedback}
+        handleSlipSubmission={handleSlipSubmission}
+        isSubmittingSlip={isSubmittingSlip}
+        getTierPriceDisplay={getTierPriceDisplay}
+      />
       </AnimatePresence>
 
       {/* PRIVATE LIVE CHAT SUPPORT INBOX MODAL */}
-      <AnimatePresence>
-        {isSupportModalOpen && user && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 10 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg h-[550px] max-h-[90vh] my-8 overflow-hidden shadow-2xl flex flex-col relative"
-            >
-              {/* Header */}
-              <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center border border-indigo-500/20">
-                    <MessagesSquare className="w-5 h-5 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Private Support Chat</h3>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-                      <span className="text-[10px] text-slate-450 font-mono">Direct Admin Bridge • Active</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => fetchSupportMessages()}
-                    className="p-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition"
-                    title="Refresh Chat history"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isFetchingSupportMsgs ? 'animate-spin' : ''}`} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsSupportModalOpen(false)}
-                    className="p-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white rounded-lg transition"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Chat Thread */}
-              <div className="flex-1 overflow-y-auto p-4 bg-slate-950 space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800">
-                {supportMessages.length === 0 ? (
-                  <div className="text-center py-24 px-4 space-y-3">
-                    <MessageSquare className="w-10 h-10 text-slate-700 mx-auto" />
-                    <h4 className="text-xs font-bold text-slate-300 font-mono uppercase tracking-wide">Start Secure Thread</h4>
-                    <p className="text-xs text-slate-550 max-w-xs mx-auto leading-relaxed">
-                      Send a message below. Our systems support desk will review and provide confidential updates right here.
-                    </p>
-                  </div>
-                ) : (
-                  supportMessages.map((msg) => {
-                    const isMe = msg.sender === 'user';
-                    return (
-                      <div 
-                        key={msg.id} 
-                        className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
-                      >
-                        <div className="flex items-center gap-1 text-[9px] text-slate-500 mb-1 font-mono">
-                          <span>{isMe ? 'You' : 'System Admin'}</span>
-                          <span>•</span>
-                          <span>{msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
-                        </div>
-                        <div 
-                          className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs leading-relaxed font-sans ${
-                            isMe 
-                              ? 'bg-indigo-600 text-white rounded-tr-none border border-indigo-500 shadow'
-                              : 'bg-slate-900 text-slate-200 rounded-tl-none border border-slate-800'
-                          }`}
-                        >
-                          <p className="whitespace-pre-wrap break-words">{msg.message}</p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-                <div ref={userChatEndRef} />
-              </div>
-
-              {/* Input Footer Form */}
-              <form 
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSendSupportMessage('user');
-                }}
-                className="p-3 bg-slate-900 border-t border-slate-800 flex gap-2"
-              >
-                <input
-                  type="text"
-                  value={currentChatInput}
-                  onChange={(e) => setCurrentChatInput(e.target.value)}
-                  placeholder="Type your confidential inquiry or support question..."
-                  className="flex-1 bg-slate-950 border border-slate-850 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-indigo-500/50 placeholder-slate-600"
-                  disabled={isSendingSupportMsg}
-                />
-                <button
-                  type="submit"
-                  disabled={isSendingSupportMsg || !currentChatInput.trim()}
-                  className="px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:bg-slate-800 disabled:text-slate-600 text-white font-bold rounded-xl text-xs transition cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  {isSendingSupportMsg ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <>
-                      <Send className="w-3.5 h-3.5" />
-                      <span>Send</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <LiveChatModal 
+        isSupportModalOpen={isSupportModalOpen}
+        setIsSupportModalOpen={setIsSupportModalOpen}
+        user={user}
+        fetchSupportMessages={fetchSupportMessages}
+        isFetchingSupportMsgs={isFetchingSupportMsgs}
+        supportMessages={supportMessages}
+        currentChatInput={currentChatInput}
+        setCurrentChatInput={setCurrentChatInput}
+        isSendingSupportMsg={isSendingSupportMsg}
+        handleSendSupportMessage={handleSendSupportMessage}
+        userChatEndRef={userChatEndRef}
+      />
 
       {/* POPUP 2: AUTH SIGN-IN MODAL - DEPRECATED IN FAVOR OF MAIN SECURE GATEWAY ENTRANCE */}
       <AnimatePresence>
         {showLoginModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/95 backdrop-blur-md overflow-y-auto">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md my-8 overflow-hidden shadow-2xl p-6 relative font-sans"
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md my-auto overflow-hidden shadow-2xl p-4 sm:p-6 relative font-sans"
             >
               <button 
                 onClick={() => setShowLoginModal(false)}

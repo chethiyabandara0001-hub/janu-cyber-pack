@@ -178,76 +178,149 @@ export const firebaseService = {
 
   // Admin control center
   fetchAdminStats: async () => {
-    const res = await fetch('/api/admin/dashboard-stats');
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
+    const res = await fetch('/api/admin/dashboard-stats', {
+      headers: {
+        'X-Requester-Uid': uid
+      }
+    });
     return res.json();
   },
 
   resetStats: async () => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/reset-stats', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requester-Uid': uid
+      }
     });
     return res.json();
   },
 
   savePackage: async (pkg: Package) => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/packages/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json', 
+        'X-Requester-Uid': uid
+      },
       body: JSON.stringify(pkg)
     });
     return res.json();
   },
 
   savePost: async (post: Post) => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/posts/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requester-Uid': uid
+      },
       body: JSON.stringify(post)
     });
     return res.json();
   },
 
   saveUserBandwidth: async (targetUserId: string, bandwidthToAddGB: number) => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/users/save-bandwidth', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requester-Uid': uid
+      },
       body: JSON.stringify({ targetUserId, bandwidthToAddGB })
     });
     return res.json();
   },
 
   promoteUser: async (targetUserId: string) => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/users/promote', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requester-Uid': uid
+      },
       body: JSON.stringify({ targetUserId })
     });
     return res.json();
   },
 
   demoteUser: async (targetUserId: string) => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/users/demote', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requester-Uid': uid
+      },
       body: JSON.stringify({ targetUserId })
     });
     return res.json();
   },
 
   saveContactDetails: async (contact: ContactDetails) => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/contact/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requester-Uid': uid
+      },
       body: JSON.stringify(contact)
     });
     return res.json();
   },
 
   saveAnnouncement: async (announcement: HomeAnnouncement) => {
+    let uid = '';
+    try {
+      const rawUser = localStorage.getItem('janu-cyber-user');
+      if (rawUser) uid = JSON.parse(rawUser).uid || '';
+    } catch(e) {}
     const res = await fetch('/api/admin/announcement/save', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requester-Uid': uid
+      },
       body: JSON.stringify(announcement)
     });
     return res.json();

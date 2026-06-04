@@ -1,8 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 
   /* Dynamically read custom variables mapped to root */
@@ -37,89 +38,89 @@
   --color-slate-950: var(--slate-950);
 }
 
-/* THEME 1: Cyberpunk Dark (Default Setup) */
+/* THEME 1: Cyberpunk Hot Pink Dark (Premium Solid Obsidian Edge) */
 :root, [data-theme="cyberpunk-dark"] {
   --indigo-50: #fff0f5;
   --indigo-100: #ffe4e8;
   --indigo-200: #ffb8c6;
   --indigo-300: #ff6e8f;
-  --indigo-400: #ff0055; /* Neon Pink/Red */
-  --indigo-500: #ff007f; /* Bright Neon Magenta */
-  --indigo-600: #d60062;
-  --indigo-700: #b3004d;
-  --indigo-800: #8c0038;
-  --indigo-900: #660025;
-  --indigo-950: #330010;
+  --indigo-400: #ff0055; /* Vibrant Laser Pink */
+  --indigo-500: #ff007f; /* Electric Magenta */
+  --indigo-600: #e2006a;
+  --indigo-700: #b80052;
+  --indigo-800: #8f003e;
+  --indigo-900: #66002a;
+  --indigo-950: #3d0016;
 
   --emerald-300: #33f5ff;
-  --emerald-400: #00f0ff; /* Neon Cyber Cyan */
+  --emerald-400: #00f0ff; /* Electric Cyan contrast */
   --emerald-500: #00c3d4;
   --emerald-600: #0093a1;
 
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #25123d; /* Highlight border */
-  --slate-850: #1b0d2b; /* Cyber borders */
-  --slate-900: #0e0517; /* Dark cyber violet-gray */
-  --slate-950: #05010a; /* Cyberpunk void black */
+  --slate-50: #fcfcfd;
+  --slate-100: #f4f5f7;
+  --slate-200: #e3e6eb;
+  --slate-300: #c1c7d0;
+  --slate-400: #8993a4;
+  --slate-500: #626f84;
+  --slate-600: #42526e;
+  --slate-700: #2c3e50;
+  --slate-800: #25092a; /* Ultra dark rose-purple borders */
+  --slate-850: #1b0421; /* High quality sleek frames */
+  --slate-900: #100216; /* Clean deep onyx velvet */
+  --slate-950: #07000d; /* Pitch dark glossy space */
 }
 
-/* THEME 2: Cyberpunk Light (Perfect Inverse & Legibility, High-contrast Off-White) */
+/* THEME 2: Cyberpunk Hot Pink Light (Striking High-Contrast Off-White) */
 [data-theme="cyberpunk-light"] {
   --indigo-50: #fff5f7;
   --indigo-100: #ffe3eb;
   --indigo-200: #ffb8cd;
   --indigo-300: #ff5e8c;
-  --indigo-400: #e6005c; /* Highly readable deep neon pink */
-  --indigo-500: #d60056; /* Rich neon pink text/base color */
-  --indigo-600: #a30041;
-  --indigo-700: #800033;
-  --indigo-800: #5c0024;
-  --indigo-900: #400019;
-  --indigo-950: #24000e;
+  --indigo-400: #e6005c; /* Highly readable hot-pink on clean background */
+  --indigo-500: #cb004f;
+  --indigo-600: #a3003c;
+  --indigo-700: #80002f;
+  --indigo-805: #5c0021;
+  --indigo-900: #400016;
+  --indigo-950: #24000c;
 
   --emerald-300: #0087a3;
   --emerald-400: #006b82; 
   --emerald-500: #004d5e;
   --emerald-600: #003742;
 
-  --slate-50: #0a0410; /* Text dark in light mode: perfectly legible */
-  --slate-100: #1a0f29;
-  --slate-200: #29183d;
-  --slate-300: #422d5e;
-  --slate-400: #5e4780;
-  --slate-500: #7b629e;
-  --slate-600: #977dbd;
-  --slate-700: #b49adc;
-  --slate-850: #efe4fc; /* Clean Borders - visible layout grids */
-  --slate-800: #e0ceff; /* Active Highlight border purple */
-  --slate-900: #f6f1fc; /* Clean crisp cards card background */
-  --slate-950: #faf8ff; /* Soft violet-tinted off-white background */
+  --slate-50: #0c0012; /* Sharp dark text */
+  --slate-100: #1c0529;
+  --slate-200: #2c0e3d;
+  --slate-300: #451b5c;
+  --slate-400: #622f80;
+  --slate-500: #7b469e;
+  --slate-600: #e0d0eb;
+  --slate-700: #ccaae6;
+  --slate-850: #f6edf9; /* Super polished soft cards */
+  --slate-800: #ecd7f4; /* Subtle layout division lines */
+  --slate-900: #ffffff; /* Clean white cards for contrast */
+  --slate-950: #fcf9fe; /* Ultra premium lilac-tinted white canvas */
 }
 
 /* INJECT EXTRA PROTECTION RULES TO ENSURE LEGIBILITY ON LIGHT THEME (Prevents any text-white from vanishing) */
 [data-theme="cyberpunk-light"] input,
 [data-theme="cyberpunk-light"] select,
 [data-theme="cyberpunk-light"] textarea {
-  color: #0a0410 !important;
-  background-color: #faf8ff !important;
-  border-color: #efe4fc !important;
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
 }
 
 [data-theme="cyberpunk-light"] :not(.bg-white):not(button):not(.bg-indigo-500):not(.bg-indigo-600):not(.bg-emerald-500):not(.bg-emerald-600):not(.bg-indigo-950).text-white {
-  color: #0a0410 !important;
+  color: #0f172a !important;
 }
 
 [data-theme="cyberpunk-light"] .border-slate-800,
 [data-theme="cyberpunk-light"] .border-slate-850,
 [data-theme="cyberpunk-light"] .border-slate-900 {
-  border-color: #efe4fc !important;
+  border-color: #e2e8f0 !important;
 }
 
 html, body {

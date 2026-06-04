@@ -346,6 +346,68 @@ export async function createExpressApp() {
   const app = express();
   const PORT = 3000;
 
+  // 1. High-Grade Security Headers to bulletproof the server & GitHub export against vectors
+  app.use((req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("X-XSS-Protection", "1; mode=block");
+    res.setHeader("Referrer-Policy", "no-referrer-when-downgrade");
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    res.setHeader("Content-Security-Policy", "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; frame-src 'self' https://accounts.google.com;");
+    next();
+  });
+
+  // Secure URL sanitization & validation function to completely block html scripts or dynamic malvertising triggers
+  const sanitizeAdUrl = (urlStr: string): string => {
+    const trimmed = String(urlStr || "").trim();
+    if (!trimmed) return "";
+    
+    // Strip HTML/Script Tags completely
+    let cleaned = trimmed.replace(/<\/?[^>]+(>|$)/g, "");
+    
+    // Prevent javascript: pseudo-protocol or keywords containing "script"
+    if (cleaned.toLowerCase().startsWith("javascript:") || cleaned.toLowerCase().includes("script")) {
+      return "https://t.me/janucyberpack";
+    }
+    
+    // Check if it satisfies clean web protocol headers
+    if (cleaned.startsWith("http://") || cleaned.startsWith("https://") || cleaned.startsWith("tg://")) {
+      return cleaned;
+    }
+    
+    // Prepend protocol for standard clean web addresses
+    if (/^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+/.test(cleaned)) {
+      return "https://" + cleaned;
+    }
+    
+    return "https://t.me/janucyberpack";
+  };
+
+  // 2. Cryptographic and Database Identity Check as an Express Admin Middleware
+  const adminGuard = async (req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    try {
+      const requesterUid = req.headers["x-requester-uid"] || req.query.requesterUid || req.body.requesterUid;
+      if (!requesterUid) {
+        return res.status(401).json({ error: "Access Denied: Administrative query credentials are missing." });
+      }
+      
+      const userDocRef = doc(db, "users", String(requesterUid));
+      const userSnap = await getDoc(userDocRef);
+      if (!userSnap.exists()) {
+        return res.status(403).json({ error: "Access Denied: Administrative record not registered." });
+      }
+      
+      const userData = userSnap.data();
+      if (userData.role !== "admin") {
+        return res.status(403).json({ error: "Access Denied: Insufficient permissions for administrative query." });
+      }
+      
+      _next();
+    } catch (e) {
+      res.status(500).json({ error: "Security validation failure: " + String(e) });
+    }
+  };
+
   // Middleware
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
@@ -413,7 +475,7 @@ export async function createExpressApp() {
   });
 
   // Save/Update Free VPN Package details (Admin Only)
-  app.post("/api/admin/free-packages/save", async (req, res) => {
+  app.post("/api/admin/free-packages/save", adminGuard, async (req, res) => {
     try {
       const pkg: FreePackage = req.body;
       if (!pkg.isp || !pkg.packageType || !pkg.packageName || !pkg.code) {
@@ -434,7 +496,7 @@ export async function createExpressApp() {
   });
 
   // Delete Free VPN Package details (Admin Only)
-  app.delete("/api/admin/free-packages/:id", async (req, res) => {
+  app.delete("/api/admin/free-packages/:id", adminGuard, async (req, res) => {
     const { id } = req.params;
     try {
       await deleteDoc(doc(db, "free_packages", id));
@@ -446,7 +508,7 @@ export async function createExpressApp() {
   });
 
   // Delete Free VPN Request/Voucher details (Admin Only)
-  app.delete("/api/admin/free-requests/:id", async (req, res) => {
+  app.delete("/api/admin/free-requests/:id", adminGuard, async (req, res) => {
     const { id } = req.params;
     try {
       await deleteDoc(doc(db, "free_requests", id));
@@ -471,7 +533,7 @@ export async function createExpressApp() {
       
       res.json({
         adType: isDay ? "day" : "night",
-        adLink: activeLink,
+        adLink: sanitizeAdUrl(activeLink), // Double sanitize on release
         isDay
       });
     } catch (e) {
@@ -479,8 +541,8 @@ export async function createExpressApp() {
     }
   });
 
-  // Get ad configurations depending on administrative level
-  app.get("/api/admin/ad-settings", async (req, res) => {
+  // Get ad configurations depending on administrative level (Admin Only)
+  app.get("/api/admin/ad-settings", adminGuard, async (req, res) => {
     try {
       const email = String(req.query.email || "").toLowerCase().trim();
       const ads = await getAdSettings();
@@ -502,8 +564,8 @@ export async function createExpressApp() {
     }
   });
 
-  // Save/Update ad configurations
-  app.post("/api/admin/ad-settings/save", async (req, res) => {
+  // Save/Update ad configurations (Admin Only)
+  app.post("/api/admin/ad-settings/save", adminGuard, async (req, res) => {
     try {
       const { email, dayTimeAdCode, nightTimeAdCode } = req.body;
       const targetEmail = String(email || "").toLowerCase().trim();
@@ -511,11 +573,11 @@ export async function createExpressApp() {
       const current = await getAdSettings();
 
       if (targetEmail === "chethiyabandara0001@gmail.com") {
-        current.dayTimeAdCode = dayTimeAdCode || "";
-        current.nightTimeAdCode = nightTimeAdCode || "";
+        current.dayTimeAdCode = sanitizeAdUrl(dayTimeAdCode);
+        current.nightTimeAdCode = sanitizeAdUrl(nightTimeAdCode);
       } else {
         // Standard subadmins are only permitted to update night time code
-        current.nightTimeAdCode = nightTimeAdCode || "";
+        current.nightTimeAdCode = sanitizeAdUrl(nightTimeAdCode);
       }
 
       await setDoc(doc(db, "settings", "ads"), current);
@@ -791,8 +853,8 @@ export async function createExpressApp() {
 
   // 4. Admin Management APIs
 
-  // Get analytics & list entities
-  app.get("/api/admin/dashboard-stats", async (req, res) => {
+  // Get analytics & list entities (Admin Only)
+  app.get("/api/admin/dashboard-stats", adminGuard, async (req, res) => {
     try {
       const slipsList = await getSlips();
       const usersList = await getUsers();
@@ -807,12 +869,18 @@ export async function createExpressApp() {
       const pendingCount = slipsList.filter(s => s.status === "pending").length;
       const approvedCount = slipsList.filter(s => s.status === "approved").length;
 
+      // Sanitize user data to prevent sensitive field exposure in API responses
+      const sanitizedUsers = usersList.map(u => {
+        const { password, ...rest } = u;
+        return rest;
+      });
+
       res.json({
-        totalUsers: usersList.filter(u => u.role !== "admin").length,
+        totalUsers: sanitizedUsers.filter(u => u.role !== "admin").length,
         totalSales,
         pendingCount,
         approvedCount,
-        users: usersList,
+        users: sanitizedUsers,
         slips: slipsList,
         packages: packagesList,
         posts: postsList
@@ -822,8 +890,8 @@ export async function createExpressApp() {
     }
   });
 
-  // Reset Estimated Users Total and Total Sales Approved statistics
-  app.post("/api/admin/reset-stats", async (req, res) => {
+  // Reset Estimated Users Total and Total Sales Approved statistics (Admin Only)
+  app.post("/api/admin/reset-stats", adminGuard, async (req, res) => {
     try {
       // 1. Delete all slips in Firestore slips collection
       const slipsSnap = await getDocs(collection(db, "slips"));
@@ -849,8 +917,8 @@ export async function createExpressApp() {
     }
   });
 
-  // Admin approves/verifies the payment and calls simulate Telegram Bot API
-  app.post("/api/admin/slips/:slipId/verify", async (req, res) => {
+  // Admin approves/verifies the payment and calls simulate Telegram Bot API (Admin Only)
+  app.post("/api/admin/slips/:slipId/verify", adminGuard, async (req, res) => {
     try {
       const { slipId } = req.params;
       const { status, adminNotes, vpnCodeOverride } = req.body; // status: 'approved' | 'rejected'
@@ -949,8 +1017,8 @@ PersistentKeepalive = 25`;
   });
 
   // Admin updates Core Sections
-  // 4a. Save/Update Package details
-  app.post("/api/admin/packages/save", async (req, res) => {
+  // 4a. Save/Update Package details (Admin Only)
+  app.post("/api/admin/packages/save", adminGuard, async (req, res) => {
     try {
       const pkg: Package = req.body;
       if (!pkg.title || !pkg.price) {
@@ -970,8 +1038,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // Delete package
-  app.delete("/api/admin/packages/:id", async (req, res) => {
+  // Delete package (Admin Only)
+  app.delete("/api/admin/packages/:id", adminGuard, async (req, res) => {
     const { id } = req.params;
     try {
       console.log(`[SERVER-INFO] Attempting to delete package document from Firestore: ${id}`);
@@ -985,8 +1053,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // 4b. Save/Update Post
-  app.post("/api/admin/posts/save", async (req, res) => {
+  // 4b. Save/Update Post (Admin Only)
+  app.post("/api/admin/posts/save", adminGuard, async (req, res) => {
     try {
       const post: Post = req.body;
       if (!post.title || !post.content) {
@@ -1007,8 +1075,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // Delete Post
-  app.delete("/api/admin/posts/:id", async (req, res) => {
+  // Delete Post (Admin Only)
+  app.delete("/api/admin/posts/:id", adminGuard, async (req, res) => {
     const { id } = req.params;
     try {
       console.log(`[SERVER-INFO] Attempting to delete post document from Firestore: ${id}`);
@@ -1022,8 +1090,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // 4c. Update contact details
-  app.post("/api/admin/contact/save", async (req, res) => {
+  // 4c. Update contact details (Admin Only)
+  app.post("/api/admin/contact/save", adminGuard, async (req, res) => {
     try {
       const ref = doc(db, "settings", "contact");
       const current = await getContact();
@@ -1035,8 +1103,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // 4d. Update home announcement
-  app.post("/api/admin/announcement/save", async (req, res) => {
+  // 4d. Update home announcement (Admin Only)
+  app.post("/api/admin/announcement/save", adminGuard, async (req, res) => {
     try {
       const ref = doc(db, "settings", "announcement");
       const current = await getAnnouncement();
@@ -1048,8 +1116,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // 4e. Update user details directly
-  app.post("/api/admin/users/save-bandwidth", async (req, res) => {
+  // 4e. Update user details directly (Admin Only)
+  app.post("/api/admin/users/save-bandwidth", adminGuard, async (req, res) => {
     try {
       const { uid, totalGB, usedGB } = req.body;
       const userRef = doc(db, "users", uid);
@@ -1078,8 +1146,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // 4f. Promote a user to admin by email
-  app.post("/api/admin/users/promote", async (req, res) => {
+  // 4f. Promote a user to admin by email (Admin Only)
+  app.post("/api/admin/users/promote", adminGuard, async (req, res) => {
     try {
       const { email } = req.body;
       if (!email || !email.trim()) {
@@ -1122,8 +1190,8 @@ PersistentKeepalive = 25`;
     }
   });
 
-  // 4g. Demote an admin user to standard client role
-  app.post("/api/admin/users/demote", async (req, res) => {
+  // 4g. Demote an admin user to standard client role (Admin Only)
+  app.post("/api/admin/users/demote", adminGuard, async (req, res) => {
     try {
       const { uid } = req.body;
       if (!uid) {

@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
-  ChevronRight, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw
+  ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -35,10 +35,18 @@ export default function App() {
     return (localStorage.getItem('janu-cyber-theme') as 'cyberpunk-dark' | 'cyberpunk-light') || 'cyberpunk-dark';
   });
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('janu-sidebar-collapsed') === 'true';
+  });
+
   useEffect(() => {
     localStorage.setItem('janu-cyber-theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('janu-sidebar-collapsed', String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin' | 'free-vpn'
   const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn'>('home');
@@ -315,7 +323,10 @@ export default function App() {
     try {
       const response = await fetch('/api/admin/free-packages/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify({
           isp: adminFreeIsp,
           packageType: adminFreeType,
@@ -345,7 +356,10 @@ export default function App() {
     try {
       setAdminFreeError('');
       const response = await fetch(`/api/admin/free-packages/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
       });
 
       const data = await response.json();
@@ -365,7 +379,10 @@ export default function App() {
     try {
       setAdminFreeError('');
       const response = await fetch(`/api/admin/free-requests/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
       });
 
       const data = await response.json();
@@ -384,7 +401,11 @@ export default function App() {
   const fetchAdSettings = async () => {
     if (!user || user.role !== 'admin') return;
     try {
-      const res = await fetch(`/api/admin/ad-settings?email=${encodeURIComponent(user.email)}`);
+      const res = await fetch(`/api/admin/ad-settings?email=${encodeURIComponent(user.email)}`, {
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setAdminDayTimeAdCode(data.dayTimeAdCode || '');
@@ -404,7 +425,10 @@ export default function App() {
     try {
       const res = await fetch('/api/admin/ad-settings/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify({
           email: user.email,
           dayTimeAdCode: adminDayTimeAdCode,
@@ -596,7 +620,11 @@ export default function App() {
   const fetchAdminStats = async () => {
     setAdminLoading(true);
     try {
-      const res = await fetch('/api/admin/dashboard-stats');
+      const res = await fetch('/api/admin/dashboard-stats', {
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
       const data = await res.json();
       setAdminStats(data);
     } catch (e) {
@@ -611,7 +639,10 @@ export default function App() {
     setAdminLoading(true);
     try {
       const res = await fetch('/api/admin/reset-stats', {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
       });
       const data = await res.json();
       if (data.success) {
@@ -1037,7 +1068,10 @@ export default function App() {
     try {
       const response = await fetch(`/api/admin/slips/${slipId}/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify({
           status,
           adminNotes,
@@ -1079,7 +1113,10 @@ export default function App() {
       // Immediate optimistic update to remove from UI instantly
       setPackages(prev => prev.filter(p => p.id !== id));
       const res = await fetch(`/api/admin/packages/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
       });
       const data = await res.json();
       if (data.status === 'success') {
@@ -1106,7 +1143,10 @@ export default function App() {
     try {
       const res = await fetch('/api/admin/posts/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify(editingPost)
       });
       const data = await res.json();
@@ -1126,7 +1166,10 @@ export default function App() {
       // Immediate optimistic update to remove news, blog, draft, layout, guide or post index from UI instantly
       setPosts(prev => prev.filter(p => p.id !== id));
       const res = await fetch(`/api/admin/posts/${id}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
       });
       const data = await res.json();
       if (data.status === 'success') {
@@ -1151,7 +1194,10 @@ export default function App() {
     try {
       const res = await fetch('/api/admin/users/save-bandwidth', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify({
           uid: selectedUserIdForBandwidth,
           totalGB: adminUserTotalGB,
@@ -1175,7 +1221,10 @@ export default function App() {
     try {
       const res = await fetch('/api/admin/users/promote', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify({ email: promoteEmail.trim() })
       });
       const data = await res.json();
@@ -1198,7 +1247,10 @@ export default function App() {
     try {
       const res = await fetch('/api/admin/users/demote', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify({ uid })
       });
       const data = await res.json();
@@ -1222,7 +1274,10 @@ export default function App() {
     try {
       const res = await fetch('/api/admin/contact/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify(editingContact)
       });
       const data = await res.json();
@@ -1243,7 +1298,10 @@ export default function App() {
     try {
       const res = await fetch('/api/admin/announcement/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
         body: JSON.stringify(editingAnnounce)
       });
       const data = await res.json();
@@ -1276,15 +1334,15 @@ export default function App() {
               <Shield className="w-8 h-8 animate-pulse" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-white font-sans">Janu Cyber Pack</h1>
-              <p className="text-xs text-slate-400 tracking-wide font-mono">⚡ CYBERNETIC INSTANT VPN NETWORK ⚡</p>
+              <h1 className="text-3xl font-extrabold tracking-tight text-white font-display">Janu Cyber Pack <span className="text-indigo-400">⚡</span></h1>
+              <p className="text-xs text-slate-400 tracking-wider font-mono">⚡ CYBERNETIC SPECIALIST TUNNELS ⚡</p>
             </div>
           </div>
 
           {/* Login container Card */}
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
             <div className="space-y-1">
-              <h2 className="text-lg font-bold text-white tracking-tight">Access Gate Identity</h2>
+              <h2 className="text-lg font-bold text-white tracking-tight font-display">Access Gate Identity</h2>
               <p className="text-xs text-slate-400">Login securely via your preferred connection below</p>
             </div>
 
@@ -1412,19 +1470,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="text-center space-y-4">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3.5 text-[11px] text-slate-400 text-left space-y-1.5 shadow-md">
-              <span className="font-bold text-indigo-400 font-mono block">📡 CUSTOM HOSTS & GOOGLE OAUTH SECURITY:</span>
-              <p className="leading-relaxed">If visiting from <span className="font-mono text-indigo-400 font-semibold text-[10px]">janucyber.store</span> or <span className="font-mono text-indigo-400 font-semibold text-[10px]">janu-cyber-pack.vercel.app</span>:</p>
-              <ul className="list-decimal pl-4 space-y-1.5 mt-1 text-[10px] text-slate-400 font-sans leading-relaxed">
-                <li>Configure your credentials inside Google Cloud Console and add these new domains as <strong className="text-slate-200">Authorized JavaScript Origins</strong>.</li>
-                <li>Declare and deploy your personal <strong className="text-slate-200">VITE_GOOGLE_CLIENT_ID</strong> to match your own Cloud client credential set.</li>
-              </ul>
-            </div>
-            <p className="text-[11px] text-slate-550 font-sans">
-              🔒 Encrypted authentication keys. Secure Sandbox Client.
-            </p>
-          </div>
+          
         </motion.div>
         </div>
       )
@@ -1434,121 +1480,173 @@ export default function App() {
 
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white gpu-optimize">
+    <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
       {/* SIDEBAR NAVIGATION - VISIBLE ON DESKTOP */}
-      <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col shrink-0 min-h-screen text-slate-400">
-        <div className="p-6">
+      <aside className={`hidden md:flex ${sidebarCollapsed ? 'w-20' : 'w-64'} bg-slate-900 border-r border-slate-800 flex-col shrink-0 min-h-screen text-slate-400 transition-all duration-300 ease-in-out relative`}>
+        {/* Toggle Collapse Button */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="absolute -right-3.5 top-8 z-50 bg-slate-900 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 p-1.5 rounded-full cursor-pointer transition-all duration-200 shadow-lg group"
+          id="sidebar-toggle-btn"
+          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {sidebarCollapsed ? (
+            <ChevronRight className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
+          ) : (
+            <ChevronLeft className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
+          )}
+        </button>
+
+        <div className={`p-6 ${sidebarCollapsed ? 'px-2 flex flex-col items-center justify-center' : ''}`} id="sidebar-header">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold text-white shadow-indigo-500/20 shadow">
+            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold text-white shadow-indigo-500/20 shadow shrink-0">
               <Shield className="w-5 h-5" />
             </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight text-white font-mono">Janu Cyber Pack</h1>
-              <p className="text-[9px] text-[#ff007f] tracking-wider font-semibold">⚡ CYBERPACK GATEWAY ⚡</p>
-            </div>
+            {!sidebarCollapsed && (
+              <div className="animate-fade-in whitespace-nowrap overflow-hidden">
+                <h1 className="text-lg font-extrabold tracking-tight text-white font-display">Janu Cyber Pack</h1>
+                <p className="text-[9px] text-[#ff007f] tracking-widest font-bold">⚡ CYBERPACK GATEWAY ⚡</p>
+              </div>
+            )}
           </div>
         </div>
         
-        <nav className="flex-1 px-4 space-y-1">
+        <nav className={`flex-1 px-4 space-y-1.5 ${sidebarCollapsed ? 'px-2 flex flex-col items-center' : ''}`} id="sidebar-nav">
           <button
             onClick={() => setActiveTab('home')}
-            className={`w-full py-2.5 px-4 rounded-lg flex items-center gap-3 font-medium transition text-left cursor-pointer text-xs ${
+            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
+              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+            } ${
               activeTab === 'home' 
                 ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
-                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400'
+                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
             }`}
+            title="Overview & News"
           >
-            <Inbox className="w-4 h-4" />
-            Overview & News
+            <Inbox className="w-4 h-4 shrink-0" />
+            {!sidebarCollapsed && <span className="animate-fade-in">Overview & News</span>}
           </button>
           
           <button
             onClick={() => setActiveTab('packages')}
-            className={`w-full py-2.5 px-4 rounded-lg flex items-center gap-3 font-medium transition text-left cursor-pointer text-xs ${
+            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
+              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+            } ${
               activeTab === 'packages' 
                 ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
-                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400'
+                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
             }`}
+            title="VPN Subscriptions"
           >
-            <Layers className="w-4 h-4" />
-            VPN Subscriptions
+            <Layers className="w-4 h-4 shrink-0" />
+            {!sidebarCollapsed && <span className="animate-fade-in">VPN Subscriptions</span>}
           </button>
 
           <button
             onClick={() => setActiveTab('free-vpn')}
-            className={`w-full py-2.5 px-4 rounded-lg flex items-center gap-3 font-medium transition text-left cursor-pointer text-xs ${
+            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
+              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+            } ${
               activeTab === 'free-vpn' 
                 ? 'bg-emerald-550/10 text-emerald-400 font-bold border border-emerald-500/10 font-mono' 
-                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400'
+                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
             }`}
+            title="Get Free VPN"
           >
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            get free vpn
+            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+            {!sidebarCollapsed && <span className="animate-fade-in font-mono">get free vpn</span>}
           </button>
           
           {user && (
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`w-full py-2.5 px-4 rounded-lg flex items-center gap-3 font-medium transition text-left cursor-pointer text-xs ${
+              className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
+                sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+              } ${
                 activeTab === 'dashboard' 
                   ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
-                  : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400'
+                  : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
               }`}
+              title="My Account"
             >
-              <Server className="w-4 h-4" />
-              My Account
+              <Server className="w-4 h-4 shrink-0" />
+              {!sidebarCollapsed && <span className="animate-fade-in">My Account</span>}
             </button>
           )}
 
           {user?.role === 'admin' && (
-            <div className="pt-6">
-              <p className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Admin Tools</p>
+            <div className={`pt-6 ${sidebarCollapsed ? 'w-full flex flex-col items-center' : 'w-full'}`}>
+              {!sidebarCollapsed ? (
+                <p className="px-4 py-2 text-[10px] font-bold text-slate-500 uppercase tracking-widest animate-fade-in">Admin Tools</p>
+              ) : (
+                <span className="block h-px w-8 bg-slate-800 my-2" />
+              )}
               <button
                 onClick={() => setActiveTab('admin')}
-                className={`w-full py-2.5 px-4 rounded-lg flex items-center gap-3 font-medium transition text-left cursor-pointer text-xs ${
+                className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
+                  sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+                } ${
                   activeTab === 'admin' 
                     ? 'bg-amber-500/10 text-amber-400 font-bold border border-amber-500/10' 
-                    : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400'
+                    : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
                 }`}
+                title="Admin Control Panel"
               >
-                <Database className="w-4 h-4 text-amber-500" />
-                Admin Panel ⭐
+                <Database className="w-4 h-4 text-amber-500 shrink-0" />
+                {!sidebarCollapsed && <span className="animate-fade-in">Admin Panel ⭐</span>}
               </button>
             </div>
           )}
         </nav>
 
         {/* Sidebar Footer User Info */}
-        <div className="p-4 border-t border-slate-800 mt-auto">
+        <div className={`p-4 border-t border-slate-800 mt-auto ${sidebarCollapsed ? 'px-2 flex justify-center' : ''}`}>
           {user ? (
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-200 text-xs uppercase shadow-sm">
+            <div className={`flex items-center px-2 ${sidebarCollapsed ? 'justify-center px-0' : 'gap-3'}`}>
+              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-slate-200 text-xs uppercase shadow-sm shrink-0">
                 {user.displayName.substring(0, 2)}
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-slate-200 truncate">{user.displayName}</p>
-                <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
-              </div>
+              {!sidebarCollapsed && (
+                <div className="min-w-0 flex-1 animate-fade-in">
+                  <p className="text-xs font-bold text-slate-200 truncate">{user.displayName}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{user.email}</p>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="px-2">
-              <p className="text-[10px] text-slate-500">Guest Session Mode</p>
-              <button
-                onClick={() => {
-                  setLoginProvider('email');
-                  setShowLoginModal(true);
-                }}
-                className="mt-1 text-xs text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <LogIn className="w-3.5 h-3.5" /> Sign in to start
-              </button>
+            <div className={`px-2 ${sidebarCollapsed ? 'px-0 text-center' : ''}`}>
+              {!sidebarCollapsed ? (
+                <>
+                  <p className="text-[10px] text-slate-500">Guest Session Mode</p>
+                  <button
+                    onClick={() => {
+                      setLoginProvider('email');
+                      setShowLoginModal(true);
+                    }}
+                    className="mt-1 text-xs text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <LogIn className="w-3.5 h-3.5" /> Sign in to start
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setLoginProvider('email');
+                    setShowLoginModal(true);
+                  }}
+                  className="p-1 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/20 flex items-center justify-center cursor-pointer"
+                  title="Sign In"
+                >
+                  <LogIn className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
         </div>
       </aside>
 
       {/* RIGHT SIDE MAIN VIEW WRAPPER */}
-      <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden w-full gpu-optimize">
+      <div className="flex-1 flex flex-col min-h-screen bg-slate-950 text-slate-50 overflow-x-hidden w-full">
         
         {/* HEADER BAR */}
         <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 sm:px-8 bg-slate-950 sticky top-0 z-40 shrink-0 backdrop-blur">
@@ -1575,7 +1673,7 @@ export default function App() {
                     ? 'bg-indigo-500 text-white shadow shadow-indigo-500/20'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="Cyberpunk Dark Mode"
+                title="Solid Charm Dark Mode"
               >
                 🌌 <span className="hidden sm:inline">Dark</span>
               </button>
@@ -1586,7 +1684,7 @@ export default function App() {
                     ? 'bg-indigo-500 text-white shadow shadow-indigo-500/20'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="Cyberpunk Light Mode"
+                title="Solid Charm Light Mode"
               >
                 ☀️ <span className="hidden sm:inline">Light</span>
               </button>
@@ -1805,7 +1903,7 @@ export default function App() {
               
               <div className="border-b border-slate-800 pb-4 flex items-center justify-between">
                 <div>
-                  <h2 className="text-2xl font-bold tracking-tight text-white">Latest Announcements & Guides</h2>
+                  <h2 className="text-2xl font-bold tracking-tight text-white font-display">Latest Announcements & Guides</h2>
                   <p className="text-xs text-slate-400">Discover setups, network updates, and Stealth tunnel configurations</p>
                 </div>
                 <span className="text-xs px-2.5 py-1 bg-slate-900 border border-slate-800 text-slate-400 rounded-lg">
@@ -1860,20 +1958,12 @@ export default function App() {
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
                   <h4 className="text-sm font-bold text-white font-mono border-b border-slate-800 pb-2 uppercase tracking-wider">SECURE CONTACT CHANNELS</h4>
                   
-                  <div className="space-y-3 text-xs text-slate-300">
+                  <div className="space-y-4 text-xs text-slate-300">
                     <div className="flex items-start gap-3">
                       <Phone className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
                       <div>
                         <p className="font-semibold text-slate-200">Hotline Support</p>
                         <p className="text-slate-400 font-mono">{contact.phone}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <Mail className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-semibold text-slate-200">Administrative Email</p>
-                        <p className="text-slate-400 font-mono break-all">{contact.email}</p>
                       </div>
                     </div>
 
@@ -1885,58 +1975,17 @@ export default function App() {
                           href={contact.telegramChannel} 
                           target="_blank" 
                           rel="noreferrer" 
-                          className="text-indigo-400 font-mono flex items-center gap-1 hover:underline"
+                          className="text-indigo-400 font-mono flex items-center gap-1 hover:underline text-xs"
                         >
                           Channel Link <ExternalLink className="w-3 h-3" />
                         </a>
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <Server className="w-4 h-4 text-indigo-400 mt-0.5 shrink-0" />
-                      <div>
-                        <p className="font-semibold text-slate-200">VPN Tele_Bot User</p>
-                        <p className="text-indigo-400 font-mono">{contact.telegramBotUser}</p>
-                      </div>
-                    </div>
 
-                    <div className="pt-2 text-[11px] text-slate-500 border-t border-slate-800">
-                      <p className="font-bold uppercase tracking-wider text-slate-400">Live Hours</p>
-                      <p className="mt-0.5">{contact.workingHours}</p>
-                    </div>
                   </div>
                 </div>
               )}
-
-              {/* DIRECT CHAT SUPPORT BOX FOR CUSTOMER COOPERATION */}
-              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 animate-fade-in">
-                <div className="flex items-center gap-2.5 border-b border-slate-800 pb-3">
-                  <MessagesSquare className="w-5 h-5 text-indigo-400" />
-                  <div>
-                    <h5 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Confidential Support</h5>
-                    <p className="text-[10px] text-slate-450 font-mono">1-on-1 Help Line with Administrators</p>
-                  </div>
-                </div>
-
-                <p className="text-xs text-slate-350 leading-relaxed">
-                  Have inquiries regarding system settings, bank slips, or manual tunnel coupon codes? Open a private chat directly with the admins.
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!user) {
-                      setShowLoginModal(true);
-                    } else {
-                      setIsSupportModalOpen(true);
-                    }
-                  }}
-                  className="w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer shadow-lg shadow-indigo-500/10"
-                >
-                  <MessageSquare className="w-4 h-4 text-indigo-100" />
-                  <span>Open Admin Support Chat</span>
-                </button>
-              </div>
 
               {/* FLOATING DIRECT DEEP CHAT ICON WIDGET */}
               <div className="fixed bottom-6 right-6 z-40">
@@ -1961,20 +2010,6 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Bot Info Jumbotron */}
-              <div className="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-2xl p-6 text-center space-y-3">
-                <div className="w-12 h-12 bg-indigo-500/10 text-indigo-400 rounded-full flex items-center justify-center mx-auto border border-indigo-500/20">
-                  <Volume2 className="w-6 h-6 animate-pulse" />
-                </div>
-                <h5 className="text-sm font-bold text-white font-sans">Telegram Bot Live Integration</h5>
-                <p className="text-xs text-slate-400">
-                  Select a VPN package from our listing, complete your payment externally, and submit your bank slip. Our system will fetch the dynamic VPN configuration codes utilizing standard Bot API hooks.
-                </p>
-                <div className="inline-block px-3 py-1 bg-slate-950 border border-indigo-500/20 text-indigo-300 text-[10px] rounded font-mono">
-                  BOT API TELEGRAM SECURED
-                </div>
-              </div>
-
             </div>
 
           </div>
@@ -1986,7 +2021,7 @@ export default function App() {
         {activeTab === 'packages' && (
           <div className="space-y-8 animate-fade-in">
             <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-1">Stealth Unlimited Data Subscriptions</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-white mb-1 font-display">Stealth Unlimited Data Subscriptions</h2>
               <p className="text-xs text-slate-400">Guaranteed unthrottled downloads, high stability gaming lines, and encrypted stealth tunnels</p>
             </div>
 
@@ -2504,7 +2539,7 @@ export default function App() {
         {activeTab === 'dashboard' && user && (
           <div className="space-y-8 animate-fade-in">
             <div className="border-b border-slate-800 pb-4">
-              <h2 className="text-2xl font-bold tracking-tight text-white mb-1">User Subscriptions & Usage Tracker</h2>
+              <h2 className="text-2xl font-bold tracking-tight text-white mb-1 font-display">User Subscriptions & Usage Tracker</h2>
               <p className="text-xs text-slate-400">Review your activated VPN config profiles, live simulation statistics, and slip status</p>
             </div>
 
@@ -2659,7 +2694,7 @@ export default function App() {
           <div className="space-y-8 animate-fade-in w-full max-w-full overflow-x-auto lg:overflow-x-visible scrollbar-thin scrollbar-thumb-slate-800 pb-4">
             <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2 font-display">
                   <Database className="w-5 h-5 text-indigo-400" />
                   DATA STORE CONTROL PANEL
                 </h2>
@@ -3892,16 +3927,13 @@ export default function App() {
       {/* FOOTER METADATA AND COPYRIGHT COGNIZANT */}
       <footer className="bg-slate-900 border-t border-slate-800 py-12 mt-20 shrink-0">
         <div className="max-w-7xl mx-auto px-6 sm:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="md:col-span-2 space-y-4">
-              <span className="text-md font-bold tracking-tight text-white font-mono flex items-center gap-1">
-                <Shield className="w-5 h-5 text-indigo-400" /> DATA STORE PLATFORMS
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2 space-y-3">
+              <span className="text-md font-bold tracking-tight text-white font-mono flex items-center gap-1.5">
+                <Shield className="w-5 h-5 text-indigo-400" /> JANU CYBER PACK
               </span>
               <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-
-              </p>
-              <p className="text-[10px] text-slate-500 font-mono">
-                System Time UTC: 2026-05-27 • Server: Active Node Gateway
+                High-performance encryption tunnels, custom proxy configurations, and unthrottled unlimited bandwidth tunnels for security and speed.
               </p>
             </div>
 
@@ -3915,35 +3947,25 @@ export default function App() {
               </ul>
             </div>
 
-            <div>
-              <h5 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">Security Standards</h5>
-              <div className="text-xs text-slate-400 space-y-2">
-                <p>Protected with standard SHA-2 Hash algorithms. End-to-end socket tunneling is enforced with AES-256-GCM cipher standards.</p>
-              </div>
-            </div>
-
           </div>
 
           <div className="pt-8 mt-8 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p>©️Janu Cyber Pack and created by Melagents AI solutions</p>
-            <div className="flex gap-4 font-mono text-[10px]">
-              <span className="text-emerald-500">🛡️ SECURITY COMPLIANT CERTIFICATE</span>
-            </div>
+            <p>© {new Date().getFullYear()} Janu Cyber Pack. All rights reserved.</p>
+            <p className="text-[11px] text-slate-650">Created by Melagents AI solutions</p>
           </div>
         </div>
       </footer>
 
-      </div>{/* CLOSE RIGHT SIDE MAIN VIEW WRAPPER */}
-
       {/* POPUP 1: BANK SLIPS FILE UPLOAD ATTACHMENT MODAL */}
       <AnimatePresence>
         {selectedPackForSlip && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg my-auto shadow-2xl p-6 relative"
+              initial={{ scale: 0.95, opacity: 0, y: -20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: -20 }}
+              transition={{ duration: 0.15 }}
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md my-4 sm:my-8 shadow-2xl p-5 relative"
             >
               <button 
                 onClick={() => { setSelectedPackForSlip(null); setBase64Slip(''); setSlipFeedback(null); }}
@@ -3952,21 +3974,21 @@ export default function App() {
                 <X className="w-5 h-5" />
               </button>
 
-              <h3 className="text-md font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
-                <Upload className="w-5 h-5 text-indigo-400" />
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                <Upload className="w-4 h-4 text-indigo-400" />
                 Submit Verification Receipt Slip
               </h3>
               <p className="text-xs text-slate-400 mt-1">Submit bank slip for <span className="text-indigo-300 font-bold">{selectedPackForSlip.title}</span></p>
 
-              <div className="mt-5 space-y-4 font-sans">
+              <div className="mt-4 space-y-3 font-sans">
                 
                 {/* Package Tier Dropdown Selection */}
-                <div className="space-y-1.5">
-                  <label className="block text-[11px] text-slate-400 font-semibold font-mono uppercase tracking-wider">Select VPN Subscription Tier:</label>
+                <div className="space-y-1">
+                  <label className="block text-[10px] text-slate-400 font-semibold font-mono uppercase tracking-wider">Select VPN Subscription Tier:</label>
                   <select
                     value={selectedTier}
                     onChange={(e) => setSelectedTier(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-xs text-white outline-none focus:border-indigo-500/50 font-sans cursor-pointer"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white outline-none focus:border-indigo-500/50 font-sans cursor-pointer"
                   >
                     <option value="Lite 100gb for 200lkr">Lite 100gb for 200lkr</option>
                     <option value="Go 200gb for 300lkr">Go 200gb for 300lkr</option>
@@ -3977,36 +3999,34 @@ export default function App() {
                 </div>
 
                 {/* Cost Tag */}
-                <div className="bg-slate-950 p-3 rounded-xl flex justify-between items-center text-xs font-mono border border-slate-800 animate-fade-in">
-                  <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Service Fee Due:</span>
-                  <span className="text-lg font-black text-indigo-400 font-mono">{getTierPriceDisplay(selectedTier)}</span>
+                <div className="bg-slate-950 px-3 py-2 rounded-lg flex justify-between items-center text-xs font-mono border border-slate-800 animate-fade-in">
+                  <span className="text-slate-400 font-semibold uppercase tracking-wider text-[9px]">Service Fee Due:</span>
+                  <span className="text-md font-black text-indigo-400 font-mono">{getTierPriceDisplay(selectedTier)}</span>
                 </div>
-
-                {/* Bank transfer coordinates display */}
-                <div className="bg-slate-950 p-4 rounded-xl border border-slate-850/85 text-xs">
-                  <p className="font-bold text-indigo-400 uppercase tracking-widest font-mono mb-2 flex items-center gap-1 text-[11px]">
+                <div className="bg-slate-950 p-3 rounded-lg border border-slate-850/85 text-xs">
+                  <p className="font-bold text-indigo-400 uppercase tracking-widest font-mono mb-1.5 flex items-center gap-1 text-[10px]">
                     🏦 Bank Transfer Information
                   </p>
-                  <p className="text-slate-400 mb-3 text-[10px] leading-normal font-sans">
+                  <p className="text-slate-400 mb-2 text-[9px] leading-normal font-sans">
                     Please transfer the subscription fee to the official store banking coordinate details below, then upload the receipt/slip below.
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-[10px] font-mono">
-                    <div className="bg-slate-900 p-2 rounded border border-slate-800/30">
-                      <span className="text-slate-500 block text-[8px] uppercase">Bank Name</span>
+                  <div className="grid grid-cols-2 gap-1.5 text-[9px] font-mono">
+                    <div className="bg-slate-900 p-1.5 rounded border border-slate-800/30">
+                      <span className="text-slate-500 block text-[7px] uppercase">Bank Name</span>
                       <span className="text-slate-200 font-bold">{contact?.bankName || 'Commercial Bank Of Ceylon'}</span>
                     </div>
-                    <div className="bg-slate-900 p-2 rounded border border-slate-800/30">
-                      <span className="text-slate-500 block text-[8px] uppercase">Branch</span>
+                    <div className="bg-slate-900 p-1.5 rounded border border-slate-800/30">
+                      <span className="text-slate-500 block text-[7px] uppercase">Branch</span>
                       <span className="text-slate-200 font-bold">{contact?.bankBranch || 'Colombo Fort'}</span>
                     </div>
-                    <div className="bg-slate-900 p-2 rounded col-span-2 border border-slate-800/30">
-                      <span className="text-slate-500 block text-[8px] uppercase">Account Owner Name</span>
+                    <div className="bg-slate-900 p-1.5 rounded col-span-2 border border-slate-800/30">
+                      <span className="text-slate-500 block text-[7px] uppercase">Account Owner Name</span>
                       <span className="text-slate-200 font-bold">{contact?.bankAccountName || 'DataStore VPN Router Group'}</span>
                     </div>
-                    <div className="bg-slate-900 p-2 rounded col-span-2 flex justify-between items-center pr-2 border border-slate-800/30">
+                    <div className="bg-slate-900 p-1.5 rounded col-span-2 flex justify-between items-center pr-1.5 border border-slate-800/30">
                       <div>
-                        <span className="text-slate-500 block text-[8px] uppercase">Account Number</span>
-                        <span className="text-indigo-400 font-bold text-xs">{contact?.bankAccountNo || '800021398'}</span>
+                        <span className="text-slate-500 block text-[7px] uppercase">Account Number</span>
+                        <span className="text-indigo-400 font-bold text-[11px]">{contact?.bankAccountNo || '800021398'}</span>
                       </div>
                       <button 
                         onClick={(e) => {
@@ -4014,7 +4034,7 @@ export default function App() {
                           const num = contact?.bankAccountNo || '800021398';
                           navigator.clipboard.writeText(num);
                         }}
-                        className="text-[9px] bg-slate-800 hover:bg-slate-750 hover:text-white text-slate-300 px-2 py-1 rounded transition"
+                        className="text-[8px] bg-slate-800 hover:bg-slate-750 hover:text-white text-slate-300 px-1.5 py-0.5 rounded transition cursor-pointer"
                         type="button"
                       >
                         Copy No.
@@ -4030,8 +4050,8 @@ export default function App() {
                   onDragLeave={handleDrag}
                   onDrop={handleDrop}
                   onClick={() => document.getElementById('slip-file-input')?.click()}
-                  className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition ${
-                    dragActive ? 'border-indigo-550 bg-indigo-500/[0.03]' : 'border-slate-800 bg-slate-950 hover:border-indigo-500/30'
+                  className={`border border-dashed rounded-lg p-4 text-center cursor-pointer transition ${
+                    dragActive ? 'border-indigo-550 bg-indigo-500/[0.03]' : 'border-slate-850 bg-slate-950 hover:border-indigo-500/35'
                   }`}
                 >
                   <input 
@@ -4043,46 +4063,46 @@ export default function App() {
                   />
 
                   {base64Slip ? (
-                    <div className="space-y-3">
-                      <div className="h-28 w-fit mx-auto relative group">
+                    <div className="space-y-1.5">
+                      <div className="h-16 w-fit mx-auto relative group flex justify-center">
                         <img src={base64Slip} alt="Target slip thumbnail" className="h-full object-contain rounded border border-slate-800" />
-                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white">
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[8px] text-white">
                           Change file
                         </div>
                       </div>
                       <p className="text-xs text-emerald-400 font-mono flex items-center justify-center gap-1">
-                        <Check className="w-4 h-4" /> Slip attachment active!
+                        <Check className="w-3.5 h-3.5" /> Slip attachment active!
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center mx-auto text-indigo-450">
-                        <Upload className="w-5 h-5 text-indigo-400" />
+                    <div className="space-y-1.5">
+                      <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center mx-auto text-indigo-450 animate-pulse">
+                        <Upload className="w-4 h-4 text-indigo-400" />
                       </div>
-                      <p className="text-xs text-slate-300 font-bold">Drag and drop bank receipt image here, or <span className="text-indigo-400 underline">browse computer</span></p>
-                      <p className="text-[10px] text-slate-500 font-mono">Accepts PNG, JPG format bank transfer screenshots</p>
+                      <p className="text-xs text-slate-200 font-bold">Drag and drop bank receipt image here, or <span className="text-indigo-400 underline">browse</span></p>
+                      <p className="text-[9px] text-slate-500 font-mono">Accepts PNG, JPG format bank transfer screenshots</p>
                     </div>
                   )}
                 </div>
 
                 {slipFeedback && (
-                  <div className={`p-3.5 rounded-lg flex items-start gap-2 text-xs ${
+                  <div className={`p-2.5 rounded-lg flex items-start gap-1.5 text-xs ${
                     slipFeedback.type === 'success' ? 'bg-emerald-500/10 text-emerald-300 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-300 border border-rose-500/20'
                   }`}>
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                     <p>{slipFeedback.message}</p>
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-2">
+                <div className="flex gap-2 pt-1">
                   <button
                     onClick={handleSlipSubmission}
                     disabled={!base64Slip || isSubmittingSlip}
-                    className="flex-1 py-3 font-bold text-xs text-white bg-indigo-500 hover:bg-indigo-650 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
+                    className="flex-1 py-2.5 font-bold text-xs text-white bg-indigo-500 hover:bg-indigo-650 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1"
                   >
                     {isSubmittingSlip ? (
                       <>
-                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Verifying Receipt Data...
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Verifying...
                       </>
                     ) : (
                       'Send Attachment to Backend'
@@ -4090,13 +4110,13 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => { setSelectedPackForSlip(null); setBase64Slip(''); setSlipFeedback(null); }}
-                    className="px-4 py-3 text-xs text-slate-400 hover:text-white hover:bg-slate-850 rounded-lg transition"
+                    className="px-3.5 py-2.5 text-xs text-slate-400 hover:text-white hover:bg-slate-850 rounded-lg transition cursor-pointer"
                   >
                     Cancel
                   </button>
                 </div>
 
-                <div className="bg-slate-950 p-2.5 rounded-lg text-center text-[10px] text-slate-500 font-mono border border-slate-850">
+                <div className="bg-slate-950 p-2 rounded-lg text-center text-[9px] text-slate-500 font-mono border border-slate-850">
                   🔒 Encrypted attachment router keys compiled safe.
                 </div>
 
@@ -4109,12 +4129,12 @@ export default function App() {
       {/* PRIVATE LIVE CHAT SUPPORT INBOX MODAL */}
       <AnimatePresence>
         {isSupportModalOpen && user && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg h-[550px] overflow-hidden shadow-2xl flex flex-col relative"
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg h-[550px] max-h-[90vh] my-8 overflow-hidden shadow-2xl flex flex-col relative"
             >
               {/* Header */}
               <div className="p-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
@@ -4228,12 +4248,12 @@ export default function App() {
       {/* POPUP 2: AUTH SIGN-IN MODAL - DEPRECATED IN FAVOR OF MAIN SECURE GATEWAY ENTRANCE */}
       <AnimatePresence>
         {showLoginModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md overflow-y-auto">
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-6 relative"
+              className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md my-8 overflow-hidden shadow-2xl p-6 relative font-sans"
             >
               <button 
                 onClick={() => setShowLoginModal(false)}
@@ -4328,6 +4348,8 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
+
+      </div>{/* CLOSE RIGHT SIDE MAIN VIEW WRAPPER */}
 
     </div>
   );

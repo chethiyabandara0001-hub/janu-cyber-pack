@@ -7,7 +7,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
-  ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw
+  ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw,
+  Sun, Moon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, User, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -1498,14 +1499,17 @@ export default function App() {
         </button>
 
         <div className={`p-6 ${sidebarCollapsed ? 'px-2 flex flex-col items-center justify-center' : ''}`} id="sidebar-header">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold text-white shadow-indigo-500/20 shadow shrink-0">
-              <Shield className="w-5 h-5" />
+          <div className="flex items-center gap-3 group/logo">
+            <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
+              <div className="absolute w-7 h-7 bg-indigo-600/40 rounded-lg border border-indigo-400/50 -rotate-12 transition-all duration-500 group-hover/logo:-rotate-[25deg] group-hover/logo:scale-110" />
+              <div className="absolute w-7 h-7 bg-purple-600/40 rounded-lg border border-purple-400/50 rotate-12 transition-all duration-500 group-hover/logo:rotate-[25deg] group-hover/logo:scale-110" />
+              <div className="relative z-10 w-8 h-8 bg-slate-900 rounded-lg border border-slate-700 flex items-center justify-center shadow-lg shadow-indigo-900/50 backdrop-blur-md">
+                <Globe className="w-4 h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.8)] animate-pulse" />
+              </div>
             </div>
             {!sidebarCollapsed && (
               <div className="animate-fade-in whitespace-nowrap overflow-hidden">
                 <h1 className="text-lg font-extrabold tracking-tight text-white font-display">Janu Cyber Pack</h1>
-                <p className="text-[9px] text-[#ff007f] tracking-widest font-bold">⚡ CYBERPACK GATEWAY ⚡</p>
               </div>
             )}
           </div>
@@ -1521,10 +1525,10 @@ export default function App() {
                 ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
                 : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
             }`}
-            title="Overview & News"
+            title="DASHBOARD"
           >
             <Inbox className="w-4 h-4 shrink-0" />
-            {!sidebarCollapsed && <span className="animate-fade-in">Overview & News</span>}
+            {!sidebarCollapsed && <span className="animate-fade-in font-semibold tracking-wider">DASHBOARD</span>}
           </button>
           
           <button
@@ -1536,27 +1540,12 @@ export default function App() {
                 ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
                 : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
             }`}
-            title="VPN Subscriptions"
+            title="VPN PACKAGES"
           >
             <Layers className="w-4 h-4 shrink-0" />
-            {!sidebarCollapsed && <span className="animate-fade-in">VPN Subscriptions</span>}
+            {!sidebarCollapsed && <span className="animate-fade-in font-semibold tracking-wider">VPN PACKAGES</span>}
           </button>
 
-          <button
-            onClick={() => setActiveTab('free-vpn')}
-            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
-              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
-            } ${
-              activeTab === 'free-vpn' 
-                ? 'bg-emerald-550/10 text-emerald-400 font-bold border border-emerald-500/10 font-mono' 
-                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
-            }`}
-            title="Get Free VPN"
-          >
-            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
-            {!sidebarCollapsed && <span className="animate-fade-in font-mono">get free vpn</span>}
-          </button>
-          
           {user && (
             <button
               onClick={() => setActiveTab('dashboard')}
@@ -1573,6 +1562,21 @@ export default function App() {
               {!sidebarCollapsed && <span className="animate-fade-in">My Account</span>}
             </button>
           )}
+
+          <button
+            onClick={() => setActiveTab('free-vpn')}
+            className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs ${
+              sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+            } ${
+              activeTab === 'free-vpn' 
+                ? 'bg-emerald-550/10 text-emerald-400 font-bold border border-emerald-500/10 font-mono' 
+                : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
+            }`}
+            title="Get Free VPN"
+          >
+            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+            {!sidebarCollapsed && <span className="animate-fade-in font-mono">get free vpn</span>}
+          </button>
 
           {user?.role === 'admin' && (
             <div className={`pt-6 ${sidebarCollapsed ? 'w-full flex flex-col items-center' : 'w-full'}`}>
@@ -1658,8 +1662,12 @@ export default function App() {
               </div>
             </div>
             
-            <h2 className="hidden md:block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              System Overview / <span className="text-slate-100">{activeTab}</span>
+            <h2 className="hidden md:block text-xs font-bold text-slate-200 uppercase tracking-widest font-mono">
+              {activeTab === 'home' && "DASHBOARD"}
+              {activeTab === 'packages' && "VPN PACKAGES"}
+              {activeTab === 'free-vpn' && "FREE VPN"}
+              {activeTab === 'dashboard' && "MY ACCOUNT"}
+              {activeTab === 'admin' && "ADMIN PANEL"}
             </h2>
           </div>
 
@@ -1668,25 +1676,25 @@ export default function App() {
             <div className="flex items-center gap-1 bg-slate-900 border border-slate-850 p-1 rounded-xl">
               <button
                 onClick={() => setTheme('cyberpunk-dark')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer text-[10px] uppercase font-mono font-bold flex items-center gap-1 ${
+                className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
                   theme === 'cyberpunk-dark'
                     ? 'bg-indigo-500 text-white shadow shadow-indigo-500/20'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
                 title="Solid Charm Dark Mode"
               >
-                🌌 <span className="hidden sm:inline">Dark</span>
+                <Moon className="w-4 h-4" />
               </button>
               <button
                 onClick={() => setTheme('cyberpunk-light')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer text-[10px] uppercase font-mono font-bold flex items-center gap-1 ${
+                className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center justify-center ${
                   theme === 'cyberpunk-light'
                     ? 'bg-indigo-500 text-white shadow shadow-indigo-500/20'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
                 title="Solid Charm Light Mode"
               >
-                ☀️ <span className="hidden sm:inline">Light</span>
+                <Sun className="w-4 h-4" />
               </button>
             </div>
 
@@ -1724,21 +1732,15 @@ export default function App() {
         <div className="md:hidden flex flex-wrap gap-1 px-4 py-2 bg-slate-900 border-b border-slate-800 justify-center">
           <button 
             onClick={() => setActiveTab('home')}
-            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'home' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+            className={`flex-1 text-center py-1.5 text-[9px] font-bold rounded-lg transition tracking-wide font-mono ${activeTab === 'home' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
           >
-            News
+            DASHBOARD
           </button>
           <button 
             onClick={() => setActiveTab('packages')}
-            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'packages' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
+            className={`flex-1 text-center py-1.5 text-[9px] font-bold rounded-lg transition tracking-wide font-mono ${activeTab === 'packages' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/10' : 'text-slate-400'}`}
           >
-            VPN List
-          </button>
-          <button 
-            onClick={() => setActiveTab('free-vpn')}
-            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'free-vpn' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 font-mono' : 'text-slate-400'}`}
-          >
-            Free VPN
+            VPN PACKAGES
           </button>
           {user && (
             <button 
@@ -1748,6 +1750,12 @@ export default function App() {
               Account
             </button>
           )}
+          <button 
+            onClick={() => setActiveTab('free-vpn')}
+            className={`flex-1 text-center py-1.5 text-[10px] font-semibold rounded-lg transition ${activeTab === 'free-vpn' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10 font-mono' : 'text-slate-400'}`}
+          >
+            Free VPN
+          </button>
           {user?.role === 'admin' && (
             <button 
               onClick={() => setActiveTab('admin')}
@@ -3938,7 +3946,7 @@ export default function App() {
             </div>
 
             <div>
-              <h5 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">VPN Subscriptions</h5>
+              <h5 className="text-xs font-bold text-white uppercase tracking-wider font-mono mb-4">VPN PACKAGES</h5>
               <ul className="space-y-2 text-xs text-slate-400">
                 <li><button onClick={() => setActiveTab('packages')} className="hover:text-indigo-400 cursor-pointer text-left">WireGuard Premium Configs</button></li>
                 <li><button onClick={() => setActiveTab('packages')} className="hover:text-indigo-400 cursor-pointer text-left">Stealth Vmess Channels</button></li>

@@ -413,6 +413,15 @@ export async function createExpressApp() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // API Backend routes
+  
+  // Sitemap routes for SEO ranking
+  app.get("/sitemap.xml", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "public", "sitemap.xml"));
+  });
+  
+  app.get("/sitemaps", (req, res) => {
+    res.redirect("/sitemap.xml");
+  });
 
   // 1. Core Config / Initial Data endpoint
   app.get("/api/initial-data", async (req, res) => {

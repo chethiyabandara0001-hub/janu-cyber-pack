@@ -13,6 +13,7 @@ interface SidebarProps {
   user: User | null;
   setLoginProvider: (provider: 'google' | 'email') => void;
   setShowLoginModal: (show: boolean) => void;
+  handleInitiateLogin?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -22,18 +23,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setActiveTab,
   user,
   setLoginProvider,
-  setShowLoginModal
+  setShowLoginModal,
+  handleInitiateLogin
 }) => {
-  const [showLoading, setShowLoading] = useState(false);
-
   const handleLogoClick = () => {
     if (!user) {
-      setShowLoading(true);
-      setTimeout(() => {
-        setShowLoading(false);
+      if (handleInitiateLogin) {
+        handleInitiateLogin();
+      } else {
         setLoginProvider('email');
         setShowLoginModal(true);
-      }, 2500); // 2.5 second loading screen
+      }
     } else {
       setActiveTab('home');
     }
@@ -41,31 +41,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Full Screen Loading Overlay for Login Entry */}
-      <AnimatePresence>
-        {showLoading && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md"
-          >
-            <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
-              <div className="absolute w-16 h-16 bg-indigo-600/40 rounded-xl border border-indigo-400/50 -rotate-12 animate-pulse" />
-              <div className="absolute w-16 h-16 bg-purple-600/40 rounded-xl border border-purple-400/50 rotate-12 animate-pulse delay-75" />
-              <div className="relative z-10 w-20 h-20 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-center shadow-2xl shadow-indigo-900/50">
-                <Globe className="w-10 h-10 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-spin-slow" />
-              </div>
-            </div>
-            <h2 className="text-2xl font-bold tracking-widest uppercase text-white font-mono mb-2">Connecting</h2>
-            <p className="text-sm font-mono text-indigo-400 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Establishing secure link...
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       <aside className={`hidden md:flex ${sidebarCollapsed ? 'w-20' : 'w-64'} bg-slate-900 border-r border-slate-800 flex-col shrink-0 min-h-screen text-slate-400 transition-all duration-300 ease-in-out relative`}>
         {/* Toggle Collapse Button */}
         <button
@@ -206,10 +181,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <>
                 <p className="text-[10px] text-slate-500">Guest Session Mode</p>
                 <button
-                  onClick={() => {
-                    setLoginProvider('email');
-                    setShowLoginModal(true);
-                  }}
+                  onClick={handleLogoClick}
                   className="mt-1 text-xs text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <LogIn className="w-3.5 h-3.5" /> Sign in to start
@@ -217,10 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </>
             ) : (
               <button
-                onClick={() => {
-                  setLoginProvider('email');
-                  setShowLoginModal(true);
-                }}
+                onClick={handleLogoClick}
                 className="p-1 rounded-lg bg-indigo-500/10 border border-indigo-500/25 text-indigo-400 hover:bg-indigo-500/20 flex items-center justify-center cursor-pointer"
                 title="Sign In"
               >

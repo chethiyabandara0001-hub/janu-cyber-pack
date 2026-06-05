@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { HelmetProvider } from 'react-helmet-async';
 
 // Suppress benign Firestore BloomFilter internal SDK warnings/errors
 const originalConsoleError = console.error;
@@ -46,7 +47,9 @@ console.warn = (...args: any[]) => {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <HelmetProvider>
+      <App />
+    </HelmetProvider>
   </StrictMode>,
 );
 

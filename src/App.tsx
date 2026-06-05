@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { 
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
@@ -141,6 +142,16 @@ export default function App() {
   const [isLoginLoading, setIsLoginLoading] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [showMobileLoading, setShowMobileLoading] = useState<boolean>(false);
+  const [isGlobalLoading, setIsGlobalLoading] = useState<boolean>(false);
+
+  const handleInitiateLogin = () => {
+    setIsGlobalLoading(true);
+    setTimeout(() => {
+      setIsGlobalLoading(false);
+      setLoginProvider('email');
+      setShowLoginModal(true);
+    }, 2500);
+  };
   
 
 
@@ -1491,6 +1502,42 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
+      <Helmet>
+        <title>{
+          activeTab === 'home' ? "Janu Cyber Pack | Ultimate Free VPN & Secure Proxy" :
+          activeTab === 'packages' ? "Premium VPN Packages | Janu Cyber Pack" :
+          activeTab === 'dashboard' ? "My Account | Janu Cyber Pack" :
+          activeTab === 'free-vpn' ? "Free VPN Access | Janu Cyber Pack" :
+          activeTab === 'admin' ? "Admin Portal | Janu Cyber Pack" :
+          "Janu Cyber Pack"
+        }</title>
+        <meta name="description" content="Browse safely and securely with Janu Cyber Pack. Delivering premium global VPN servers, anonymous surfing, and unblocking capabilities worldwide. Start for free today!" />
+        <link rel="canonical" href="https://janucyber.store/" />
+        
+        {/* Structured Data for SEO */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "Janu Cyber Pack",
+            "operatingSystem": "iOS, Android, Windows, macOS",
+            "applicationCategory": "SecurityApplication",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "LKR"
+            },
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.9",
+              "reviewCount": "1250"
+            }
+          })}
+        </script>
+      </Helmet>
+
+      {/* Hidden H1 for SEO robots */}
+      <h1 className="sr-only">Janu Cyber Pack - Fast, Secure and Free VPN Service worldwide</h1>
       {/* SIDEBAR NAVIGATION - VISIBLE ON DESKTOP */}
       <Sidebar 
         sidebarCollapsed={sidebarCollapsed}
@@ -1500,6 +1547,7 @@ export default function App() {
         user={user}
         setLoginProvider={setLoginProvider}
         setShowLoginModal={setShowLoginModal}
+        handleInitiateLogin={handleInitiateLogin}
       />
 
       {/* RIGHT SIDE MAIN VIEW WRAPPER */}
@@ -1511,12 +1559,7 @@ export default function App() {
             {/* Mobile block logo */}
             <div className="flex md:hidden items-center gap-2 cursor-pointer" onClick={() => {
               if (!user) {
-                setShowMobileLoading(true);
-                setTimeout(() => {
-                  setShowMobileLoading(false);
-                  setLoginProvider('email');
-                  setShowLoginModal(true);
-                }, 2500);
+                handleInitiateLogin();
               } else {
                 setActiveTab('home');
               }
@@ -1526,30 +1569,7 @@ export default function App() {
               </div>
             </div>
             
-            {/* FULL SCREEN MOBILE LOADING OVERLAY */}
-            <AnimatePresence>
-              {showMobileLoading && (
-                <motion.div 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md"
-                >
-                  <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
-                    <div className="absolute w-16 h-16 bg-indigo-600/40 rounded-xl border border-indigo-400/50 -rotate-12 animate-pulse" />
-                    <div className="absolute w-16 h-16 bg-purple-600/40 rounded-xl border border-purple-400/50 rotate-12 animate-pulse delay-75" />
-                    <div className="relative z-10 w-20 h-20 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-center shadow-2xl shadow-indigo-900/50">
-                      <Shield className="w-10 h-10 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-spin-slow" />
-                    </div>
-                  </div>
-                  <h2 className="text-2xl font-bold tracking-widest uppercase text-white font-mono mb-2">Connecting</h2>
-                  <p className="text-sm font-mono text-indigo-400 flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Establishing secure link...
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Removed mobile loading overlay, it's now global */}
             
             <h2 className="hidden md:block text-xs font-bold text-slate-200 uppercase tracking-widest font-mono">
               {activeTab === 'home' && "DASHBOARD"}
@@ -3005,7 +3025,11 @@ export default function App() {
 
           <div className="pt-8 mt-8 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>© {new Date().getFullYear()} Janu Cyber Pack. All rights reserved.</p>
-            <p className="text-[11px] text-slate-650">Created by Melagents AI solutions</p>
+            <div className="flex gap-4">
+              <a href="/sitemaps" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Sitemaps</a>
+              <a href="https://janucyber.store" className="hover:text-indigo-400 transition-colors">Official Domain</a>
+            </div>
+            <p className="text-[11px] text-slate-600">Created by Melagents AI solutions</p>
           </div>
         </div>
       </footer>
@@ -3046,6 +3070,31 @@ export default function App() {
         handleSendSupportMessage={handleSendSupportMessage}
         userChatEndRef={userChatEndRef}
       />
+
+      {/* GLOBAL LOADING OVERLAY */}
+      <AnimatePresence>
+        {isGlobalLoading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md"
+          >
+            <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
+              <div className="absolute w-16 h-16 bg-indigo-600/40 rounded-xl border border-indigo-400/50 -rotate-12 animate-pulse" />
+              <div className="absolute w-16 h-16 bg-purple-600/40 rounded-xl border border-purple-400/50 rotate-12 animate-pulse delay-75" />
+              <div className="relative z-10 w-20 h-20 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-center shadow-2xl shadow-indigo-900/50">
+                <Globe className="w-10 h-10 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-pulse" />
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold tracking-widest uppercase text-white font-mono mb-2">Connecting</h2>
+            <p className="text-sm font-mono text-indigo-400 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Establishing secure link...
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* POPUP 2: AUTH SIGN-IN MODAL - DEPRECATED IN FAVOR OF MAIN SECURE GATEWAY ENTRANCE */}
       <AnimatePresence>

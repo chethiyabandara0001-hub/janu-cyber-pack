@@ -1,6 +1,6 @@
 {
   "name": "Janu Cyber Pack",
-  "description": "Premium full-stack store for VPN packages with instant verification, admin controls, and usage analytics dashboards.",
+  "description": "The ultimate secure VPN marketplace providing fast, reliable, and free proxy services with real-time verification and admin management.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

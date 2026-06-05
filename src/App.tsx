@@ -141,7 +141,6 @@ export default function App() {
   const [emailAuthMode, setEmailAuthMode] = useState<'login' | 'register'>('login');
   const [isLoginLoading, setIsLoginLoading] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
-  const [showMobileLoading, setShowMobileLoading] = useState<boolean>(false);
   const [isGlobalLoading, setIsGlobalLoading] = useState<boolean>(false);
 
   const handleInitiateLogin = () => {
@@ -293,8 +292,7 @@ export default function App() {
   // User Free VPN Activation Handler
   const handleClaimFreeVpn = async (pkgId: string) => {
     if (!user) {
-      setLoginProvider('email');
-      setShowLoginModal(true);
+      handleInitiateLogin();
       return;
     }
 
@@ -1045,7 +1043,7 @@ export default function App() {
   // User submits Slip to backend
   const handleSlipSubmission = async () => {
     if (!user) {
-      setShowLoginModal(true);
+      handleInitiateLogin();
       return;
     }
     if (!selectedPackForSlip || !base64Slip) return;
@@ -1624,10 +1622,7 @@ export default function App() {
               </div>
             ) : (
               <button
-                onClick={() => {
-                  setLoginProvider('email');
-                  setShowLoginModal(true);
-                }}
+                onClick={() => handleInitiateLogin()}
                 className="px-5 py-2.5 text-sm font-semibold rounded-xl text-white bg-indigo-500 hover:bg-indigo-600 transition-all flex items-center gap-2 cursor-pointer shadow-indigo-900/50 shadow-md"
               >
                 <LogIn className="w-4 h-4" />
@@ -1715,6 +1710,7 @@ export default function App() {
             contact={contact}
             setShowLoginModal={setShowLoginModal}
             setIsSupportModalOpen={setIsSupportModalOpen}
+            handleInitiateLogin={handleInitiateLogin}
           />
         )}
 
@@ -1725,6 +1721,7 @@ export default function App() {
             user={user}
             setShowLoginModal={setShowLoginModal}
             setSelectedPackForSlip={setSelectedPackForSlip}
+            handleInitiateLogin={handleInitiateLogin}
           />
         )}
 
@@ -1734,6 +1731,7 @@ export default function App() {
             user={user}
             setLoginProvider={setLoginProvider}
             setShowLoginModal={setShowLoginModal}
+            handleInitiateLogin={handleInitiateLogin}
             selectedFreeIsp={selectedFreeIsp}
             setSelectedFreeIsp={setSelectedFreeIsp}
             selectedFreeType={selectedFreeType}
@@ -3027,7 +3025,7 @@ export default function App() {
             <p>© {new Date().getFullYear()} Janu Cyber Pack. All rights reserved.</p>
             <div className="flex gap-4">
               <a href="/sitemaps" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Sitemaps</a>
-              <a href="https://janucyber.store" className="hover:text-indigo-400 transition-colors">Official Domain</a>
+              <a href="https://janucyber.store" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Official Domain</a>
             </div>
             <p className="text-[11px] text-slate-600">Created by Melagents AI solutions</p>
           </div>

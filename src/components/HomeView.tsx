@@ -11,6 +11,7 @@ interface HomeViewProps {
   contact: ContactDetails | null;
   setShowLoginModal: (show: boolean) => void;
   setIsSupportModalOpen: (show: boolean) => void;
+  handleInitiateLogin?: () => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -20,7 +21,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   posts,
   contact,
   setShowLoginModal,
-  setIsSupportModalOpen
+  setIsSupportModalOpen,
+  handleInitiateLogin
 }) => {
   return (
     <div className="space-y-6">
@@ -229,7 +231,11 @@ export const HomeView: React.FC<HomeViewProps> = ({
             type="button"
             onClick={() => {
               if (!user) {
-                setShowLoginModal(true);
+                if (handleInitiateLogin) {
+                  handleInitiateLogin();
+                } else {
+                  setShowLoginModal(true);
+                }
               } else {
                 setIsSupportModalOpen(true);
               }

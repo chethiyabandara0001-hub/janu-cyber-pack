@@ -6,6 +6,7 @@ interface FreeVpnViewProps {
   user: User | null;
   setLoginProvider: (provider: 'email' | 'google') => void;
   setShowLoginModal: (show: boolean) => void;
+  handleInitiateLogin?: () => void;
   selectedFreeIsp: 'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel';
   setSelectedFreeIsp: (val: 'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel') => void;
   selectedFreeType: 'Mobile' | 'Router' | 'Fiber';
@@ -30,6 +31,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
   user,
   setLoginProvider,
   setShowLoginModal,
+  handleInitiateLogin,
   selectedFreeIsp,
   setSelectedFreeIsp,
   selectedFreeType,
@@ -155,8 +157,12 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                 </p>
                 <button
                   onClick={() => {
-                    setLoginProvider('email');
-                    setShowLoginModal(true);
+                    if (handleInitiateLogin) {
+                      handleInitiateLogin();
+                    } else {
+                      setLoginProvider('email');
+                      setShowLoginModal(true);
+                    }
                   }}
                   className="mt-3 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-[10px] font-bold text-slate-950 rounded-lg cursor-pointer transition uppercase"
                 >

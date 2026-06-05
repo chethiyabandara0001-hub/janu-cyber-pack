@@ -7,13 +7,15 @@ interface PackagesViewProps {
   user: User | null;
   setShowLoginModal: (show: boolean) => void;
   setSelectedPackForSlip: (pkg: Package) => void;
+  handleInitiateLogin?: () => void;
 }
 
 export const PackagesView: React.FC<PackagesViewProps> = ({
   packages,
   user,
   setShowLoginModal,
-  setSelectedPackForSlip
+  setSelectedPackForSlip,
+  handleInitiateLogin
 }) => {
   return (
     <div className="space-y-8 animate-fade-in">
@@ -85,7 +87,11 @@ export const PackagesView: React.FC<PackagesViewProps> = ({
                   <button
                     onClick={() => {
                       if (!user) {
-                        setShowLoginModal(true);
+                        if (handleInitiateLogin) {
+                          handleInitiateLogin();
+                        } else {
+                          setShowLoginModal(true);
+                        }
                         return;
                       }
                       setSelectedPackForSlip(pkg);

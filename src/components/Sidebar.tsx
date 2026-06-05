@@ -8,8 +8,8 @@ import { AnimatePresence, motion } from 'motion/react';
 interface SidebarProps {
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (val: boolean) => void;
-  activeTab: 'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn';
-  setActiveTab: (tab: 'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn') => void;
+  activeTab: 'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps';
+  setActiveTab: (tab: 'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps') => void;
   user: User | null;
   setLoginProvider: (provider: 'google' | 'email') => void;
   setShowLoginModal: (show: boolean) => void;

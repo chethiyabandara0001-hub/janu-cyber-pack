@@ -23,6 +23,9 @@ import { PackagesView } from './components/PackagesView';
 import { UserDashboardView } from './components/UserDashboardView';
 import { AdBanner } from './components/AdBanner';
 import { FreeVpnView } from './components/FreeVpnView';
+import { PrivacyView } from './components/PrivacyView';
+import { TermsView } from './components/TermsView';
+import { SitemapsView } from './components/SitemapsView';
 
 const getTierPriceDisplay = (tierInput: string): string => {
   const normalized = (tierInput || '').trim().toLowerCase();
@@ -58,8 +61,46 @@ export default function App() {
     localStorage.setItem('janu-sidebar-collapsed', String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin' | 'free-vpn'
-  const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn'>('home');
+  // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps'
+  const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps'>(() => {
+    const path = window.location.pathname;
+    if (path === '/privacy') return 'privacy';
+    if (path === '/terms') return 'terms';
+    if (path === '/sitemaps') return 'sitemaps';
+    if (path === '/packages') return 'packages';
+    if (path === '/free-vpn') return 'free-vpn';
+    return 'home';
+  });
+
+  // Keep state tab and address bar URL perfectly and elegantly in sync
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const path = window.location.pathname;
+      if (path === '/privacy') {
+        setActiveTab('privacy');
+      } else if (path === '/terms') {
+        setActiveTab('terms');
+      } else if (path === '/sitemaps') {
+        setActiveTab('sitemaps');
+      } else if (path === '/packages') {
+        setActiveTab('packages');
+      } else if (path === '/free-vpn') {
+        setActiveTab('free-vpn');
+      } else if (path === '/') {
+        setActiveTab('home');
+      }
+    };
+    window.addEventListener('popstate', handleUrlChange);
+    return () => window.removeEventListener('popstate', handleUrlChange);
+  }, []);
+
+  useEffect(() => {
+    const currentPath = window.location.pathname;
+    const expectedPath = activeTab === 'home' ? '/' : `/${activeTab}`;
+    if (currentPath !== expectedPath) {
+      window.history.pushState(null, '', expectedPath);
+    }
+  }, [activeTab]);
   const [user, setUser] = useState<User | null>(() => {
     try {
       const savedUser = localStorage.getItem('janu-cyber-user');
@@ -1507,6 +1548,9 @@ export default function App() {
           activeTab === 'dashboard' ? "My Account | Janu Cyber Pack" :
           activeTab === 'free-vpn' ? "Free VPN Access | Janu Cyber Pack" :
           activeTab === 'admin' ? "Admin Portal | Janu Cyber Pack" :
+          activeTab === 'privacy' ? "Privacy Policy | Janu Cyber Pack" :
+          activeTab === 'terms' ? "Terms of Service | Janu Cyber Pack" :
+          activeTab === 'sitemaps' ? "Sitemaps Navigation Index | Janu Cyber Pack" :
           "Janu Cyber Pack"
         }</title>
         <meta name="description" content="Browse safely and securely with Janu Cyber Pack. Delivering premium global VPN servers, anonymous surfing, and unblocking capabilities worldwide. Start for free today!" />
@@ -1575,6 +1619,9 @@ export default function App() {
               {activeTab === 'free-vpn' && "FREE VPN"}
               {activeTab === 'dashboard' && "MY ACCOUNT"}
               {activeTab === 'admin' && "ADMIN PANEL"}
+              {activeTab === 'privacy' && "PRIVACY POLICY"}
+              {activeTab === 'terms' && "TERMS OF SERVICE"}
+              {activeTab === 'sitemaps' && "SITEMAPS VISUAL DIRECTORY"}
             </h2>
           </div>
 
@@ -1759,6 +1806,21 @@ export default function App() {
             user={user}
             userSlips={userSlips}
           />
+        )}
+
+        {/* TAB: PRIVACY POLICY */}
+        {activeTab === 'privacy' && (
+          <PrivacyView onBackToHome={() => setActiveTab('home')} />
+        )}
+
+        {/* TAB: TERMS OF SERVICE */}
+        {activeTab === 'terms' && (
+          <TermsView onBackToHome={() => setActiveTab('home')} />
+        )}
+
+        {/* TAB: SITEMAPS VISUAL DIRECTORY */}
+        {activeTab === 'sitemaps' && (
+          <SitemapsView onNavigate={(tab) => setActiveTab(tab)} />
         )}
 
         {/* TAB 4: ADMINISTRATIVE COMMAND CENTER */}
@@ -3024,9 +3086,27 @@ export default function App() {
           <div className="pt-8 mt-8 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>© {new Date().getFullYear()} Janu Cyber Pack. All rights reserved.</p>
             <div className="flex gap-4">
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Privacy</a>
-              <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Terms</a>
-              <a href="/sitemaps" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Sitemaps</a>
+              <a 
+                href="/privacy" 
+                onClick={(e) => { e.preventDefault(); setActiveTab('privacy'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                className="hover:text-indigo-400 transition-colors cursor-pointer"
+              >
+                Privacy
+              </a>
+              <a 
+                href="/terms" 
+                onClick={(e) => { e.preventDefault(); setActiveTab('terms'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                className="hover:text-indigo-400 transition-colors cursor-pointer"
+              >
+                Terms
+              </a>
+              <a 
+                href="/sitemaps" 
+                onClick={(e) => { e.preventDefault(); setActiveTab('sitemaps'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} 
+                className="hover:text-indigo-400 transition-colors cursor-pointer"
+              >
+                Sitemaps
+              </a>
               <a href="https://janucyber.store" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Official Domain</a>
             </div>
             <p className="text-[11px] text-slate-600">Created by Melagents AI solutions</p>

@@ -3024,6 +3024,8 @@ export default function App() {
           <div className="pt-8 mt-8 border-t border-slate-800 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-4">
             <p>© {new Date().getFullYear()} Janu Cyber Pack. All rights reserved.</p>
             <div className="flex gap-4">
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Privacy</a>
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Terms</a>
               <a href="/sitemaps" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Sitemaps</a>
               <a href="https://janucyber.store" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Official Domain</a>
             </div>

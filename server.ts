@@ -471,6 +471,16 @@ export async function createExpressApp() {
               <span class="block text-sm font-bold text-slate-100 group-hover:text-purple-400 transition-colors">Secure Client Portal</span>
               <span class="block text-xs text-slate-500 mt-1 leading-relaxed">User dashboard for tracking bandwidth usage and managing active sessions.</span>
             </a>
+
+             <a href="/privacy" class="group p-5 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-blue-500/50 hover:bg-slate-800 transition-all duration-300">
+              <span class="block text-sm font-bold text-slate-100 group-hover:text-blue-400 transition-colors">Privacy Policy</span>
+              <span class="block text-xs text-slate-500 mt-1 leading-relaxed">Our commitment to user data protection and anonymous browsing.</span>
+            </a>
+
+            <a href="/terms" class="group p-5 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-pink-500/50 hover:bg-slate-800 transition-all duration-300">
+              <span class="block text-sm font-bold text-slate-100 group-hover:text-pink-400 transition-colors">Terms of Service</span>
+              <span class="block text-xs text-slate-500 mt-1 leading-relaxed">Usage agreements, service conditions, and legal guidelines.</span>
+            </a>
           </div>
           
           <div class="mt-8 pt-8 border-t border-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-6">
@@ -495,6 +505,145 @@ export async function createExpressApp() {
           © 2026 Janu Cyber Pack. All trademarks property of their respective owners.<br/>
           Designed for maximum visibility and indexing performance.
         </footer>
+      </body>
+      </html>
+    `;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+
+  app.get("/privacy", (req, res) => {
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Privacy Policy | Janu Cyber Pack</title>
+        <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
+        </style>
+      </head>
+      <body class="min-h-screen py-12 px-6 flex flex-col items-center">
+        <div class="w-full max-w-3xl bg-slate-900/50 border border-slate-800 rounded-2xl p-8 md:p-12 backdrop-blur-md shadow-2xl">
+          <header class="mb-10 text-center">
+            <h1 class="text-3xl font-extrabold text-white mb-2">Privacy Policy</h1>
+            <p class="text-indigo-400 text-sm font-medium tracking-wide uppercase">Effective Date: June 05, 2026</p>
+          </header>
+          
+          <div class="space-y-8 text-slate-300 leading-relaxed">
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">1. Introduction</h2>
+              <p>Welcome to Janu Cyber Pack. We are committed to protecting your privacy and ensuring that your personal information is handled in a safe and responsible manner. This Privacy Policy outlines how we collect, use, and protect your data when you use our VPN services.</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">2. No-Logs Policy</h2>
+              <p>Our core mission is your privacy. We maintain a strict <span class="text-emerald-400 font-semibold">No-Logs Policy</span>. We do not track, collect, or store any data related to your browsing history, connection destination, traffic content, or DNS queries while connected to our VPN.</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">3. Data Collection</h2>
+              <p>We only collect the minimum information necessary to maintain your account and provide services:</p>
+              <ul class="list-disc ml-6 mt-3 space-y-2">
+                <li><span class="text-white">Account Information:</span> Your email address for login and support purposes.</li>
+                <li><span class="text-white">Transaction Data:</span> Proof of payment (bank slips) for manual package activation.</li>
+                <li><span class="text-white">Technical Metrics:</span> Basic, non-identifying aggregate metrics like server load to optimize performance.</li>
+              </ul>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">4. Data Security</h2>
+              <p>We use industry-standard encryption protocols (including AES-256) to protect any data transmitted through our network. Access to our database is strictly limited to authorized administrative personnel only.</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">5. Third-Party Services</h2>
+              <p>Our website may use third-party tools for analytics or advertisements. These services operate under their own privacy policies. We do not share your VPN traffic data with any third parties.</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">6. Changes to This Policy</h2>
+              <p>We may update this Privacy Policy from time to time. We will notify users of any significant changes by posting the new policy on this page.</p>
+            </section>
+          </div>
+          
+          <footer class="mt-12 pt-8 border-t border-slate-800 text-center">
+            <a href="/" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-indigo-900/30">Return to Dashboard</a>
+          </footer>
+        </div>
+      </body>
+      </html>
+    `;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
+  });
+
+  app.get("/terms", (req, res) => {
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Terms of Service | Janu Cyber Pack</title>
+        <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
+        </style>
+      </head>
+      <body class="min-h-screen py-12 px-6 flex flex-col items-center">
+        <div class="w-full max-w-3xl bg-slate-900/50 border border-slate-800 rounded-2xl p-8 md:p-12 backdrop-blur-md shadow-2xl">
+          <header class="mb-10 text-center">
+            <h1 class="text-3xl font-extrabold text-white mb-2">Terms of Service</h1>
+            <p class="text-pink-400 text-sm font-medium tracking-wide uppercase">Last Updated: June 05, 2026</p>
+          </header>
+          
+          <div class="space-y-8 text-slate-300 leading-relaxed">
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">1. Acceptance of Terms</h2>
+              <p>By accessing and using Janu Cyber Pack, you agree to comply with and be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">2. Description of Service</h2>
+              <p>Janu Cyber Pack provides Virtual Private Network (VPN) services to enhance user privacy and security online. We offer both free and premium packages subject to availability and maintenance.</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">3. User Conduct</h2>
+              <p>Users agree NOT to use the service for any illegal activities, including but not limited to:</p>
+              <ul class="list-disc ml-6 mt-3 space-y-2">
+                <li>Unauthorized access to other computer systems.</li>
+                <li>Distribution of malware or viruses.</li>
+                <li>Activities that violate the intellectual property rights of others.</li>
+                <li>Spamming or any form of online harassment.</li>
+              </ul>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">4. Payments and Refunds</h2>
+              <p>Premium packages are activated upon successful verification of an uploaded payment slip. All sales are final. Refunds are provided only in cases where the service fails to meet the technical specifications promised for a sustained period (exceeding 72 hours).</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">5. Disclaimer of Warranties</h2>
+              <p>The service is provided on an "as is" and "as available" basis. While we strive for 100% uptime, we do not guarantee uninterrupted service or specific speeds, as these can be affected by external network conditions.</p>
+            </section>
+            
+            <section>
+              <h2 class="text-xl font-bold text-white mb-3">6. Termination</h2>
+              <p>We reserve the right to suspend or terminate any account found to be in violation of these Terms of Service without prior notice or refund.</p>
+            </section>
+          </div>
+          
+          <footer class="mt-12 pt-8 border-t border-slate-800 text-center">
+            <a href="/" class="px-6 py-2 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-pink-900/30">I Understand & AGREE</a>
+          </footer>
+        </div>
       </body>
       </html>
     `;

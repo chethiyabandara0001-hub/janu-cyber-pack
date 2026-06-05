@@ -192,6 +192,24 @@ export default function App() {
     }, 2500);
   };
   
+  // Intercept every click on interactive elements until user is logged in
+  useEffect(() => {
+    if (user || showLoginModal || isGlobalLoading) return;
+
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Intercept clicks on clickable or interactive elements
+      const clickableElement = target.closest('button, a, [role="button"], .cursor-pointer, input, select, textarea');
+      if (clickableElement) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleInitiateLogin();
+      }
+    };
+
+    document.addEventListener('click', handleGlobalClick, true);
+    return () => document.removeEventListener('click', handleGlobalClick, true);
+  }, [user, showLoginModal, isGlobalLoading]);
 
 
   // Admin Dashboard stats & controls
@@ -1669,10 +1687,10 @@ export default function App() {
             ) : (
               <button
                 onClick={() => handleInitiateLogin()}
-                className="px-5 py-2.5 text-sm font-semibold rounded-xl text-white bg-indigo-500 hover:bg-indigo-600 transition-all flex items-center gap-2 cursor-pointer shadow-indigo-900/50 shadow-md"
+                className="px-5 py-2.5 text-xs sm:text-sm font-bold rounded-xl text-white bg-indigo-500 hover:bg-indigo-600 transition-all flex items-center gap-2 cursor-pointer shadow-indigo-900/50 shadow-md border border-indigo-400/20 active:scale-95"
               >
-                <LogIn className="w-4 h-4" />
-                Sign In
+                <LogIn className="w-4 h-4 text-indigo-200" />
+                Login or Sign Up
               </button>
             )}
           </div>

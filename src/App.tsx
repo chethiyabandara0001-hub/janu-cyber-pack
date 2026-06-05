@@ -8,7 +8,7 @@ import {
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
   ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw,
-  Sun, Moon
+  Sun, Moon, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -140,6 +140,7 @@ export default function App() {
   const [emailAuthMode, setEmailAuthMode] = useState<'login' | 'register'>('login');
   const [isLoginLoading, setIsLoginLoading] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
+  const [showMobileLoading, setShowMobileLoading] = useState<boolean>(false);
   
 
 
@@ -1508,11 +1509,47 @@ export default function App() {
         <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 sm:px-8 bg-slate-950 sticky top-0 z-40 shrink-0 backdrop-blur">
           <div className="flex items-center gap-3">
             {/* Mobile block logo */}
-            <div className="flex md:hidden items-center gap-2 cursor-pointer" onClick={() => setActiveTab('home')}>
+            <div className="flex md:hidden items-center gap-2 cursor-pointer" onClick={() => {
+              if (!user) {
+                setShowMobileLoading(true);
+                setTimeout(() => {
+                  setShowMobileLoading(false);
+                  setLoginProvider('email');
+                  setShowLoginModal(true);
+                }, 2500);
+              } else {
+                setActiveTab('home');
+              }
+            }}>
               <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center font-bold text-white shadow-md">
                 <Shield className="w-5 h-5" />
               </div>
             </div>
+            
+            {/* FULL SCREEN MOBILE LOADING OVERLAY */}
+            <AnimatePresence>
+              {showMobileLoading && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md"
+                >
+                  <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
+                    <div className="absolute w-16 h-16 bg-indigo-600/40 rounded-xl border border-indigo-400/50 -rotate-12 animate-pulse" />
+                    <div className="absolute w-16 h-16 bg-purple-600/40 rounded-xl border border-purple-400/50 rotate-12 animate-pulse delay-75" />
+                    <div className="relative z-10 w-20 h-20 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-center shadow-2xl shadow-indigo-900/50">
+                      <Shield className="w-10 h-10 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-spin-slow" />
+                    </div>
+                  </div>
+                  <h2 className="text-2xl font-bold tracking-widest uppercase text-white font-mono mb-2">Connecting</h2>
+                  <p className="text-sm font-mono text-indigo-400 flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Establishing secure link...
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             <h2 className="hidden md:block text-xs font-bold text-slate-200 uppercase tracking-widest font-mono">
               {activeTab === 'home' && "DASHBOARD"}

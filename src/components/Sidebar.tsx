@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
-  Inbox, Layers, Server, Sparkles, Database, ChevronRight, ChevronLeft, Globe, LogIn 
+  Inbox, Layers, Server, Sparkles, Database, ChevronRight, ChevronLeft, Globe, LogIn, Loader2 
 } from 'lucide-react';
 import { User } from '../types';
+import { AnimatePresence, motion } from 'motion/react';
 
 interface SidebarProps {
   sidebarCollapsed: boolean;
@@ -23,38 +24,79 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setLoginProvider,
   setShowLoginModal
 }) => {
-  return (
-    <aside className={`hidden md:flex ${sidebarCollapsed ? 'w-20' : 'w-64'} bg-slate-900 border-r border-slate-800 flex-col shrink-0 min-h-screen text-slate-400 transition-all duration-300 ease-in-out relative`}>
-      {/* Toggle Collapse Button */}
-      <button
-        onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-        className="absolute -right-3.5 top-8 z-50 bg-slate-900 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 p-1.5 rounded-full cursor-pointer transition-all duration-200 shadow-lg group"
-        id="sidebar-toggle-btn"
-        title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-      >
-        {sidebarCollapsed ? (
-          <ChevronRight className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
-        ) : (
-          <ChevronLeft className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
-        )}
-      </button>
+  const [showLoading, setShowLoading] = useState(false);
 
-      <div className={`p-6 ${sidebarCollapsed ? 'px-2 flex flex-col items-center justify-center' : ''}`} id="sidebar-header">
-        <div className="flex items-center gap-3 group/logo">
-          <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
-            <div className="absolute w-7 h-7 bg-indigo-600/40 rounded-lg border border-indigo-400/50 -rotate-12 transition-all duration-500 group-hover/logo:-rotate-[25deg] group-hover/logo:scale-110" />
-            <div className="absolute w-7 h-7 bg-purple-600/40 rounded-lg border border-purple-400/50 rotate-12 transition-all duration-500 group-hover/logo:rotate-[25deg] group-hover/logo:scale-110" />
-            <div className="relative z-10 w-8 h-8 bg-slate-900 rounded-lg border border-slate-700 flex items-center justify-center shadow-lg shadow-indigo-900/50 backdrop-blur-md">
-              <Globe className="w-4 h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.8)] animate-pulse" />
+  const handleLogoClick = () => {
+    if (!user) {
+      setShowLoading(true);
+      setTimeout(() => {
+        setShowLoading(false);
+        setLoginProvider('email');
+        setShowLoginModal(true);
+      }, 2500); // 2.5 second loading screen
+    } else {
+      setActiveTab('home');
+    }
+  };
+
+  return (
+    <>
+      {/* Full Screen Loading Overlay for Login Entry */}
+      <AnimatePresence>
+        {showLoading && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-md"
+          >
+            <div className="relative w-24 h-24 mb-6 flex items-center justify-center">
+              <div className="absolute w-16 h-16 bg-indigo-600/40 rounded-xl border border-indigo-400/50 -rotate-12 animate-pulse" />
+              <div className="absolute w-16 h-16 bg-purple-600/40 rounded-xl border border-purple-400/50 rotate-12 animate-pulse delay-75" />
+              <div className="relative z-10 w-20 h-20 bg-slate-900 rounded-xl border border-slate-700 flex items-center justify-center shadow-2xl shadow-indigo-900/50">
+                <Globe className="w-10 h-10 text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.8)] animate-spin-slow" />
+              </div>
             </div>
-          </div>
-          {!sidebarCollapsed && (
-            <div className="animate-fade-in whitespace-nowrap overflow-hidden">
-              <h1 className="text-lg font-extrabold tracking-tight text-white font-display">Janu Cyber Pack</h1>
-            </div>
+            <h2 className="text-2xl font-bold tracking-widest uppercase text-white font-mono mb-2">Connecting</h2>
+            <p className="text-sm font-mono text-indigo-400 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Establishing secure link...
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <aside className={`hidden md:flex ${sidebarCollapsed ? 'w-20' : 'w-64'} bg-slate-900 border-r border-slate-800 flex-col shrink-0 min-h-screen text-slate-400 transition-all duration-300 ease-in-out relative`}>
+        {/* Toggle Collapse Button */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="absolute -right-3.5 top-8 z-50 bg-slate-900 hover:bg-indigo-600 hover:text-white border border-slate-800 text-slate-400 p-1.5 rounded-full cursor-pointer transition-all duration-200 shadow-lg group"
+          id="sidebar-toggle-btn"
+          title={sidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {sidebarCollapsed ? (
+            <ChevronRight className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
+          ) : (
+            <ChevronLeft className="w-4 h-4 group-hover:scale-110 transition-transform text-indigo-400 group-hover:text-white" />
           )}
+        </button>
+
+        <div className={`p-6 ${sidebarCollapsed ? 'px-2 flex flex-col items-center justify-center' : ''}`} id="sidebar-header">
+          <div className="flex items-center gap-3 group/logo cursor-pointer" onClick={handleLogoClick} title={!user ? "Sign In to Client Portal" : "Go to Dashboard"}>
+            <div className="relative w-10 h-10 shrink-0 flex items-center justify-center">
+              <div className="absolute w-7 h-7 bg-indigo-600/40 rounded-lg border border-indigo-400/50 -rotate-12 transition-all duration-500 group-hover/logo:-rotate-[25deg] group-hover/logo:scale-110" />
+              <div className="absolute w-7 h-7 bg-purple-600/40 rounded-lg border border-purple-400/50 rotate-12 transition-all duration-500 group-hover/logo:rotate-[25deg] group-hover/logo:scale-110" />
+              <div className="relative z-10 w-8 h-8 bg-slate-900 rounded-lg border border-slate-700 flex items-center justify-center shadow-lg shadow-indigo-900/50 backdrop-blur-md">
+                <Globe className="w-4 h-4 text-indigo-400 drop-shadow-[0_0_5px_rgba(99,102,241,0.8)] animate-pulse group-hover/logo:scale-110 transition-transform" />
+              </div>
+            </div>
+            {!sidebarCollapsed && (
+              <div className="animate-fade-in whitespace-nowrap overflow-hidden">
+                <h1 className="text-lg font-extrabold tracking-tight text-white font-display group-hover/logo:text-indigo-400 transition-colors">Janu Cyber Pack</h1>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       
       <nav className={`flex-1 px-4 space-y-1.5 ${sidebarCollapsed ? 'px-2 flex flex-col items-center' : ''}`} id="sidebar-nav">
         <button
@@ -189,5 +231,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
       </div>
     </aside>
+    </>
   );
 };

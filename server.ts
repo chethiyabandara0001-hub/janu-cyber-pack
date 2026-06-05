@@ -418,6 +418,18 @@ export async function createExpressApp() {
   app.get("/sitemap.xml", (req, res) => {
     res.sendFile(path.join(process.cwd(), "public", "sitemap.xml"));
   });
+
+  app.get("/robots.txt", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "public", "robots.txt"));
+  });
+
+  app.get("/favicon.png", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "public", "favicon.png"));
+  });
+
+  app.get("/favicon.ico", (req, res) => {
+    res.sendFile(path.join(process.cwd(), "public", "favicon.ico"));
+  });
   
   app.get("/sitemaps", (req, res) => {
     const html = `
@@ -435,7 +447,11 @@ export async function createExpressApp() {
         </script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Sitemaps | Janu Cyber Pack</title>
+        <link rel="icon" type="image/png" href="/favicon.png">
+        <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+        <title>Sitemap Index | Buy High Speed Premium VPN Configs - Janu Cyber Pack</title>
+        <meta name="description" content="Explore roads to ultimate online safety with Janu Cyber Pack! Complete map directory linking premium packages, free WireGuard configurations, stealth tunnels, and legal protocols.">
+        <meta name="keywords" content="sitemap, vpn sitemap, secure wireguard configs, vmess proxy index, ssh tunnels, buy cheap vpn">
         <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
         <style>
@@ -537,7 +553,11 @@ export async function createExpressApp() {
         </script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Privacy Policy | Janu Cyber Pack</title>
+        <link rel="icon" type="image/png" href="/favicon.png">
+        <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+        <title>Privacy Policy | Secure No-Logs Premium VPN - Janu Cyber Pack</title>
+        <meta name="description" content="Learn about Janu Cyber Pack's absolute commitment to our No-Logs pledge, AES-256 grade tunnel cryptography, and metadata confidentiality policies. Secure your premium browsing today!">
+        <meta name="keywords" content="vpn privacy, no-logs policy, encrypt traffic, secure vpn provider, stealth vmess privacy Sri Lanka">
         <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>
@@ -615,7 +635,11 @@ export async function createExpressApp() {
         </script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Terms of Service | Janu Cyber Pack</title>
+        <link rel="icon" type="image/png" href="/favicon.png">
+        <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+        <title>Terms of Service | Secure Premium VPN Server Selling - Janu Cyber Pack</title>
+        <meta name="description" content="Read our billing, honest bank slip verification protocols, acceptable tunnel traffic, and account active terms for Sri Lanka and international proxy users.">
+        <meta name="keywords" content="vpn terms, buy premium wireguard, verified vpn accounts, safe tunnel rules">
         <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
         <style>

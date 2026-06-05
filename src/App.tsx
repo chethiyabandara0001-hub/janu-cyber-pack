@@ -1543,17 +1543,17 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
       <Helmet>
         <title>{
-          activeTab === 'home' ? "Janu Cyber Pack | Ultimate Free VPN & Secure Proxy" :
-          activeTab === 'packages' ? "Premium VPN Packages | Janu Cyber Pack" :
-          activeTab === 'dashboard' ? "My Account | Janu Cyber Pack" :
-          activeTab === 'free-vpn' ? "Free VPN Access | Janu Cyber Pack" :
+          activeTab === 'home' ? "Janu Cyber Pack | No.1 Ultra-Fast Premium & Free VPN Store" :
+          activeTab === 'packages' ? "Buy Premium VPN Packages & Secure Configs | Janu Cyber Pack" :
+          activeTab === 'dashboard' ? "My Secure VPN Dashboard | Janu Cyber Pack" :
+          activeTab === 'free-vpn' ? "Get Free Daily VPN Configs (Dialog, Mobitel, Hutch) | Janu Cyber Pack" :
           activeTab === 'admin' ? "Admin Portal | Janu Cyber Pack" :
-          activeTab === 'privacy' ? "Privacy Policy | Janu Cyber Pack" :
-          activeTab === 'terms' ? "Terms of Service | Janu Cyber Pack" :
+          activeTab === 'privacy' ? "Privacy Policy & No-Logs Commitment | Janu Cyber Pack" :
+          activeTab === 'terms' ? "Terms of Service & Usage Standards | Janu Cyber Pack" :
           activeTab === 'sitemaps' ? "Sitemaps Navigation Index | Janu Cyber Pack" :
           "Janu Cyber Pack"
         }</title>
-        <meta name="description" content="Browse safely and securely with Janu Cyber Pack. Delivering premium global VPN servers, anonymous surfing, and unblocking capabilities worldwide. Start for free today!" />
+        <meta name="description" content="Looking to buy premium high-speed VPN configs? Janu Cyber Pack offers ultra-fast WireGuard profiles, Stealth Vmess, and SSH custom tunnels at the cheapest rates globally in LKR, USD, and AUD. Experience unthrottled low-latency gaming and seamless streaming today. Get started for free!" />
         <link rel="canonical" href="https://janucyber.store/" />
         
         {/* Structured Data for SEO */}
@@ -3109,7 +3109,7 @@ export default function App() {
               </a>
               <a href="https://janucyber.store" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Official Domain</a>
             </div>
-            <p className="text-[11px] text-slate-600">Created by Melagents AI solutions</p>
+            <p className="text-[11px] text-slate-600">Created by <a href="https://ace-10.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">ACE10</a></p>
           </div>
         </div>
       </footer>

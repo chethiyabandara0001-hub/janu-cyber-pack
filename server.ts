@@ -420,7 +420,86 @@ export async function createExpressApp() {
   });
   
   app.get("/sitemaps", (req, res) => {
-    res.redirect("/sitemap.xml");
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Sitemaps | Janu Cyber Pack</title>
+        <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Inter', sans-serif; background-color: #020617; color: #e2e8f0; }
+          .font-mono { font-family: 'JetBrains Mono', monospace; }
+        </style>
+      </head>
+      <body class="min-h-screen flex flex-col items-center py-12 px-6">
+        <header class="w-full max-w-2xl mb-12 flex items-center gap-4">
+          <div class="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-900/40">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+          </div>
+          <div>
+            <h1 class="text-2xl font-extrabold tracking-tight text-white">Janu Cyber Pack</h1>
+            <p class="text-sm text-slate-400 font-mono">Visual Index of Security Resources</p>
+          </div>
+        </header>
+        
+        <main class="w-full max-w-2xl bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-8 backdrop-blur-sm">
+          <h2 class="text-lg font-semibold text-emerald-400 mb-6 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            Site Navigation Directory
+          </h2>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <a href="https://janucyber.store/" class="group p-5 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-emerald-500/50 hover:bg-slate-800 transition-all duration-300">
+              <span class="block text-sm font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">Home Dashboard</span>
+              <span class="block text-xs text-slate-500 mt-1 leading-relaxed">Official entrance, latest announcements, and community updates.</span>
+            </a>
+            
+            <a href="https://janucyber.store/" class="group p-5 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-indigo-500/50 hover:bg-slate-800 transition-all duration-300">
+              <span class="block text-sm font-bold text-slate-100 group-hover:text-indigo-400 transition-colors">VPN Packages</span>
+              <span class="block text-xs text-slate-500 mt-1 leading-relaxed">Secure global packages including WireGuard, V2Ray and SSH premium kits.</span>
+            </a>
+            
+            <a href="https://janucyber.store/" class="group p-5 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-amber-500/50 hover:bg-slate-800 transition-all duration-300">
+              <span class="block text-sm font-bold text-slate-100 group-hover:text-amber-400 transition-colors">Free VPN Tunneling</span>
+              <span class="block text-xs text-slate-500 mt-1 leading-relaxed">Access daily free VPN configurations for Dialog, Mobitel and Hutch networks.</span>
+            </a>
+            
+            <a href="https://janucyber.store/" class="group p-5 bg-slate-900/80 border border-slate-800 rounded-xl hover:border-purple-500/50 hover:bg-slate-800 transition-all duration-300">
+              <span class="block text-sm font-bold text-slate-100 group-hover:text-purple-400 transition-colors">Secure Client Portal</span>
+              <span class="block text-xs text-slate-500 mt-1 leading-relaxed">User dashboard for tracking bandwidth usage and managing active sessions.</span>
+            </a>
+          </div>
+          
+          <div class="mt-8 pt-8 border-t border-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-6">
+            <div class="flex gap-6">
+              <a href="/sitemap.xml" class="text-xs font-mono text-slate-500 hover:text-emerald-400 flex items-center gap-1.5 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M9 15h6"/><path d="M9 11h6"/><path d="M9 19h1"/></svg>
+                SITEMAP.XML
+              </a>
+              <a href="/robots.txt" class="text-xs font-mono text-slate-500 hover:text-amber-400 flex items-center gap-1.5 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                ROBOTS.TXT
+              </a>
+            </div>
+            
+            <div class="text-[10px] font-mono text-slate-600 bg-slate-800/30 px-3 py-1 rounded-full border border-slate-700/50">
+              Last Crawl: 2026-06-05
+            </div>
+          </div>
+        </main>
+        
+        <footer class="mt-12 text-slate-600 text-[11px] text-center max-w-lg leading-relaxed">
+          © 2026 Janu Cyber Pack. All trademarks property of their respective owners.<br/>
+          Designed for maximum visibility and indexing performance.
+        </footer>
+      </body>
+      </html>
+    `;
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
   });
 
   // 1. Core Config / Initial Data endpoint

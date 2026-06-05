@@ -9,7 +9,7 @@ import {
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
   ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw,
-  Sun, Moon, Loader2
+  Sun, Moon, Loader2, Zap, ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -21,7 +21,6 @@ import { BankSlipUpload } from './components/BankSlipUpload';
 import { HomeView } from './components/HomeView';
 import { PackagesView } from './components/PackagesView';
 import { UserDashboardView } from './components/UserDashboardView';
-import { AdBanner } from './components/AdBanner';
 import { FreeVpnView } from './components/FreeVpnView';
 import { PrivacyView } from './components/PrivacyView';
 import { TermsView } from './components/TermsView';
@@ -1741,12 +1740,37 @@ export default function App() {
           </div>
         )}
 
+        {/* RECOMMENDED / PROMOTED: FREE HIGH SPEED VPN FILES */}
+        {activeTab === 'home' && (
+          <div className="bg-emerald-950/20 border-b border-emerald-500/15 py-4">
+            <div className="max-w-7xl mx-auto px-6 sm:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl shrink-0 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-emerald-400 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">
+                    GET FREE VPN FILE FOR FREE
+                  </h3>
+                  <p className="text-xs text-slate-400/90 mt-0.5 leading-relaxed">
+                    Download 100% free daily high-speed working configurations for Dialog, Mobitel, and Hutch networks.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveTab('free-vpn')}
+                className="w-full sm:w-auto px-5 py-2.5 text-xs font-bold text-slate-950 bg-emerald-400 hover:bg-emerald-300 rounded-xl shrink-0 transition-all shadow-md shadow-emerald-400/10 flex items-center justify-center gap-1.5 focus:ring-2 focus:ring-emerald-400/50 cursor-pointer font-sans"
+              >
+                Get Free Unlimited High-Speed VPN File
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+
       {/* APP CONTENT BODY */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full overflow-x-auto lg:overflow-x-visible scrollbar-thin scrollbar-thumb-slate-800">
         
-        {/* GLOBAL AD BANNER */}
-        <AdBanner />
-
         {/* TAB 1: OVERVIEW & NEW POSTS */}
         {activeTab === 'home' && (
           <HomeView
@@ -1758,6 +1782,7 @@ export default function App() {
             setShowLoginModal={setShowLoginModal}
             setIsSupportModalOpen={setIsSupportModalOpen}
             handleInitiateLogin={handleInitiateLogin}
+            onNavigate={(tab) => setActiveTab(tab)}
           />
         )}
 
@@ -3109,7 +3134,7 @@ export default function App() {
               </a>
               <a href="https://janucyber.store" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Official Domain</a>
             </div>
-            <p className="text-[11px] text-slate-600">Created by <a href="https://ace-10.vercel.app/" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">ACE10</a></p>
+            <p className="text-[11px] text-slate-600">Created by <a href="https://ace-10.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 font-semibold transition-colors cursor-pointer underline decoration-indigo-500/40 underline-offset-2">ACE10</a></p>
           </div>
         </div>
       </footer>

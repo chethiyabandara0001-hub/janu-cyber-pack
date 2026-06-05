@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { User, PaymentSlip, Package, Post, ContactDetails } from '../types';
-import { Phone, Send, ExternalLink, MessagesSquare } from 'lucide-react';
+import { Phone, Send, ExternalLink, MessagesSquare, ArrowRight, Zap, Download } from 'lucide-react';
 
 interface HomeViewProps {
   user: User | null;
@@ -12,6 +12,7 @@ interface HomeViewProps {
   setShowLoginModal: (show: boolean) => void;
   setIsSupportModalOpen: (show: boolean) => void;
   handleInitiateLogin?: () => void;
+  onNavigate?: (tab: 'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps') => void;
 }
 
 export const HomeView: React.FC<HomeViewProps> = ({
@@ -22,7 +23,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
   contact,
   setShowLoginModal,
   setIsSupportModalOpen,
-  handleInitiateLogin
+  handleInitiateLogin,
+  onNavigate
 }) => {
   return (
     <div className="space-y-6">
@@ -191,6 +193,13 @@ export const HomeView: React.FC<HomeViewProps> = ({
       {/* Sidebar section: Quick Stats and secure contacts */}
       <div className="space-y-6">
         
+        {/* SPONSORED POPUNDER PORTAL */}
+        <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl relative overflow-hidden flex flex-col items-center justify-center text-center shadow-lg hover:border-indigo-500/20 transition-all group">
+          <div id="popunder-ad-placement" className="w-full flex justify-center">
+            <AdScriptLoader src="https://pl29639427.effectivecpmnetwork.com/5c/d7/00/5cd7005fccf5a43cf8f0e42393ddc073.js" />
+          </div>
+        </div>
+
         {/* Secure Contact channels */}
         {contact && (
           <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
@@ -258,4 +267,20 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
     </div>
   );
+};
+
+// Declarative helper to safely perform server-side dynamic script injection
+const AdScriptLoader: React.FC<{ src: string }> = ({ src }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = '';
+    const script = document.createElement('script');
+    script.src = src;
+    script.async = true;
+    containerRef.current.appendChild(script);
+  }, [src]);
+
+  return <div ref={containerRef} className="w-full flex justify-center"></div>;
 };

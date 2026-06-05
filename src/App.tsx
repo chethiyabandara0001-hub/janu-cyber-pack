@@ -184,12 +184,8 @@ export default function App() {
   const [isGlobalLoading, setIsGlobalLoading] = useState<boolean>(false);
 
   const handleInitiateLogin = () => {
-    setIsGlobalLoading(true);
-    setTimeout(() => {
-      setIsGlobalLoading(false);
-      setLoginProvider('email');
-      setShowLoginModal(true);
-    }, 2500);
+    setLoginProvider('email');
+    setShowLoginModal(true);
   };
   
   // Intercept every click on interactive elements until user is logged in

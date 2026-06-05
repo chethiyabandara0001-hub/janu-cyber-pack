@@ -424,6 +424,15 @@ export async function createExpressApp() {
       <!DOCTYPE html>
       <html lang="en">
       <head>
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-GB16F9SJBK"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-GB16F9SJBK');
+        </script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Sitemaps | Janu Cyber Pack</title>
@@ -517,6 +526,15 @@ export async function createExpressApp() {
       <!DOCTYPE html>
       <html lang="en">
       <head>
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-GB16F9SJBK"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-GB16F9SJBK');
+        </script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Privacy Policy | Janu Cyber Pack</title>
@@ -586,6 +604,15 @@ export async function createExpressApp() {
       <!DOCTYPE html>
       <html lang="en">
       <head>
+        <!-- Google tag (gtag.js) -->
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-GB16F9SJBK"></script>
+        <script>
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+
+          gtag('config', 'G-GB16F9SJBK');
+        </script>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Terms of Service | Janu Cyber Pack</title>

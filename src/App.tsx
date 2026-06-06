@@ -3037,7 +3037,7 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* POPUP 2: AUTH SIGN-IN MODAL - DEPRECATED IN FAVOR OF MAIN SECURE GATEWAY ENTRANCE */}
+      {/* POPUP 2: AUTH SIGN-IN MODAL - UNIFIED ENTRANCE FOR ALL CREDENTIALS */}
       <AnimatePresence>
         {showLoginModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 bg-black/95 backdrop-blur-md overflow-y-auto">
@@ -3054,88 +3054,142 @@ export default function App() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="text-center space-y-2">
-                <span className="inline-block p-2 text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-2">
+              <div className="text-center space-y-2 mb-4">
+                <span className="inline-block p-2 text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 rounded-xl mb-1">
                   <Shield className="w-6 h-6" />
                 </span>
                 <h3 className="text-lg font-bold text-white font-mono uppercase tracking-tight">Access Gate Identity</h3>
-                <p className="text-xs text-slate-400">Connect to your secure dashboard</p>
+                <p className="text-xs text-slate-400">Connect securely using your credentials or Google integration</p>
               </div>
 
-              <div className="mt-6 grid grid-cols-3 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800">
-                {(['email', 'google'] as const).map((prov) => (
-                  <button
-                    key={prov}
-                    type="button"
-                    onClick={() => {
-                      setLoginProvider(prov);
-                      setAuthError('');
-                      if (prov === 'google') {
-                        setLoginEmail('gmail-user@gmail.com');
-                        setLoginName('Google Account Client');
-                      } else {
-                        setLoginEmail('');
-                        setLoginName('');
-                      }
-                    }}
-                    className={`py-2 text-xs font-bold rounded-lg uppercase transition cursor-pointer ${
-                      loginProvider === prov ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20' : 'text-slate-500 hover:text-slate-300'
-                    }`}
-                  >
-                    {prov}
-                  </button>
-                ))}
-              </div>
-
-              {loginProvider === 'google' ? (
-                <div className="mt-5 space-y-4 text-center flex flex-col items-center justify-center w-full">
-                  <div className="flex justify-center w-full py-4">
-                    <div id="google-signin-btn-modal" className="w-[320px] h-[40px]" style={{ minHeight: '40px' }}></div>
-                  </div>
+              {authError && (
+                <div className="p-3 bg-rose-500/10 text-rose-300 border border-rose-500/20 rounded-xl flex items-start gap-2 text-xs font-mono mb-4">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <p className="font-medium">{authError}</p>
                 </div>
-              ) : (
-                <form onSubmit={handleAuthSignIn} className="mt-5 space-y-4 text-xs font-mono">
-                  <div>
-                    <label className="block text-slate-400 mb-1">EMAIL ID ADDRESS:</label>
-                    <input
-                      type="email"
-                      required
-                      placeholder="e.g. user@domain.com"
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-400 mb-1 font-mono">SECURE ACCESS PASSWORD:</label>
-                    <input
-                      type="password"
-                      required
-                      placeholder="••••••••"
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isLoginLoading}
-                    className="w-full py-3 font-bold bg-indigo-500 hover:bg-indigo-600 text-white text-xs uppercase tracking-wider rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    {isLoginLoading ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" /> Verifying Keys...
-                      </>
-                    ) : (
-                      <>
-                        <LogIn className="w-4 h-4" /> Sign In EMAIL
-                      </>
-                    )}
-                  </button>
-                </form>
               )}
+
+              {/* Email Authentication Mode Selector Tabs */}
+              <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 rounded-xl border border-slate-800 mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailAuthMode('login');
+                    setLoginProvider('email');
+                    setAuthError('');
+                  }}
+                  className={`py-2 text-[11px] font-bold rounded-lg uppercase transition-all cursor-pointer ${
+                    emailAuthMode === 'login'
+                      ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/10 shadow-sm font-mono'
+                      : 'text-slate-500 hover:text-slate-400 font-mono'
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmailAuthMode('register');
+                    setLoginProvider('email');
+                    setAuthError('');
+                  }}
+                  className={`py-2 text-[11px] font-bold rounded-lg uppercase transition-all cursor-pointer ${
+                    emailAuthMode === 'register'
+                      ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-505/10 shadow-sm font-mono'
+                      : 'text-slate-500 hover:text-slate-400 font-mono'
+                  }`}
+                >
+                  Register
+                </button>
+              </div>
+
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setLoginProvider('email');
+                  if (emailAuthMode === 'login') {
+                    handleAuthSignIn(e);
+                  } else {
+                    handleAuthRegister(e);
+                  }
+                }} 
+                className="space-y-4 text-xs font-mono"
+              >
+                <div>
+                  <label className="block text-slate-400 mb-1 font-mono uppercase tracking-wider text-[10px] font-bold">
+                    {emailAuthMode === 'login' ? 'SECURE ACCOUNT EMAIL:' : 'REGISTRATION EMAIL ADDRESS:'}
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="e.g. user@domain.com"
+                    value={loginEmail}
+                    onChange={(e) => {
+                      setLoginEmail(e.target.value);
+                      setLoginProvider('email');
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none rounded-xl"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 mb-1 font-mono uppercase tracking-wider text-[10px] font-bold">
+                    {emailAuthMode === 'login' ? 'SECURE ACCESS PASSWORD:' : 'CREATE SECURE PASSWORD:'}
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={(e) => {
+                      setLoginPassword(e.target.value);
+                      setLoginProvider('email');
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none rounded-xl"
+                  />
+                </div>
+
+                {emailAuthMode === 'register' && (
+                  <div>
+                    <label className="block text-slate-400 mb-1 font-mono uppercase tracking-wider text-[10px] font-bold">DISPLAY NICKNAME (OPTIONAL):</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Alex"
+                      value={loginName}
+                      onChange={(e) => setLoginName(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded px-3 py-2.5 text-white focus:border-indigo-500 outline-none rounded-xl"
+                    />
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoginLoading}
+                  className="w-full py-3 font-bold bg-indigo-500 hover:bg-indigo-600 text-white text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {isLoginLoading ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> VERIFYING ACCESS...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="w-4 h-4" /> 
+                      {emailAuthMode === 'login' ? 'Secure Account Login' : 'Register New Account'}
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Direct Unification: No Separation of Providers */}
+              <div className="relative flex py-4 items-center">
+                <div className="flex-grow border-t border-slate-800"></div>
+                <span className="flex-shrink mx-4 text-slate-500 text-[10px] tracking-widest uppercase font-mono">Or connect with</span>
+                <div className="flex-grow border-t border-slate-800"></div>
+              </div>
+
+              <div className="flex justify-center w-full pb-2">
+                <div id="google-signin-btn-modal" className="w-[320px] h-[40px] flex justify-center" style={{ minHeight: '40px' }}></div>
+              </div>
             </motion.div>
           </div>
         )}

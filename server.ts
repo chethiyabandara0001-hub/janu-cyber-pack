@@ -348,6 +348,12 @@ export async function createExpressApp() {
 
   // 1. High-Grade Security Headers to bulletproof the server & GitHub export against vectors
   app.use((req, res, next) => {
+    // Log crawler/bot requests to help debug network and CDN level blocks
+    const ua = req.headers["user-agent"] || "";
+    if (ua.toLowerCase().includes("bot") || ua.toLowerCase().includes("crawler") || ua.toLowerCase().includes("facebook") || ua.toLowerCase().includes("face") || ua.toLowerCase().includes("ping")) {
+      console.log(`[CRAWLER LOG] ${new Date().toISOString()} | Path: ${req.path} | UA: ${ua} | IP: ${req.ip || req.headers["x-forwarded-for"] || "Unknown"}`);
+    }
+
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("X-XSS-Protection", "1; mode=block");

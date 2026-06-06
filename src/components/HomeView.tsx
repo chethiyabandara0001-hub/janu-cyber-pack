@@ -136,6 +136,74 @@ export const HomeView: React.FC<HomeViewProps> = ({
         );
       })()}
 
+      {/* COMPREHENSIVE APP PURPOSE & MISSION OVERVIEW (CRITICAL FOR REVIEW & CLEAR UTILITY DESCRIPTION) */}
+      <div className="bg-gradient-to-br from-indigo-950/40 via-slate-900/90 to-slate-950/80 border border-indigo-500/15 p-6 sm:p-8 rounded-2xl relative overflow-hidden shadow-xl animate-fade-in">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        <div className="absolute -bottom-8 -left-8 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div className="relative z-10 max-w-4xl">
+          <div className="flex items-center gap-2.5 mb-3">
+            <span className="p-1 px-2.5 bg-indigo-500/15 text-indigo-400 border border-indigo-500/20 rounded-lg text-[10px] font-bold uppercase tracking-wider font-mono">
+              OFFICIAL HUB
+            </span>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="text-xs text-slate-400 font-medium">Safe & Verified Utility</span>
+          </div>
+
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight font-display mb-3">
+            Janu Cyber Pack — Premium Network Tunnel & Configuration Store
+          </h1>
+
+          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl mb-6">
+            Welcome to the central gateway of <strong>Janu Cyber Pack</strong>. Our utility is dedicated to distributing optimized tunnel file configurations (v2ray, SSH, Shadowsocks, and OpenVPN) and providing verified, high-speed network guides. 
+            We help developers, testers, and everyday users bypass ISP-level speed throttling, secure their browser endpoints with robust encryption templates, and gain optimal connection performance on major networks—including <strong>Dialog, Mobitel, and Hutch</strong>.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-850 hover:border-indigo-500/20 transition-all">
+              <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wide font-mono mb-1">🚀 Unthrottled Speeds</h4>
+              <p className="text-[11px] text-slate-400 leading-normal">
+                Avoid network restriction and local latency using highly optimized config layers.
+              </p>
+            </div>
+            
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-850 hover:border-indigo-500/20 transition-all">
+              <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wide font-mono mb-1">🔒 Complete Privacy</h4>
+              <p className="text-[11px] text-slate-400 leading-normal">
+                Strict zero-logs standard ensures that configuration parameters remain fully safe.
+              </p>
+            </div>
+
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-850 hover:border-indigo-500/20 transition-all">
+              <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wide font-mono mb-1">📦 Packages Manager</h4>
+              <p className="text-[11px] text-slate-400 leading-normal">
+                Browse, obtain premium bandwidth codes, and track validity days live in your account.
+              </p>
+            </div>
+
+            <div className="bg-slate-950/60 p-4 rounded-xl border border-slate-850 hover:border-indigo-500/20 transition-all">
+              <h4 className="text-xs font-bold text-indigo-400 uppercase tracking-wide font-mono mb-1">🛠️ Engineering Help</h4>
+              <p className="text-[11px] text-slate-400 leading-normal">
+                24/7 technical hotline and integrated telegram dispatch chat lines directly with help desk.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-slate-850 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-500 font-mono">
+            <div>
+              <span>Domain Authority: </span>
+              <a href="https://www.janucyber.store" target="_blank" rel="noreferrer" className="text-indigo-400 hover:underline">
+                www.janucyber.store
+              </a>
+            </div>
+            <div className="flex items-center gap-2 bg-slate-900/80 px-2.5 py-1 rounded border border-slate-800">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+              <span>100% Client-Side Integrity & Fully Transparent Operations</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       
       {/* Main posts sections (Featured, Recent, News) */}

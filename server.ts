@@ -13,13 +13,13 @@ import {
 } from "firebase/firestore/lite";
 
 let firebaseConfig: any = {
-  projectId: "gen-lang-client-0008438867",
-  appId: "1:796923319104:web:5408ce4861d12aec6460a5",
-  apiKey: "AIzaSyClstsLmizDZJ6OD_WnKaSE06yIwHdtq-8",
-  authDomain: "gen-lang-client-0008438867.firebaseapp.com",
-  firestoreDatabaseId: "ai-studio-05efdffc-31e5-48da-b96f-d2964f93684b",
-  storageBucket: "gen-lang-client-0008438867.firebasestorage.app",
-  messagingSenderId: "796923319104",
+  projectId: process.env.FIREBASE_PROJECT_ID || "gen-lang-client-0008438867",
+  appId: process.env.FIREBASE_APP_ID || "1:796923319104:web:5408ce4861d12aec6460a5",
+  apiKey: process.env.FIREBASE_API_KEY || "AIzaSyClstsLmizDZJ6OD_WnKaSE06yIwHdtq-8",
+  authDomain: process.env.FIREBASE_AUTH_DOMAIN || "gen-lang-client-0008438867.firebaseapp.com",
+  firestoreDatabaseId: process.env.FIRESTORE_DATABASE_ID || "ai-studio-05efdffc-31e5-48da-b96f-d2964f93684b",
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET || "gen-lang-client-0008438867.firebasestorage.app",
+  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID || "796923319104",
   measurementId: ""
 };
 

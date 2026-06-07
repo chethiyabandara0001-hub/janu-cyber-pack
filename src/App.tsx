@@ -197,6 +197,7 @@ export default function App() {
   const [adminStats, setAdminStats] = useState<any>(null);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
   const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState<boolean>(false);
   const [slipVerificationFilter, setSlipVerificationFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [adminNotes, setAdminNotes] = useState<string>('');
   const [customVpnCode, setCustomVpnCode] = useState<string>('');
@@ -705,6 +706,29 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         setShowResetConfirm(false);
+        await fetchAdminStats();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Reset & Restore initial default packages, free packages, and posts from the server database
+  const handleRestoreDefaults = async () => {
+    setAdminLoading(true);
+    try {
+      const res = await fetch('/api/admin/restore-defaults', {
+        method: 'POST',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowRestoreConfirm(false);
+        await fetchAllData();
         await fetchAdminStats();
       }
     } catch (e) {
@@ -1726,6 +1750,34 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowResetConfirm(false)}
+                      className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {!showRestoreConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowRestoreConfirm(true)}
+                    className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5" /> Restore Defaults
+                  </button>
+                ) : (
+                  <div className="flex gap-1.5 items-center bg-emerald-950/20 border border-emerald-500/20 rounded-lg px-2 py-0.5 block">
+                    <span className="text-[10px] text-emerald-400 font-mono">Restore packages & posts?</span>
+                    <button
+                      type="button"
+                      onClick={handleRestoreDefaults}
+                      className="px-2 py-1 text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded transition cursor-pointer"
+                    >
+                      Yes, Restore
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowRestoreConfirm(false)}
                       className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
                     >
                       Cancel

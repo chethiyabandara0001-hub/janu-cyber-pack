@@ -106,15 +106,12 @@ async function getPackages(): Promise<Package[]> {
     const list: Package[] = [];
     snap.forEach(d => list.push(d.data() as Package));
     if (list.length === 0) {
-      const alreadySeeded = await checkSeeded();
-      if (!alreadySeeded) {
-        // Bootstrap seed collection
-        for (const pkg of INITIAL_PACKAGES) {
-          await setDoc(doc(db, "packages", pkg.id), pkg);
-          list.push(pkg);
-        }
-        await markSeeded();
+      // Bootstrap seed collection automatically if empty to recover cleared data
+      for (const pkg of INITIAL_PACKAGES) {
+        await setDoc(doc(db, "packages", pkg.id), pkg);
+        list.push(pkg);
       }
+      await markSeeded();
     }
     return list;
   } catch (e) {
@@ -129,14 +126,12 @@ async function getPosts(): Promise<Post[]> {
     const list: Post[] = [];
     snap.forEach(d => list.push(d.data() as Post));
     if (list.length === 0) {
-      const alreadySeeded = await checkSeeded();
-      if (!alreadySeeded) {
-        for (const post of INITIAL_POSTS) {
-          await setDoc(doc(db, "posts", post.id), post);
-          list.push(post);
-        }
-        await markSeeded();
+      // Bootstrap seed collection automatically if empty to recover cleared data
+      for (const post of INITIAL_POSTS) {
+        await setDoc(doc(db, "posts", post.id), post);
+        list.push(post);
       }
+      await markSeeded();
     }
     return list;
   } catch (e) {
@@ -1249,7 +1244,7 @@ export async function createExpressApp() {
       const usersSnap = await getDocs(collection(db, "users"));
       for (const d of usersSnap.docs) {
         const u = d.data();
-        if (u.role !== "admin" && u.uid !== "admin-master-account") {
+         if (u.role !== "admin" && u.uid !== "admin-master-account") {
           await deleteDoc(doc(db, "users", d.id));
         }
       }
@@ -1259,6 +1254,106 @@ export async function createExpressApp() {
 
       res.json({ success: true });
     } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Force Reset & Restore Default Packages and Data (Admin Only)
+  app.post("/api/admin/restore-defaults", adminGuard, async (req, res) => {
+    try {
+      // 1. Restore packages collection
+      const packagesRef = collection(db, "packages");
+      const packagesSnap = await getDocs(packagesRef);
+      for (const d of packagesSnap.docs) {
+        await deleteDoc(doc(db, "packages", d.id));
+      }
+      for (const pkg of INITIAL_PACKAGES) {
+        await setDoc(doc(db, "packages", pkg.id), pkg);
+      }
+
+      // 2. Restore posts collection
+      const postsRef = collection(db, "posts");
+      const postsSnap = await getDocs(postsRef);
+      for (const d of postsSnap.docs) {
+        await deleteDoc(doc(db, "posts", d.id));
+      }
+      for (const post of INITIAL_POSTS) {
+        await setDoc(doc(db, "posts", post.id), post);
+      }
+
+      // 3. Restore free packages collection
+      const freeRef = collection(db, "free_packages");
+      const freeSnap = await getDocs(freeRef);
+      for (const d of freeSnap.docs) {
+        await deleteDoc(doc(db, "free_packages", d.id));
+      }
+      const initialFree = [
+        {
+          id: "free-dialog-mobile-social",
+          isp: "Dialog" as const,
+          packageType: "Mobile" as const,
+          packageName: "Social Media Pack",
+          price: "Free",
+          code: "WGRD-DIALOG-SOC-99X-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-dialog-mobile-zoom",
+          isp: "Dialog" as const,
+          packageType: "Mobile" as const,
+          packageName: "Zoom Unlimited",
+          price: "Free",
+          code: "VMESS-DIALOG-ZM-22K-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-mobitel-mobile-tiktok",
+          isp: "Mobitel" as const,
+          packageType: "Mobile" as const,
+          packageName: "TikTok Heavy",
+          price: "Free",
+          code: "TROJAN-MOBITEL-TT-44W-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-hutch-router-anytime",
+          isp: "Hutch" as const,
+          packageType: "Router" as const,
+          packageName: "Anytime Free VPN",
+          price: "Free",
+          code: "SSH-HUTCH-RTR-77N-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-airtel-fiber-yt",
+          isp: "Airtel" as const,
+          packageType: "Fiber" as const,
+          packageName: "YouTube Unlimited",
+          price: "Free",
+          code: "V2RAY-AIRTEL-YT-88Q-FREE",
+          createdAt: new Date().toISOString()
+        }
+      ];
+      for (const fp of initialFree) {
+        await setDoc(doc(db, "free_packages", fp.id), fp);
+      }
+
+      // 4. Mark seeded true
+      await markSeeded();
+
+      // Retrieve full list of fresh data and return
+      const updatedPackages = await getPackages();
+      const updatedPosts = await getPosts();
+      const updatedFree = await getFreePackages();
+
+      res.json({
+        success: true,
+        packages: updatedPackages,
+        posts: updatedPosts,
+        freePackages: updatedFree
+      });
+    } catch (e) {
+      console.error("Failed to restore default mock data:", e);
       res.status(500).json({ error: String(e) });
     }
   });

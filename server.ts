@@ -199,9 +199,19 @@ async function getSupportMessages(): Promise<SupportMessage[]> {
   try {
     const snap = await getDocs(collection(db, "support_messages"));
     const list: SupportMessage[] = [];
-    snap.forEach(d => list.push(d.data() as SupportMessage));
-    return list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    snap.forEach(d => {
+      const data = d.data() as SupportMessage;
+      // Ensure missing fields don't cause fatal downstream errors
+      if (!data.timestamp) data.timestamp = new Date().toISOString(); 
+      list.push(data);
+    });
+    return list.sort((a, b) => {
+      const timeA = new Date(a.timestamp || 0).getTime();
+      const timeB = new Date(b.timestamp || 0).getTime();
+      return timeA - timeB;
+    });
   } catch (e) {
+    console.error("Error in getSupportMessages:", e);
     handleFirestoreError(e, OperationType.GET, "support_messages");
     return [];
   }
@@ -1207,7 +1217,8 @@ export async function createExpressApp() {
       }
       res.json(allMsgs);
     } catch (e) {
-      res.status(500).json({ error: String(e) });
+      console.error("[GET /api/support-messages] Error:", e);
+      res.status(500).json({ error: String(e), stack: (e as any)?.stack || '' });
     }
   });
 

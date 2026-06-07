@@ -615,7 +615,7 @@ export default function App() {
       fetchSupportMessages();
       intervalId = setInterval(() => {
         fetchSupportMessages();
-      }, 5000);
+      }, 15000);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
@@ -629,12 +629,12 @@ export default function App() {
         fetchSupportMessages(activeUserChatId);
         intervalId = setInterval(() => {
           fetchSupportMessages(activeUserChatId);
-        }, 5000);
+        }, 15000);
       } else {
         fetchSupportMessages();
         intervalId = setInterval(() => {
           fetchSupportMessages();
-        }, 8000);
+        }, 20000);
       }
     }
     return () => {
@@ -983,18 +983,26 @@ export default function App() {
   };
 
   // Initialize and render standard Google Sign-In button
+  const googleBtnInitialized = useRef(false);
   useEffect(() => {
     const initAndRenderGoogleBtn = () => {
       const googleObj = (window as any).google;
       if (googleObj?.accounts?.id) {
-        googleObj.accounts.id.initialize({
-          client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
-          callback: handleGoogleCredentialResponse,
-        });
+        if (!googleBtnInitialized.current) {
+          try {
+            googleObj.accounts.id.initialize({
+              client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
+              callback: handleGoogleCredentialResponse,
+            });
+            googleBtnInitialized.current = true;
+          } catch(e) {
+            console.warn("GSI Logger override catch", e);
+          }
+        }
 
         // Try to render standard button on landing page if element exists
         const btnLanding = document.getElementById("google-signin-btn");
-        if (btnLanding) {
+        if (btnLanding && !btnLanding.hasChildNodes()) {
           googleObj.accounts.id.renderButton(btnLanding, {
             theme: "outline",
             shape: "pill",
@@ -1006,7 +1014,7 @@ export default function App() {
 
         // Try to render standard button on login modal if element exists
         const btnModal = document.getElementById("google-signin-btn-modal");
-        if (btnModal) {
+        if (btnModal && !btnModal.hasChildNodes()) {
           googleObj.accounts.id.renderButton(btnModal, {
             theme: "outline",
             shape: "pill",
@@ -1021,12 +1029,10 @@ export default function App() {
     // Run immediately and also set a slight timeout to ensure components are painted
     initAndRenderGoogleBtn();
     const timer = setTimeout(initAndRenderGoogleBtn, 300);
-    const interval = setInterval(initAndRenderGoogleBtn, 1000);
     return () => {
       clearTimeout(timer);
-      clearInterval(interval);
     };
-  }, [user, showLoginModal, loginProvider]);
+  }, [user, showLoginModal, loginProvider, handleGoogleCredentialResponse]);
 
   // Drag and drop setup for slip
   const handleDrag = (e: React.DragEvent) => {

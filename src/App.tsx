@@ -1091,8 +1091,8 @@ export default function App() {
     setSlipFeedback(null);
 
     try {
-      // Direct Firebase Storage upload: convert base64 representation back to a cloud asset
-      const publicStorageUrl = await firebaseService.uploadIfBase64(base64Slip, "slips");
+      // Direct high-performance server-side handling: pass base64 directly to the backend
+      const publicStorageUrl = base64Slip;
 
       const data = await firebaseService.submitPaymentSlip({
         userId: user.uid,

@@ -253,6 +253,48 @@ async function getUsers(): Promise<any[]> {
   }
 }
 
+// Helper to decode a base64 image and save it on the server local filesystem
+function saveBase64Image(base64Str: string): string {
+  if (!base64Str || !base64Str.startsWith("data:")) {
+    return base64Str;
+  }
+
+  try {
+    const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return base64Str;
+    }
+
+    const type = matches[1];
+    const dataBuffer = Buffer.from(matches[2], "base64");
+    
+    // Determine file extension
+    let extension = "jpg";
+    if (type.includes("png")) {
+      extension = "png";
+    } else if (type.includes("gif")) {
+      extension = "gif";
+    } else if (type.includes("webp")) {
+      extension = "webp";
+    }
+
+    const filename = `slip_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${extension}`;
+    const uploadsDir = path.join(process.cwd(), "uploads");
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    const filePath = path.join(uploadsDir, filename);
+    fs.writeFileSync(filePath, dataBuffer);
+
+    // Return the local server URL which will be stored in Firestore database
+    return `/uploads/${filename}`;
+  } catch (e) {
+    console.error("Failed to save base64 image to server filesystem:", e);
+    return base64Str;
+  }
+}
+
 async function getSlips(): Promise<PaymentSlip[]> {
   try {
     const snap = await getDocs(collection(db, "slips"));
@@ -417,6 +459,13 @@ export async function createExpressApp() {
   // Middleware
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+  // Ensure uploads directory exists and expose it as static folder
+  const uploadsDir = path.join(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+  app.use("/uploads", express.static(uploadsDir));
 
   // API Backend routes
   
@@ -1065,6 +1114,9 @@ export async function createExpressApp() {
         resolvedCurrency = "LKR";
       }
 
+      // Direct high-performance server side filesytem conversion to prevent Firestore 1MB limits
+      const processedSlipUrl = saveBase64Image(bankSlipBase64);
+
       const slipId = "slip_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
       const newSlip: PaymentSlip = {
         id: slipId,
@@ -1076,7 +1128,7 @@ export async function createExpressApp() {
         vpnTypeName: selectedPkg.vpnTypeName,
         price: resolvedPrice,
         currency: resolvedCurrency,
-        bankSlipBase64,
+        bankSlipBase64: processedSlipUrl,
         status: "pending",
         submittedAt: new Date().toISOString(),
         tier: tier || "Lite 100gb for 200lkr"

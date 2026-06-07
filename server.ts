@@ -10,7 +10,7 @@ import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection 
-} from "firebase/firestore";
+} from "firebase/firestore/lite";
 
 let firebaseConfig: any;
 try {
@@ -777,6 +777,15 @@ export async function createExpressApp() {
     `;
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
+  });
+
+  // Apply cache-control middleware for all API routes to prevent Vercel CDN caching
+  app.use("/api", (req, res, next) => {
+    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    res.setHeader("Surrogate-Control", "no-store");
+    next();
   });
 
   // 1. Core Config / Initial Data endpoint

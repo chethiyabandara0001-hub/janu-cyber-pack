@@ -7,9 +7,9 @@ import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePacka
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "./src/mockData";
 
 // Initialize Firebase JS SDK
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { 
-  getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection 
+  getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection, Firestore 
 } from "firebase/firestore/lite";
 
 let firebaseConfig: any = {
@@ -26,36 +26,46 @@ let firebaseConfig: any = {
 try {
   const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(firebaseConfigPath)) {
-    console.log("Loading firebase-applet-config.json from cwd...");
     const config = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
     firebaseConfig = { ...firebaseConfig, ...config };
   } else {
     const parentPath = path.join(process.cwd(), "..", "firebase-applet-config.json");
     if (fs.existsSync(parentPath)) {
-      console.log("Loading firebase-applet-config.json from parent...");
       const config = JSON.parse(fs.readFileSync(parentPath, "utf8"));
       firebaseConfig = { ...firebaseConfig, ...config };
     }
   }
 } catch (err) {
-  console.warn("Could not load firebase-applet-config.json, using hardcoded fallback:", err);
+  console.warn("Could not load firebase-applet-config.json, using hardcoded fallback");
 }
 
-const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+let firebaseApp: FirebaseApp;
+let db: Firestore;
 
-// Test connection on boot as per skill requirements
+function getDb(): Firestore {
+  if (!db) {
+    try {
+      firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+      db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+      console.log(`[BOOT] Firestore initialized for DB: ${firebaseConfig.firestoreDatabaseId}`);
+    } catch (e) {
+      console.error("[CRITICAL] Firebase initialization failed:", e);
+      throw e;
+    }
+  }
+  return db;
+}
+
+// Test connection helper
 async function testDbConnection() {
   try {
-    console.log(`Verifying Firestore connection for DB: ${firebaseConfig.firestoreDatabaseId}...`);
-    // Lite SDK getDocs is a good lightweight test
-    const snap = await getDocs(collection(db, "settings"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "settings"));
     console.log(`Firestore connection verified. Settings collection docs: ${snap.size}`);
   } catch (e) {
     console.error("Firestore connection test FAILED:", e);
   }
 }
-testDbConnection();
 
 // Error handling in compliance with Phase 3 of Firebase Integration Skill
 enum OperationType {
@@ -92,7 +102,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 // Helper to mark database as seeded
 async function markSeeded(): Promise<void> {
   try {
-    await setDoc(doc(db, "settings", "seeding_state"), { seeded: true });
+    const database = getDb();
+    await setDoc(doc(database, "settings", "seeding_state"), { seeded: true });
   } catch (e) {}
 }
 
@@ -100,31 +111,32 @@ async function markSeeded(): Promise<void> {
 async function seedAllData(force = false) {
   try {
     console.log(`Starting Database Seeding (force=${force})...`);
+    const database = getDb();
     
     // 1. Packages
-    const pkgSnap = await getDocs(collection(db, "packages"));
+    const pkgSnap = await getDocs(collection(database, "packages"));
     if (force || pkgSnap.size === 0) {
       if (force) {
-        for (const d of pkgSnap.docs) await deleteDoc(doc(db, "packages", d.id));
+        for (const d of pkgSnap.docs) await deleteDoc(doc(database, "packages", d.id));
       }
-      for (const p of INITIAL_PACKAGES) await setDoc(doc(db, "packages", p.id), p);
+      for (const p of INITIAL_PACKAGES) await setDoc(doc(database, "packages", p.id), p);
       console.log("Seeded Packages.");
     }
 
     // 2. Posts
-    const postSnap = await getDocs(collection(db, "posts"));
+    const postSnap = await getDocs(collection(database, "posts"));
     if (force || postSnap.size === 0) {
       if (force) {
-        for (const d of postSnap.docs) await deleteDoc(doc(db, "posts", d.id));
+        for (const d of postSnap.docs) await deleteDoc(doc(database, "posts", d.id));
       }
-      for (const p of INITIAL_POSTS) await setDoc(doc(db, "posts", p.id), p);
+      for (const p of INITIAL_POSTS) await setDoc(doc(database, "posts", p.id), p);
       console.log("Seeded Posts.");
     }
 
     // 3. Contact & Announcement (Settings)
-    const contactRef = doc(db, "settings", "contact");
-    const annRef = doc(db, "settings", "announcement");
-    const adRef = doc(db, "settings", "ads");
+    const contactRef = doc(database, "settings", "contact");
+    const annRef = doc(database, "settings", "announcement");
+    const adRef = doc(database, "settings", "ads");
 
     const contactSnap = await getDoc(contactRef);
     if (force || !contactSnap.exists()) {
@@ -148,10 +160,10 @@ async function seedAllData(force = false) {
     }
 
     // 4. Free Packages
-    const freePkgSnap = await getDocs(collection(db, "free_packages"));
+    const freePkgSnap = await getDocs(collection(database, "free_packages"));
     if (force || freePkgSnap.size === 0) {
       if (force) {
-        for (const d of freePkgSnap.docs) await deleteDoc(doc(db, "free_packages", d.id));
+        for (const d of freePkgSnap.docs) await deleteDoc(doc(database, "free_packages", d.id));
       }
       const initialFree = [
         {
@@ -200,7 +212,7 @@ async function seedAllData(force = false) {
           createdAt: new Date().toISOString()
         }
       ];
-      for (const p of initialFree) await setDoc(doc(db, "free_packages", p.id), p);
+      for (const p of initialFree) await setDoc(doc(database, "free_packages", p.id), p);
       console.log("Seeded Free Packages.");
     }
 
@@ -215,10 +227,11 @@ async function seedAllData(force = false) {
 // Helper methods to connect Firestore queries securely
 async function getPackages(): Promise<Package[]> {
   try {
-    const snap = await getDocs(collection(db, "packages"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "packages"));
     if (snap.size === 0) {
       await seedAllData();
-      const freshSnap = await getDocs(collection(db, "packages"));
+      const freshSnap = await getDocs(collection(database, "packages"));
       const list: Package[] = [];
       freshSnap.forEach(d => list.push(d.data() as Package));
       return list;
@@ -234,10 +247,11 @@ async function getPackages(): Promise<Package[]> {
 
 async function getPosts(): Promise<Post[]> {
   try {
-    const snap = await getDocs(collection(db, "posts"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "posts"));
     if (snap.size === 0) {
       await seedAllData();
-      const freshSnap = await getDocs(collection(db, "posts"));
+      const freshSnap = await getDocs(collection(database, "posts"));
       const list: Post[] = [];
       freshSnap.forEach(d => list.push(d.data() as Post));
       return list;
@@ -253,7 +267,8 @@ async function getPosts(): Promise<Post[]> {
 
 async function getContact(): Promise<ContactDetails> {
   try {
-    const ref = doc(db, "settings", "contact");
+    const database = getDb();
+    const ref = doc(database, "settings", "contact");
     const snap = await getDoc(ref);
     if (snap.exists()) {
       return snap.data() as ContactDetails;
@@ -269,7 +284,8 @@ async function getContact(): Promise<ContactDetails> {
 
 async function getAnnouncement(): Promise<HomeAnnouncement> {
   try {
-    const ref = doc(db, "settings", "announcement");
+    const database = getDb();
+    const ref = doc(database, "settings", "announcement");
     const snap = await getDoc(ref);
     if (snap.exists()) {
       return snap.data() as HomeAnnouncement;
@@ -285,7 +301,8 @@ async function getAnnouncement(): Promise<HomeAnnouncement> {
 
 async function getAdSettings(): Promise<AdSettings> {
   try {
-    const ref = doc(db, "settings", "ads");
+    const database = getDb();
+    const ref = doc(database, "settings", "ads");
     const snap = await getDoc(ref);
     if (snap.exists()) {
       return snap.data() as AdSettings;
@@ -307,7 +324,8 @@ async function getAdSettings(): Promise<AdSettings> {
 
 async function getSupportMessages(): Promise<SupportMessage[]> {
   try {
-    const snap = await getDocs(collection(db, "support_messages"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "support_messages"));
     const list: SupportMessage[] = [];
     snap.forEach(d => {
       const data = d.data() as SupportMessage;
@@ -329,7 +347,8 @@ async function getSupportMessages(): Promise<SupportMessage[]> {
 
 async function getUsers(): Promise<any[]> {
   try {
-    const snap = await getDocs(collection(db, "users"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "users"));
     const list: any[] = [];
     snap.forEach(d => list.push(d.data()));
     if (list.length === 0) {
@@ -357,7 +376,7 @@ async function getUsers(): Promise<any[]> {
         }
       ];
       for (const u of initialUsers) {
-        await setDoc(doc(db, "users", u.uid), u);
+        await setDoc(doc(database, "users", u.uid), u);
         list.push(u);
       }
     }
@@ -415,7 +434,8 @@ function saveBase64Image(base64Str: string): string {
 
 async function getSlips(): Promise<PaymentSlip[]> {
   try {
-    const snap = await getDocs(collection(db, "slips"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "slips"));
     const list: PaymentSlip[] = [];
     snap.forEach(d => list.push(d.data() as PaymentSlip));
     return list;
@@ -427,7 +447,8 @@ async function getSlips(): Promise<PaymentSlip[]> {
 
 async function getFreePackages(): Promise<FreePackage[]> {
   try {
-    const snap = await getDocs(collection(db, "free_packages"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "free_packages"));
     const list: FreePackage[] = [];
     snap.forEach(d => list.push(d.data() as FreePackage));
     if (list.length === 0) {
@@ -479,7 +500,7 @@ async function getFreePackages(): Promise<FreePackage[]> {
         }
       ];
       for (const fp of initialFree) {
-        await setDoc(doc(db, "free_packages", fp.id), fp);
+        await setDoc(doc(database, "free_packages", fp.id), fp);
         list.push(fp);
       }
     }
@@ -492,7 +513,8 @@ async function getFreePackages(): Promise<FreePackage[]> {
 
 async function getFreeRequests(): Promise<FreeRequest[]> {
   try {
-    const snap = await getDocs(collection(db, "free_requests"));
+    const database = getDb();
+    const snap = await getDocs(collection(database, "free_requests"));
     const list: FreeRequest[] = [];
     snap.forEach(d => list.push(d.data() as FreeRequest));
     return list;
@@ -568,7 +590,8 @@ export async function createExpressApp() {
         return res.status(401).json({ error: "Access Denied: Administrative query credentials are missing." });
       }
       
-      const userDocRef = doc(db, "users", String(requesterUid));
+      const database = getDb();
+      const userDocRef = doc(database, "users", String(requesterUid));
       const userSnap = await getDoc(userDocRef);
       if (!userSnap.exists()) {
         return res.status(403).json({ error: "Access Denied: Administrative record not registered." });
@@ -970,7 +993,7 @@ export async function createExpressApp() {
         requestedAt: new Date().toISOString()
       };
 
-      await setDoc(doc(db, "free_requests", requestId), newRequest);
+      await setDoc(doc(getDb(), "free_requests", requestId), newRequest);
 
       const updatedRequests = await getFreeRequests();
       res.json({ status: "success", request: newRequest, freeRequests: updatedRequests });
@@ -991,7 +1014,7 @@ export async function createExpressApp() {
       pkg.id = pkgId;
       pkg.price = pkg.price || "Free";
 
-      await setDoc(doc(db, "free_packages", pkgId), pkg);
+      await setDoc(doc(getDb(), "free_packages", pkgId), pkg);
 
       const updated = await getFreePackages();
       res.json({ status: "success", freePackages: updated });
@@ -1004,7 +1027,7 @@ export async function createExpressApp() {
   app.delete("/api/admin/free-packages/:id", adminGuard, async (req, res) => {
     const { id } = req.params;
     try {
-      await deleteDoc(doc(db, "free_packages", id));
+      await deleteDoc(doc(getDb(), "free_packages", id));
       const updated = await getFreePackages();
       res.json({ status: "success", freePackages: updated });
     } catch (e) {
@@ -1016,7 +1039,7 @@ export async function createExpressApp() {
   app.delete("/api/admin/free-requests/:id", adminGuard, async (req, res) => {
     const { id } = req.params;
     try {
-      await deleteDoc(doc(db, "free_requests", id));
+      await deleteDoc(doc(getDb(), "free_requests", id));
       const updated = await getFreeRequests();
       res.json({ status: "success", freeRequests: updated });
     } catch (e) {
@@ -1085,7 +1108,7 @@ export async function createExpressApp() {
         current.nightTimeAdCode = sanitizeAdUrl(nightTimeAdCode);
       }
 
-      await setDoc(doc(db, "settings", "ads"), current);
+      await setDoc(doc(getDb(), "settings", "ads"), current);
       
       // Return updated according to permissions
       if (targetEmail === "chethiyabandara0001@gmail.com") {
@@ -1125,7 +1148,7 @@ export async function createExpressApp() {
           if (displayName) {
             existingUser.displayName = displayName;
           }
-          await setDoc(doc(db, "users", existingUser.uid), existingUser);
+          await setDoc(doc(getDb(), "users", existingUser.uid), existingUser);
           return res.json({ status: "success", user: existingUser });
         }
         return res.status(400).json({ error: "An account with this email already exists. Please log in instead." });
@@ -1152,7 +1175,7 @@ export async function createExpressApp() {
         }
       };
 
-      await setDoc(doc(db, "users", uid), newUser);
+      await setDoc(doc(getDb(), "users", uid), newUser);
 
       res.json({ status: "success", user: newUser });
     } catch (e) {
@@ -1201,7 +1224,7 @@ export async function createExpressApp() {
               activeConnections: 0
             }
           };
-          await setDoc(doc(db, "users", uid), user);
+          await setDoc(doc(getDb(), "users", uid), user);
         } else {
           // Keep dynamic dataUsage if not existing
           if (!user.dataUsage && role === "user") {
@@ -1212,7 +1235,7 @@ export async function createExpressApp() {
               speedLimitMbps: 200,
               activeConnections: 1
             };
-            await setDoc(doc(db, "users", user.uid), user);
+            await setDoc(doc(getDb(), "users", user.uid), user);
           }
         }
       }
@@ -1227,7 +1250,7 @@ export async function createExpressApp() {
   app.get("/api/users/:uid", async (req, res) => {
     try {
       const { uid } = req.params;
-      const snap = await getDoc(doc(db, "users", uid));
+      const snap = await getDoc(doc(getDb(), "users", uid));
       if (!snap.exists()) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -1296,7 +1319,7 @@ export async function createExpressApp() {
         tier: tier || "Lite 100gb for 200lkr"
       };
 
-      await setDoc(doc(db, "slips", slipId), newSlip);
+      await setDoc(doc(getDb(), "slips", slipId), newSlip);
 
       res.json({ status: "success", message: "Receipt sent successfully. Awaiting verification.", slip: newSlip });
     } catch (e) {
@@ -1355,7 +1378,7 @@ export async function createExpressApp() {
         timestamp: new Date().toISOString()
       };
 
-      await setDoc(doc(db, "support_messages", msgId), newMsg);
+      await setDoc(doc(getDb(), "support_messages", msgId), newMsg);
 
       const allMsgs = await getSupportMessages();
       const userMsgs = allMsgs.filter(m => m.userId === userId);
@@ -1408,17 +1431,18 @@ export async function createExpressApp() {
   app.post("/api/admin/reset-stats", adminGuard, async (req, res) => {
     try {
       // 1. Delete all slips in Firestore slips collection
-      const slipsSnap = await getDocs(collection(db, "slips"));
+      const database = getDb();
+      const slipsSnap = await getDocs(collection(database, "slips"));
       for (const d of slipsSnap.docs) {
-        await deleteDoc(doc(db, "slips", d.id));
+        await deleteDoc(doc(database, "slips", d.id));
       }
 
       // 2. Delete non-admin users in Firestore users collection
-      const usersSnap = await getDocs(collection(db, "users"));
+      const usersSnap = await getDocs(collection(database, "users"));
       for (const d of usersSnap.docs) {
         const u = d.data();
          if (u.role !== "admin" && u.uid !== "admin-master-account") {
-          await deleteDoc(doc(db, "users", d.id));
+          await deleteDoc(doc(database, "users", d.id));
         }
       }
 
@@ -1464,7 +1488,8 @@ export async function createExpressApp() {
         return res.status(400).json({ error: "Invalid status state" });
       }
 
-      const slipRef = doc(db, "slips", slipId);
+      const database = getDb();
+      const slipRef = doc(database, "slips", slipId);
       const slipSnap = await getDoc(slipRef);
       if (!slipSnap.exists()) {
         return res.status(404).json({ error: "Payment slip record not found" });
@@ -1518,7 +1543,7 @@ PersistentKeepalive = 25`;
         slip.vpnCode = vpnCode;
 
         // Update the user's dataUsage metrics because of the active subscription state change!
-        const userRef = doc(db, "users", slip.userId);
+        const userRef = doc(database, "users", slip.userId);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           const userObj = userSnap.data();
@@ -1566,7 +1591,7 @@ PersistentKeepalive = 25`;
       pkg.id = pkgId;
       pkg.status = pkg.status || "active";
 
-      await setDoc(doc(db, "packages", pkgId), pkg);
+      await setDoc(doc(getDb(), "packages", pkgId), pkg);
 
       const updated = await getPackages();
       res.json({ status: "success", packages: updated });
@@ -1580,7 +1605,7 @@ PersistentKeepalive = 25`;
     const { id } = req.params;
     try {
       console.log(`[SERVER-INFO] Attempting to delete package document from Firestore: ${id}`);
-      await deleteDoc(doc(db, "packages", id));
+      await deleteDoc(doc(getDb(), "packages", id));
       console.log(`[SERVER-SUCCESS] Successfully deleted package document ${id}. Fetching updated list.`);
       const updated = await getPackages();
       res.json({ status: "success", packages: updated });
@@ -1603,7 +1628,7 @@ PersistentKeepalive = 25`;
       post.date = post.date || new Date().toISOString().substring(0, 10);
       post.author = post.author || "Admin";
 
-      await setDoc(doc(db, "posts", postId), post);
+      await setDoc(doc(getDb(), "posts", postId), post);
 
       const updated = await getPosts();
       res.json({ status: "success", posts: updated });
@@ -1617,7 +1642,7 @@ PersistentKeepalive = 25`;
     const { id } = req.params;
     try {
       console.log(`[SERVER-INFO] Attempting to delete post document from Firestore: ${id}`);
-      await deleteDoc(doc(db, "posts", id));
+      await deleteDoc(doc(getDb(), "posts", id));
       console.log(`[SERVER-SUCCESS] Successfully deleted post document ${id}. Fetching updated list.`);
       const updated = await getPosts();
       res.json({ status: "success", posts: updated });
@@ -1630,7 +1655,7 @@ PersistentKeepalive = 25`;
   // 4c. Update contact details (Admin Only)
   app.post("/api/admin/contact/save", adminGuard, async (req, res) => {
     try {
-      const ref = doc(db, "settings", "contact");
+      const ref = doc(getDb(), "settings", "contact");
       const current = await getContact();
       const updated = { ...current, ...req.body };
       await setDoc(ref, updated);
@@ -1643,7 +1668,7 @@ PersistentKeepalive = 25`;
   // 4d. Update home announcement (Admin Only)
   app.post("/api/admin/announcement/save", adminGuard, async (req, res) => {
     try {
-      const ref = doc(db, "settings", "announcement");
+      const ref = doc(getDb(), "settings", "announcement");
       const current = await getAnnouncement();
       const updated = { ...current, ...req.body };
       await setDoc(ref, updated);
@@ -1657,7 +1682,7 @@ PersistentKeepalive = 25`;
   app.post("/api/admin/users/save-bandwidth", adminGuard, async (req, res) => {
     try {
       const { uid, totalGB, usedGB } = req.body;
-      const userRef = doc(db, "users", uid);
+      const userRef = doc(getDb(), "users", uid);
       const snap = await getDoc(userRef);
 
       if (snap.exists()) {
@@ -1696,7 +1721,7 @@ PersistentKeepalive = 25`;
 
       if (targetUser) {
         // Update existing user role
-        const userRef = doc(db, "users", targetUser.uid);
+        const userRef = doc(getDb(), "users", targetUser.uid);
         targetUser.role = "admin";
         await setDoc(userRef, targetUser);
         const updatedUsersList = await getUsers();
@@ -1718,7 +1743,7 @@ PersistentKeepalive = 25`;
             activeConnections: 0
           }
         };
-        await setDoc(doc(db, "users", uid), newAdminPlaceholder);
+        await setDoc(doc(getDb(), "users", uid), newAdminPlaceholder);
         const updatedUsersList = await getUsers();
         return res.json({ status: "success", message: `Registered ${targetEmail} as a pending administrator. They will have admin role as soon as they sign up!`, users: updatedUsersList });
       }
@@ -1734,7 +1759,7 @@ PersistentKeepalive = 25`;
       if (!uid) {
         return res.status(400).json({ error: "User ID is required" });
       }
-      const userRef = doc(db, "users", uid);
+      const userRef = doc(getDb(), "users", uid);
       const snap = await getDoc(userRef);
 
       if (!snap.exists()) {

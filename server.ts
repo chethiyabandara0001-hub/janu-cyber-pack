@@ -132,11 +132,14 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 let seedingPromise: Promise<boolean> | null = null;
 
 async function seedAllData(force = false): Promise<boolean> {
+  if (!force) {
+    console.log("[SEED] Background automatic seeding is disabled to respect database cleanliness.");
+    return false;
+  }
+
   if (seedingPromise) {
-    if (!force) {
-      console.log("[SEED] Seeding is already in progress, returning active promise...");
-      return seedingPromise;
-    }
+    console.log("[SEED] Seeding is already in progress, returning active promise...");
+    return seedingPromise;
   }
 
   const performSeeding = async (): Promise<boolean> => {
@@ -304,6 +307,83 @@ async function seedAllData(force = false): Promise<boolean> {
   return seedingPromise;
 }
 
+async function completeDatabaseWipe(): Promise<boolean> {
+  try {
+    const database = getDb();
+    console.log("[WIPE] Beginning thorough database cleanup...");
+    
+    // 1. Delete Packages
+    const pkgs = await getDocs(collection(database, "packages"));
+    for (const d of pkgs.docs) {
+      await deleteDoc(doc(database, "packages", d.id));
+    }
+    console.log(`[WIPE] Deleted ${pkgs.size} packages.`);
+    
+    // 2. Delete Posts
+    const psts = await getDocs(collection(database, "posts"));
+    for (const d of psts.docs) {
+      await deleteDoc(doc(database, "posts", d.id));
+    }
+    console.log(`[WIPE] Deleted ${psts.size} posts.`);
+    
+    // 3. Delete Free Packages
+    const fps = await getDocs(collection(database, "free_packages"));
+    for (const d of fps.docs) {
+      await deleteDoc(doc(database, "free_packages", d.id));
+    }
+    console.log(`[WIPE] Deleted ${fps.size} free packages.`);
+    
+    // 4. Delete Free Requests
+    const frs = await getDocs(collection(database, "free_requests"));
+    for (const d of frs.docs) {
+      await deleteDoc(doc(database, "free_requests", d.id));
+    }
+    console.log(`[WIPE] Deleted ${frs.size} free requests.`);
+    
+    // 5. Delete Support Messages
+    const msgs = await getDocs(collection(database, "support_messages"));
+    for (const d of msgs.docs) {
+      await deleteDoc(doc(database, "support_messages", d.id));
+    }
+    console.log(`[WIPE] Deleted ${msgs.size} support messages.`);
+    
+    // 6. Delete Slips
+    const sls = await getDocs(collection(database, "slips"));
+    for (const d of sls.docs) {
+      await deleteDoc(doc(database, "slips", d.id));
+    }
+    console.log(`[WIPE] Deleted ${sls.size} slips.`);
+    
+    // 7. Delete settings documents
+    const stg = await getDocs(collection(database, "settings"));
+    for (const d of stg.docs) {
+      await deleteDoc(doc(database, "settings", d.id));
+    }
+    console.log(`[WIPE] Deleted ${stg.size} settings documents.`);
+    
+    // 8. Delete all users except administrator accounts
+    const usrs = await getDocs(collection(database, "users"));
+    let deletedUsersCount = 0;
+    for (const d of usrs.docs) {
+      const u = d.data();
+      if (u.role !== "admin" && u.email?.toLowerCase() !== "chethiyabandara0001@gmail.com") {
+        await deleteDoc(doc(database, "users", d.id));
+        deletedUsersCount++;
+      }
+    }
+    console.log(`[WIPE] Deleted ${deletedUsersCount} non-admin users.`);
+    
+    // Store a special indicator so that the server knows it was intentionally wiped and we shouldn't auto-seed
+    await setDoc(doc(database, "settings", "seeding_state"), { seeded: true, wiped: true });
+    
+    console.log("[WIPE] Database wiped clean successfully!");
+    return true;
+  } catch (e) {
+    console.error("[WIPE] Error wiping database:", e);
+    return false;
+  }
+}
+
 // Helper methods to connect Firestore queries securely
 async function getPackages(): Promise<Package[]> {
   try {
@@ -311,14 +391,10 @@ async function getPackages(): Promise<Package[]> {
     const snap = await getDocs(collection(database, "packages"));
     const list: Package[] = [];
     snap.forEach(d => list.push(d.data() as Package));
-    if (list.length === 0) {
-      seedAllData(false).catch(err => console.error("Database seed error:", err));
-      return INITIAL_PACKAGES;
-    }
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "packages");
-    return INITIAL_PACKAGES;
+    return [];
   }
 }
 
@@ -328,14 +404,10 @@ async function getPosts(): Promise<Post[]> {
     const snap = await getDocs(collection(database, "posts"));
     const list: Post[] = [];
     snap.forEach(d => list.push(d.data() as Post));
-    if (list.length === 0) {
-      seedAllData(false).catch(err => console.error("Database seed error:", err));
-      return INITIAL_POSTS;
-    }
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "posts");
-    return INITIAL_POSTS;
+    return [];
   }
 }
 
@@ -347,12 +419,33 @@ async function getContact(): Promise<ContactDetails> {
     if (snap.exists()) {
       return snap.data() as ContactDetails;
     } else {
-      seedAllData(false).catch(err => console.error("Database seed error:", err));
-      return INITIAL_CONTACT;
+      return {
+        phone: "",
+        email: "",
+        telegramChannel: "",
+        telegramBotUser: "",
+        address: "",
+        workingHours: "",
+        bankName: "",
+        bankBranch: "",
+        bankAccountNo: "",
+        bankAccountName: ""
+      };
     }
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "settings/contact");
-    return INITIAL_CONTACT;
+    return {
+      phone: "",
+      email: "",
+      telegramChannel: "",
+      telegramBotUser: "",
+      address: "",
+      workingHours: "",
+      bankName: "",
+      bankBranch: "",
+      bankAccountNo: "",
+      bankAccountName: ""
+    };
   }
 }
 
@@ -364,12 +457,21 @@ async function getAnnouncement(): Promise<HomeAnnouncement> {
     if (snap.exists()) {
       return snap.data() as HomeAnnouncement;
     } else {
-      seedAllData(false).catch(err => console.error("Database seed error:", err));
-      return INITIAL_ANNOUNCEMENT;
+      return {
+        title: "",
+        subtitle: "",
+        announcementText: "",
+        showAnnouncement: false
+      };
     }
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "settings/announcement");
-    return INITIAL_ANNOUNCEMENT;
+    return {
+      title: "",
+      subtitle: "",
+      announcementText: "",
+      showAnnouncement: false
+    };
   }
 }
 
@@ -381,7 +483,6 @@ async function getAdSettings(): Promise<AdSettings> {
     if (snap.exists()) {
       return snap.data() as AdSettings;
     } else {
-      seedAllData(false).catch(err => console.error("Database seed error:", err));
       return {
         dayTimeAdCode: "https://t.me/janucyberpack",
         nightTimeAdCode: "https://t.me/janucyberpack"
@@ -425,22 +526,7 @@ async function getUsers(): Promise<any[]> {
     const list: any[] = [];
     snap.forEach(d => list.push(d.data()));
     if (list.length === 0) {
-      seedAllData(false).catch(err => console.error("Database seed error:", err));
       return [
-        {
-          uid: "user-demotesting-1",
-          email: "demo@datastore.shop",
-          displayName: "Sample Premium Client",
-          role: "user",
-          createdAt: new Date().toISOString(),
-          dataUsage: {
-            totalGB: 100,
-            usedGB: 42.8,
-            billingCycleEnd: "June 25, 2026",
-            speedLimitMbps: 150,
-            activeConnections: 2
-          }
-        },
         {
           uid: "admin-master-account",
           email: "chethiyabandara0001@gmail.com",
@@ -521,56 +607,6 @@ async function getFreePackages(): Promise<FreePackage[]> {
     const snap = await getDocs(collection(database, "free_packages"));
     const list: FreePackage[] = [];
     snap.forEach(d => list.push(d.data() as FreePackage));
-    if (list.length === 0) {
-      seedAllData(false).catch(err => console.error("Database seed error:", err));
-      return [
-        {
-          id: "free-dialog-mobile-social",
-          isp: "Dialog" as const,
-          packageType: "Mobile" as const,
-          packageName: "Social Media Pack",
-          price: "Free",
-          code: "WGRD-DIALOG-SOC-99X-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-dialog-mobile-zoom",
-          isp: "Dialog" as const,
-          packageType: "Mobile" as const,
-          packageName: "Zoom Unlimited",
-          price: "Free",
-          code: "VMESS-DIALOG-ZM-22K-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-mobitel-mobile-tiktok",
-          isp: "Mobitel" as const,
-          packageType: "Mobile" as const,
-          packageName: "TikTok Heavy",
-          price: "Free",
-          code: "TROJAN-MOBITEL-TT-44W-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-hutch-router-anytime",
-          isp: "Hutch" as const,
-          packageType: "Router" as const,
-          packageName: "Anytime Free VPN",
-          price: "Free",
-          code: "SSH-HUTCH-RTR-77N-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-airtel-fiber-yt",
-          isp: "Airtel" as const,
-          packageType: "Fiber" as const,
-          packageName: "YouTube Unlimited",
-          price: "Free",
-          code: "V2RAY-AIRTEL-YT-88Q-FREE",
-          createdAt: new Date().toISOString()
-        }
-      ];
-    }
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "free_packages");
@@ -623,10 +659,16 @@ export async function createExpressApp() {
     }
   }
 
-  // Pre-seed the database in background safely if empty
-  seedAllData(false).catch(err => {
-    console.warn("[BOOT] Async background database seed warning:", err);
-  });
+  // One-time automatic cleanup to honor user's directive: "Clean the firebase database to nothing"
+  const wipeTrackFile = path.join(process.cwd(), ".database_wiped");
+  if (!fs.existsSync(wipeTrackFile)) {
+    completeDatabaseWipe().then(() => {
+      fs.writeFileSync(wipeTrackFile, "wiped", "utf8");
+      console.log("[BOOT] Database wiped clean successfully to honor user request.");
+    }).catch(err => {
+      console.error("[BOOT] One-time database wipe failed:", err);
+    });
+  }
   
   // High-priority global error handler definition
   const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
@@ -1581,6 +1623,24 @@ export async function createExpressApp() {
       await markSeeded();
 
       res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Force Clear everything (Admin Only) - "Clean the firebase database to nothing"
+  app.post("/api/admin/wipe-database", adminGuard, async (req, res) => {
+    try {
+      console.log("Admin triggering Complete Database Wipe...");
+      const success = await completeDatabaseWipe();
+      if (success) {
+        res.json({ 
+          success: true, 
+          message: "Database successfully cleared entirely to nothing!"
+        });
+      } else {
+        res.status(500).json({ error: "Failed to fully wipe the database. Check server logs." });
+      }
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }

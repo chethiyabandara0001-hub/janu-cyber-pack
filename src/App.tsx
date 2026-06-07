@@ -201,6 +201,7 @@ export default function App() {
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
   const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState<boolean>(false);
+  const [showWipeConfirm, setShowWipeConfirm] = useState<boolean>(false);
   const [slipVerificationFilter, setSlipVerificationFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [adminNotes, setAdminNotes] = useState<string>('');
   const [customVpnCode, setCustomVpnCode] = useState<string>('');
@@ -753,6 +754,43 @@ export default function App() {
       setAdminManageMessage({
         type: 'error',
         text: 'Network error connecting to administrative restore module: ' + (e?.message || String(e))
+      });
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Deep Wipe the database to nothing
+  const handleWipeDatabase = async () => {
+    setAdminLoading(true);
+    setAdminManageMessage(null);
+    try {
+      const res = await fetch('/api/admin/wipe-database', {
+        method: 'POST',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        setShowWipeConfirm(false);
+        setAdminManageMessage({
+          type: 'success',
+          text: 'Database successfully cleared entirely to nothing!'
+        });
+        await fetchAllData();
+        await fetchAdminStats();
+      } else {
+        setAdminManageMessage({
+          type: 'error',
+          text: data.error || 'Failed to wipe database.'
+        });
+      }
+    } catch (e: any) {
+      console.error(e);
+      setAdminManageMessage({
+        type: 'error',
+        text: 'Network error connecting to administrative database wipe module: ' + (e?.message || String(e))
       });
     } finally {
       setAdminLoading(false);
@@ -1805,6 +1843,34 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowRestoreConfirm(false)}
+                      className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {!showWipeConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowWipeConfirm(true)}
+                    className="px-3 py-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Wipe Database
+                  </button>
+                ) : (
+                  <div className="flex gap-1.5 items-center bg-rose-950/20 border border-rose-500/20 rounded-lg px-2 py-0.5">
+                    <span className="text-[10px] text-rose-400 font-mono">Wipe everything?</span>
+                    <button
+                      type="button"
+                      onClick={handleWipeDatabase}
+                      className="px-2 py-1 text-[10px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded transition cursor-pointer"
+                    >
+                      Yes, Wipe Clean
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowWipeConfirm(false)}
                       className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
                     >
                       Cancel

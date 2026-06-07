@@ -382,9 +382,20 @@ async function getFreeRequests(): Promise<FreeRequest[]> {
   }
 }
 
+import cors from "cors";
+
 export async function createExpressApp() {
   const app = express();
   const PORT = 3000;
+  
+  app.set("trust proxy", 1); // Trust first proxy (like Cloudflare)
+  app.use(cors({ origin: true, credentials: true })); // Allow all cross origin requests (useful behind CF)
+  
+  // Custom CORS headers to ensure CF doesn't block custom auth headers
+  app.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-Requester-Uid, Authorization");
+    next();
+  });
 
   // 1. High-Grade Security Headers to bulletproof the server & GitHub export against vectors
   app.use((req, res, next) => {

@@ -7,10 +7,10 @@ import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePacka
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "./src/mockData";
 
 // Initialize Firebase JS SDK
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp } from "firebase/app";
 import { 
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection 
-} from "firebase/firestore/lite";
+} from "firebase/firestore";
 
 let firebaseConfig: any;
 try {
@@ -48,7 +48,7 @@ try {
   };
 }
 
-const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 
 // Error handling in compliance with Phase 3 of Firebase Integration Skill
@@ -106,12 +106,15 @@ async function getPackages(): Promise<Package[]> {
     const list: Package[] = [];
     snap.forEach(d => list.push(d.data() as Package));
     if (list.length === 0) {
-      // Bootstrap seed collection automatically if empty to recover cleared data
-      for (const pkg of INITIAL_PACKAGES) {
-        await setDoc(doc(db, "packages", pkg.id), pkg);
-        list.push(pkg);
+      const alreadySeeded = await checkSeeded();
+      if (!alreadySeeded) {
+        // Bootstrap seed collection
+        for (const pkg of INITIAL_PACKAGES) {
+          await setDoc(doc(db, "packages", pkg.id), pkg);
+          list.push(pkg);
+        }
+        await markSeeded();
       }
-      await markSeeded();
     }
     return list;
   } catch (e) {
@@ -126,12 +129,14 @@ async function getPosts(): Promise<Post[]> {
     const list: Post[] = [];
     snap.forEach(d => list.push(d.data() as Post));
     if (list.length === 0) {
-      // Bootstrap seed collection automatically if empty to recover cleared data
-      for (const post of INITIAL_POSTS) {
-        await setDoc(doc(db, "posts", post.id), post);
-        list.push(post);
+      const alreadySeeded = await checkSeeded();
+      if (!alreadySeeded) {
+        for (const post of INITIAL_POSTS) {
+          await setDoc(doc(db, "posts", post.id), post);
+          list.push(post);
+        }
+        await markSeeded();
       }
-      await markSeeded();
     }
     return list;
   } catch (e) {
@@ -199,19 +204,9 @@ async function getSupportMessages(): Promise<SupportMessage[]> {
   try {
     const snap = await getDocs(collection(db, "support_messages"));
     const list: SupportMessage[] = [];
-    snap.forEach(d => {
-      const data = d.data() as SupportMessage;
-      // Ensure missing fields don't cause fatal downstream errors
-      if (!data.timestamp) data.timestamp = new Date().toISOString(); 
-      list.push(data);
-    });
-    return list.sort((a, b) => {
-      const timeA = new Date(a.timestamp || 0).getTime();
-      const timeB = new Date(b.timestamp || 0).getTime();
-      return timeA - timeB;
-    });
+    snap.forEach(d => list.push(d.data() as SupportMessage));
+    return list.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
   } catch (e) {
-    console.error("Error in getSupportMessages:", e);
     handleFirestoreError(e, OperationType.GET, "support_messages");
     return [];
   }
@@ -255,51 +250,6 @@ async function getUsers(): Promise<any[]> {
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "users");
     return [];
-  }
-}
-
-// Helper to decode a base64 image and save it on the server local filesystem
-function saveBase64Image(base64Str: string): string {
-  if (!base64Str || !base64Str.startsWith("data:")) {
-    return base64Str;
-  }
-
-  try {
-    const matches = base64Str.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      return base64Str;
-    }
-
-    const type = matches[1];
-    const dataBuffer = Buffer.from(matches[2], "base64");
-    
-    // Determine file extension
-    let extension = "jpg";
-    if (type.includes("png")) {
-      extension = "png";
-    } else if (type.includes("gif")) {
-      extension = "gif";
-    } else if (type.includes("webp")) {
-      extension = "webp";
-    }
-
-    const filename = `slip_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${extension}`;
-    const uploadsDir = path.join(process.cwd(), "uploads");
-    
-    try {
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      const filePath = path.join(uploadsDir, filename);
-      fs.writeFileSync(filePath, dataBuffer);
-      return `/uploads/${filename}`;
-    } catch (fsErr) {
-      console.warn("Local storage write failed (could be a read-only serverless environment), falling back to base64 encoding:", fsErr);
-      return base64Str;
-    }
-  } catch (e) {
-    console.error("Failed to save base64 image to server filesystem:", e);
-    return base64Str;
   }
 }
 
@@ -392,20 +342,9 @@ async function getFreeRequests(): Promise<FreeRequest[]> {
   }
 }
 
-import cors from "cors";
-
 export async function createExpressApp() {
   const app = express();
   const PORT = 3000;
-  
-  app.set("trust proxy", 1); // Trust first proxy (like Cloudflare)
-  app.use(cors({ origin: true, credentials: true })); // Allow all cross origin requests (useful behind CF)
-  
-  // Custom CORS headers to ensure CF doesn't block custom auth headers
-  app.use((req, res, next) => {
-    res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-Requester-Uid, Authorization");
-    next();
-  });
 
   // 1. High-Grade Security Headers to bulletproof the server & GitHub export against vectors
   app.use((req, res, next) => {
@@ -479,54 +418,23 @@ export async function createExpressApp() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-  // Ensure uploads directory exists and expose it as static folder
-  const uploadsDir = path.join(process.cwd(), "uploads");
-  try {
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-  } catch (e) {
-    console.warn("Could not create uploads directory in read-only environment (Serverless/Vercel handles static assets differently):", e);
-  }
-  app.use("/uploads", express.static(uploadsDir));
-
   // API Backend routes
   
   // Sitemap routes for SEO ranking
   app.get("/sitemap.xml", (req, res) => {
-    const p = path.join(process.cwd(), "public", "sitemap.xml");
-    if (fs.existsSync(p)) {
-      res.sendFile(p);
-    } else {
-      res.status(404).send("Sitemap not found");
-    }
+    res.sendFile(path.join(process.cwd(), "public", "sitemap.xml"));
   });
 
   app.get("/robots.txt", (req, res) => {
-    const p = path.join(process.cwd(), "public", "robots.txt");
-    if (fs.existsSync(p)) {
-      res.sendFile(p);
-    } else {
-      res.status(404).send("Robots configuration not found");
-    }
+    res.sendFile(path.join(process.cwd(), "public", "robots.txt"));
   });
 
   app.get("/favicon.png", (req, res) => {
-    const p = path.join(process.cwd(), "public", "favicon.png");
-    if (fs.existsSync(p)) {
-      res.sendFile(p);
-    } else {
-      res.status(404).send("Favicon not found");
-    }
+    res.sendFile(path.join(process.cwd(), "public", "favicon.png"));
   });
 
   app.get("/favicon.ico", (req, res) => {
-    const p = path.join(process.cwd(), "public", "favicon.ico");
-    if (fs.existsSync(p)) {
-      res.sendFile(p);
-    } else {
-      res.status(404).send("Favicon icon not found");
-    }
+    res.sendFile(path.join(process.cwd(), "public", "favicon.ico"));
   });
   
   app.get("/sitemaps", (req, res) => {
@@ -798,15 +706,6 @@ export async function createExpressApp() {
     `;
     res.setHeader('Content-Type', 'text/html');
     res.send(html);
-  });
-
-  // Apply cache-control middleware for all API routes to prevent Vercel CDN caching
-  app.use("/api", (req, res, next) => {
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
-    res.setHeader("Surrogate-Control", "no-store");
-    next();
   });
 
   // 1. Core Config / Initial Data endpoint
@@ -1166,9 +1065,6 @@ export async function createExpressApp() {
         resolvedCurrency = "LKR";
       }
 
-      // Direct high-performance server side filesytem conversion to prevent Firestore 1MB limits
-      const processedSlipUrl = saveBase64Image(bankSlipBase64);
-
       const slipId = "slip_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
       const newSlip: PaymentSlip = {
         id: slipId,
@@ -1180,7 +1076,7 @@ export async function createExpressApp() {
         vpnTypeName: selectedPkg.vpnTypeName,
         price: resolvedPrice,
         currency: resolvedCurrency,
-        bankSlipBase64: processedSlipUrl,
+        bankSlipBase64,
         status: "pending",
         submittedAt: new Date().toISOString(),
         tier: tier || "Lite 100gb for 200lkr"
@@ -1217,8 +1113,7 @@ export async function createExpressApp() {
       }
       res.json(allMsgs);
     } catch (e) {
-      console.error("[GET /api/support-messages] Error:", e);
-      res.status(500).json({ error: String(e), stack: (e as any)?.stack || '' });
+      res.status(500).json({ error: String(e) });
     }
   });
 
@@ -1302,7 +1197,7 @@ export async function createExpressApp() {
       const usersSnap = await getDocs(collection(db, "users"));
       for (const d of usersSnap.docs) {
         const u = d.data();
-         if (u.role !== "admin" && u.uid !== "admin-master-account") {
+        if (u.role !== "admin" && u.uid !== "admin-master-account") {
           await deleteDoc(doc(db, "users", d.id));
         }
       }
@@ -1312,106 +1207,6 @@ export async function createExpressApp() {
 
       res.json({ success: true });
     } catch (e) {
-      res.status(500).json({ error: String(e) });
-    }
-  });
-
-  // Force Reset & Restore Default Packages and Data (Admin Only)
-  app.post("/api/admin/restore-defaults", adminGuard, async (req, res) => {
-    try {
-      // 1. Restore packages collection
-      const packagesRef = collection(db, "packages");
-      const packagesSnap = await getDocs(packagesRef);
-      for (const d of packagesSnap.docs) {
-        await deleteDoc(doc(db, "packages", d.id));
-      }
-      for (const pkg of INITIAL_PACKAGES) {
-        await setDoc(doc(db, "packages", pkg.id), pkg);
-      }
-
-      // 2. Restore posts collection
-      const postsRef = collection(db, "posts");
-      const postsSnap = await getDocs(postsRef);
-      for (const d of postsSnap.docs) {
-        await deleteDoc(doc(db, "posts", d.id));
-      }
-      for (const post of INITIAL_POSTS) {
-        await setDoc(doc(db, "posts", post.id), post);
-      }
-
-      // 3. Restore free packages collection
-      const freeRef = collection(db, "free_packages");
-      const freeSnap = await getDocs(freeRef);
-      for (const d of freeSnap.docs) {
-        await deleteDoc(doc(db, "free_packages", d.id));
-      }
-      const initialFree = [
-        {
-          id: "free-dialog-mobile-social",
-          isp: "Dialog" as const,
-          packageType: "Mobile" as const,
-          packageName: "Social Media Pack",
-          price: "Free",
-          code: "WGRD-DIALOG-SOC-99X-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-dialog-mobile-zoom",
-          isp: "Dialog" as const,
-          packageType: "Mobile" as const,
-          packageName: "Zoom Unlimited",
-          price: "Free",
-          code: "VMESS-DIALOG-ZM-22K-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-mobitel-mobile-tiktok",
-          isp: "Mobitel" as const,
-          packageType: "Mobile" as const,
-          packageName: "TikTok Heavy",
-          price: "Free",
-          code: "TROJAN-MOBITEL-TT-44W-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-hutch-router-anytime",
-          isp: "Hutch" as const,
-          packageType: "Router" as const,
-          packageName: "Anytime Free VPN",
-          price: "Free",
-          code: "SSH-HUTCH-RTR-77N-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-airtel-fiber-yt",
-          isp: "Airtel" as const,
-          packageType: "Fiber" as const,
-          packageName: "YouTube Unlimited",
-          price: "Free",
-          code: "V2RAY-AIRTEL-YT-88Q-FREE",
-          createdAt: new Date().toISOString()
-        }
-      ];
-      for (const fp of initialFree) {
-        await setDoc(doc(db, "free_packages", fp.id), fp);
-      }
-
-      // 4. Mark seeded true
-      await markSeeded();
-
-      // Retrieve full list of fresh data and return
-      const updatedPackages = await getPackages();
-      const updatedPosts = await getPosts();
-      const updatedFree = await getFreePackages();
-
-      res.json({
-        success: true,
-        packages: updatedPackages,
-        posts: updatedPosts,
-        freePackages: updatedFree
-      });
-    } catch (e) {
-      console.error("Failed to restore default mock data:", e);
       res.status(500).json({ error: String(e) });
     }
   });
@@ -1729,7 +1524,7 @@ PersistentKeepalive = 25`;
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else if (!process.env.VERCEL) {
+  } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {

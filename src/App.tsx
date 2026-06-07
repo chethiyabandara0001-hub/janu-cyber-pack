@@ -197,6 +197,7 @@ export default function App() {
   const [adminStats, setAdminStats] = useState<any>(null);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
   const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
+  const [showRestoreConfirm, setShowRestoreConfirm] = useState<boolean>(false);
   const [slipVerificationFilter, setSlipVerificationFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [adminNotes, setAdminNotes] = useState<string>('');
   const [customVpnCode, setCustomVpnCode] = useState<string>('');
@@ -614,7 +615,7 @@ export default function App() {
       fetchSupportMessages();
       intervalId = setInterval(() => {
         fetchSupportMessages();
-      }, 5000);
+      }, 15000);
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
@@ -628,12 +629,12 @@ export default function App() {
         fetchSupportMessages(activeUserChatId);
         intervalId = setInterval(() => {
           fetchSupportMessages(activeUserChatId);
-        }, 5000);
+        }, 15000);
       } else {
         fetchSupportMessages();
         intervalId = setInterval(() => {
           fetchSupportMessages();
-        }, 8000);
+        }, 20000);
       }
     }
     return () => {
@@ -709,6 +710,43 @@ export default function App() {
       }
     } catch (e) {
       console.error(e);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Reset & Restore initial default packages, free packages, and posts from the server database
+  const handleRestoreDefaults = async () => {
+    setAdminLoading(true);
+    setAdminManageMessage(null);
+    try {
+      const res = await fetch('/api/admin/restore-defaults', {
+        method: 'POST',
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
+      const data = await res.json();
+      if (data.success || res.ok) {
+        setShowRestoreConfirm(false);
+        setAdminManageMessage({
+          type: 'success',
+          text: 'Database successfully restored to original factory default packages, posts, and free VPN listings!'
+        });
+        await fetchAllData();
+        await fetchAdminStats();
+      } else {
+        setAdminManageMessage({
+          type: 'error',
+          text: data.error || 'Failed to restore default configuration.'
+        });
+      }
+    } catch (e: any) {
+      console.error(e);
+      setAdminManageMessage({
+        type: 'error',
+        text: 'Network error connecting to administrative restore module: ' + (e?.message || String(e))
+      });
     } finally {
       setAdminLoading(false);
     }
@@ -945,18 +983,26 @@ export default function App() {
   };
 
   // Initialize and render standard Google Sign-In button
+  const googleBtnInitialized = useRef(false);
   useEffect(() => {
     const initAndRenderGoogleBtn = () => {
       const googleObj = (window as any).google;
       if (googleObj?.accounts?.id) {
-        googleObj.accounts.id.initialize({
-          client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
-          callback: handleGoogleCredentialResponse,
-        });
+        if (!googleBtnInitialized.current) {
+          try {
+            googleObj.accounts.id.initialize({
+              client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
+              callback: handleGoogleCredentialResponse,
+            });
+            googleBtnInitialized.current = true;
+          } catch(e) {
+            console.warn("GSI Logger override catch", e);
+          }
+        }
 
         // Try to render standard button on landing page if element exists
         const btnLanding = document.getElementById("google-signin-btn");
-        if (btnLanding) {
+        if (btnLanding && !btnLanding.hasChildNodes()) {
           googleObj.accounts.id.renderButton(btnLanding, {
             theme: "outline",
             shape: "pill",
@@ -968,7 +1014,7 @@ export default function App() {
 
         // Try to render standard button on login modal if element exists
         const btnModal = document.getElementById("google-signin-btn-modal");
-        if (btnModal) {
+        if (btnModal && !btnModal.hasChildNodes()) {
           googleObj.accounts.id.renderButton(btnModal, {
             theme: "outline",
             shape: "pill",
@@ -983,12 +1029,10 @@ export default function App() {
     // Run immediately and also set a slight timeout to ensure components are painted
     initAndRenderGoogleBtn();
     const timer = setTimeout(initAndRenderGoogleBtn, 300);
-    const interval = setInterval(initAndRenderGoogleBtn, 1000);
     return () => {
       clearTimeout(timer);
-      clearInterval(interval);
     };
-  }, [user, showLoginModal, loginProvider]);
+  }, [user, showLoginModal, loginProvider, handleGoogleCredentialResponse]);
 
   // Drag and drop setup for slip
   const handleDrag = (e: React.DragEvent) => {
@@ -1091,8 +1135,8 @@ export default function App() {
     setSlipFeedback(null);
 
     try {
-      // Direct Firebase Storage upload: convert base64 representation back to a cloud asset
-      const publicStorageUrl = await firebaseService.uploadIfBase64(base64Slip, "slips");
+      // Direct high-performance server-side handling: pass base64 directly to the backend
+      const publicStorageUrl = base64Slip;
 
       const data = await firebaseService.submitPaymentSlip({
         userId: user.uid,
@@ -1726,6 +1770,34 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowResetConfirm(false)}
+                      className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+
+                {!showRestoreConfirm ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowRestoreConfirm(true)}
+                    className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-lg flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5" /> Restore Defaults
+                  </button>
+                ) : (
+                  <div className="flex gap-1.5 items-center bg-emerald-950/20 border border-emerald-500/20 rounded-lg px-2 py-0.5 block">
+                    <span className="text-[10px] text-emerald-400 font-mono">Restore packages & posts?</span>
+                    <button
+                      type="button"
+                      onClick={handleRestoreDefaults}
+                      className="px-2 py-1 text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded transition cursor-pointer"
+                    >
+                      Yes, Restore
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowRestoreConfirm(false)}
                       className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
                     >
                       Cancel

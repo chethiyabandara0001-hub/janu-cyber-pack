@@ -89,36 +89,142 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Seed tracking helper to prevent auto reset of empty collections
-async function checkSeeded(): Promise<boolean> {
-  try {
-    const snap = await getDoc(doc(db, "settings", "seeding_state"));
-    return snap.exists() && snap.data()?.seeded === true;
-  } catch (e) {
-    return false;
-  }
-}
-
+// Helper to mark database as seeded
 async function markSeeded(): Promise<void> {
   try {
     await setDoc(doc(db, "settings", "seeding_state"), { seeded: true });
   } catch (e) {}
 }
 
+// Seed helper for complete recovery
+async function seedAllData(force = false) {
+  try {
+    console.log(`Starting Database Seeding (force=${force})...`);
+    
+    // 1. Packages
+    const pkgSnap = await getDocs(collection(db, "packages"));
+    if (force || pkgSnap.size === 0) {
+      if (force) {
+        for (const d of pkgSnap.docs) await deleteDoc(doc(db, "packages", d.id));
+      }
+      for (const p of INITIAL_PACKAGES) await setDoc(doc(db, "packages", p.id), p);
+      console.log("Seeded Packages.");
+    }
+
+    // 2. Posts
+    const postSnap = await getDocs(collection(db, "posts"));
+    if (force || postSnap.size === 0) {
+      if (force) {
+        for (const d of postSnap.docs) await deleteDoc(doc(db, "posts", d.id));
+      }
+      for (const p of INITIAL_POSTS) await setDoc(doc(db, "posts", p.id), p);
+      console.log("Seeded Posts.");
+    }
+
+    // 3. Contact & Announcement (Settings)
+    const contactRef = doc(db, "settings", "contact");
+    const annRef = doc(db, "settings", "announcement");
+    const adRef = doc(db, "settings", "ads");
+
+    const contactSnap = await getDoc(contactRef);
+    if (force || !contactSnap.exists()) {
+      await setDoc(contactRef, INITIAL_CONTACT);
+      console.log("Seeded Contact.");
+    }
+
+    const annSnap = await getDoc(annRef);
+    if (force || !annSnap.exists()) {
+      await setDoc(annRef, INITIAL_ANNOUNCEMENT);
+      console.log("Seeded Announcement.");
+    }
+
+    const adSnap = await getDoc(adRef);
+    if (force || !adSnap.exists()) {
+      await setDoc(adRef, {
+        dayTimeAdCode: "https://t.me/janucyberpack",
+        nightTimeAdCode: "https://t.me/janucyberpack"
+      });
+      console.log("Seeded Ads.");
+    }
+
+    // 4. Free Packages
+    const freePkgSnap = await getDocs(collection(db, "free_packages"));
+    if (force || freePkgSnap.size === 0) {
+      if (force) {
+        for (const d of freePkgSnap.docs) await deleteDoc(doc(db, "free_packages", d.id));
+      }
+      const initialFree = [
+        {
+          id: "free-dialog-mobile-social",
+          isp: "Dialog",
+          packageType: "Mobile",
+          packageName: "Social Media Pack",
+          price: "Free",
+          code: "WGRD-DIALOG-SOC-99X-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-dialog-mobile-zoom",
+          isp: "Dialog",
+          packageType: "Mobile",
+          packageName: "Zoom Unlimited",
+          price: "Free",
+          code: "VMESS-DIALOG-ZM-22K-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-mobitel-mobile-tiktok",
+          isp: "Mobitel",
+          packageType: "Mobile",
+          packageName: "TikTok Heavy",
+          price: "Free",
+          code: "TROJAN-MOBITEL-TT-44W-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-hutch-router-anytime",
+          isp: "Hutch",
+          packageType: "Router",
+          packageName: "Anytime Free VPN",
+          price: "Free",
+          code: "SSH-HUTCH-RTR-77N-FREE",
+          createdAt: new Date().toISOString()
+        },
+        {
+          id: "free-airtel-fiber-yt",
+          isp: "Airtel",
+          packageType: "Fiber",
+          packageName: "YouTube Unlimited",
+          price: "Free",
+          code: "V2RAY-AIRTEL-YT-88Q-FREE",
+          createdAt: new Date().toISOString()
+        }
+      ];
+      for (const p of initialFree) await setDoc(doc(db, "free_packages", p.id), p);
+      console.log("Seeded Free Packages.");
+    }
+
+    await markSeeded();
+    return true;
+  } catch (err) {
+    console.error("Seeding operation failed:", err);
+    return false;
+  }
+}
+
 // Helper methods to connect Firestore queries securely
 async function getPackages(): Promise<Package[]> {
   try {
     const snap = await getDocs(collection(db, "packages"));
+    if (snap.size === 0) {
+      await seedAllData();
+      const freshSnap = await getDocs(collection(db, "packages"));
+      const list: Package[] = [];
+      freshSnap.forEach(d => list.push(d.data() as Package));
+      return list;
+    }
     const list: Package[] = [];
     snap.forEach(d => list.push(d.data() as Package));
-    if (list.length === 0) {
-      // Bootstrap seed collection automatically if empty to recover cleared data
-      for (const pkg of INITIAL_PACKAGES) {
-        await setDoc(doc(db, "packages", pkg.id), pkg);
-        list.push(pkg);
-      }
-      await markSeeded();
-    }
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "packages");
@@ -129,16 +235,15 @@ async function getPackages(): Promise<Package[]> {
 async function getPosts(): Promise<Post[]> {
   try {
     const snap = await getDocs(collection(db, "posts"));
+    if (snap.size === 0) {
+      await seedAllData();
+      const freshSnap = await getDocs(collection(db, "posts"));
+      const list: Post[] = [];
+      freshSnap.forEach(d => list.push(d.data() as Post));
+      return list;
+    }
     const list: Post[] = [];
     snap.forEach(d => list.push(d.data() as Post));
-    if (list.length === 0) {
-      // Bootstrap seed collection automatically if empty to recover cleared data
-      for (const post of INITIAL_POSTS) {
-        await setDoc(doc(db, "posts", post.id), post);
-        list.push(post);
-      }
-      await markSeeded();
-    }
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "posts");
@@ -153,7 +258,7 @@ async function getContact(): Promise<ContactDetails> {
     if (snap.exists()) {
       return snap.data() as ContactDetails;
     } else {
-      await setDoc(ref, INITIAL_CONTACT);
+      await seedAllData();
       return INITIAL_CONTACT;
     }
   } catch (e) {
@@ -169,7 +274,7 @@ async function getAnnouncement(): Promise<HomeAnnouncement> {
     if (snap.exists()) {
       return snap.data() as HomeAnnouncement;
     } else {
-      await setDoc(ref, INITIAL_ANNOUNCEMENT);
+      await seedAllData();
       return INITIAL_ANNOUNCEMENT;
     }
   } catch (e) {
@@ -185,12 +290,11 @@ async function getAdSettings(): Promise<AdSettings> {
     if (snap.exists()) {
       return snap.data() as AdSettings;
     } else {
-      const defaultAds: AdSettings = {
+      await seedAllData();
+      return {
         dayTimeAdCode: "https://t.me/janucyberpack",
         nightTimeAdCode: "https://t.me/janucyberpack"
       };
-      await setDoc(ref, defaultAds);
-      return defaultAds;
     }
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "settings/ads");
@@ -1330,99 +1434,22 @@ export async function createExpressApp() {
   // Force Reset & Restore Default Packages and Data (Admin Only)
   app.post("/api/admin/restore-defaults", adminGuard, async (req, res) => {
     try {
-      // 1. Restore packages collection
-      const packagesRef = collection(db, "packages");
-      const packagesSnap = await getDocs(packagesRef);
-      for (const d of packagesSnap.docs) {
-        await deleteDoc(doc(db, "packages", d.id));
+      console.log("Admin triggering Deep Reset of all databases...");
+      const success = await seedAllData(true);
+      if (success) {
+        // Retrieve fresh lists
+        const [pkgs, psts, freePkgs] = await Promise.all([getPackages(), getPosts(), getFreePackages()]);
+        res.json({ 
+          success: true, 
+          message: "All collections restored to factory defaults.",
+          packages: pkgs,
+          posts: psts,
+          freePackages: freePkgs
+        });
+      } else {
+        res.status(500).json({ error: "Failed to fully restore defaults. Check server logs." });
       }
-      for (const pkg of INITIAL_PACKAGES) {
-        await setDoc(doc(db, "packages", pkg.id), pkg);
-      }
-
-      // 2. Restore posts collection
-      const postsRef = collection(db, "posts");
-      const postsSnap = await getDocs(postsRef);
-      for (const d of postsSnap.docs) {
-        await deleteDoc(doc(db, "posts", d.id));
-      }
-      for (const post of INITIAL_POSTS) {
-        await setDoc(doc(db, "posts", post.id), post);
-      }
-
-      // 3. Restore free packages collection
-      const freeRef = collection(db, "free_packages");
-      const freeSnap = await getDocs(freeRef);
-      for (const d of freeSnap.docs) {
-        await deleteDoc(doc(db, "free_packages", d.id));
-      }
-      const initialFree = [
-        {
-          id: "free-dialog-mobile-social",
-          isp: "Dialog" as const,
-          packageType: "Mobile" as const,
-          packageName: "Social Media Pack",
-          price: "Free",
-          code: "WGRD-DIALOG-SOC-99X-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-dialog-mobile-zoom",
-          isp: "Dialog" as const,
-          packageType: "Mobile" as const,
-          packageName: "Zoom Unlimited",
-          price: "Free",
-          code: "VMESS-DIALOG-ZM-22K-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-mobitel-mobile-tiktok",
-          isp: "Mobitel" as const,
-          packageType: "Mobile" as const,
-          packageName: "TikTok Heavy",
-          price: "Free",
-          code: "TROJAN-MOBITEL-TT-44W-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-hutch-router-anytime",
-          isp: "Hutch" as const,
-          packageType: "Router" as const,
-          packageName: "Anytime Free VPN",
-          price: "Free",
-          code: "SSH-HUTCH-RTR-77N-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-airtel-fiber-yt",
-          isp: "Airtel" as const,
-          packageType: "Fiber" as const,
-          packageName: "YouTube Unlimited",
-          price: "Free",
-          code: "V2RAY-AIRTEL-YT-88Q-FREE",
-          createdAt: new Date().toISOString()
-        }
-      ];
-      for (const fp of initialFree) {
-        await setDoc(doc(db, "free_packages", fp.id), fp);
-      }
-
-      // 4. Mark seeded true
-      await markSeeded();
-
-      // Retrieve full list of fresh data and return
-      const updatedPackages = await getPackages();
-      const updatedPosts = await getPosts();
-      const updatedFree = await getFreePackages();
-
-      res.json({
-        success: true,
-        packages: updatedPackages,
-        posts: updatedPosts,
-        freePackages: updatedFree
-      });
     } catch (e) {
-      console.error("Failed to restore default mock data:", e);
       res.status(500).json({ error: String(e) });
     }
   });

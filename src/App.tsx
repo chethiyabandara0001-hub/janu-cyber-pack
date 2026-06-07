@@ -991,54 +991,53 @@ export default function App() {
 
   // Initialize and render standard Google Sign-In button
   useEffect(() => {
-    const initAndRenderGoogleBtn = () => {
-      const googleObj = (window as any).google;
-      if (googleObj?.accounts?.id) {
-        if (!googleBtnInitialized.current) {
-          try {
-            googleObj.accounts.id.initialize({
-              client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
-              callback: handleGoogleCredentialResponse,
-            });
-            googleBtnInitialized.current = true;
-          } catch(e) {
-            console.warn("GSI Logger override catch", e);
-          }
-        }
+    const googleObj = (window as any).google;
+    if (!googleObj?.accounts?.id) return;
 
-        // Try to render standard button on landing page if element exists
-        const btnLanding = document.getElementById("google-signin-btn");
-        if (btnLanding && !btnLanding.hasChildNodes()) {
-          googleObj.accounts.id.renderButton(btnLanding, {
-            theme: "outline",
-            shape: "pill",
-            size: "large",
-            width: 320,
-            text: "signin_with"
-          });
-        }
+    if (!googleBtnInitialized.current) {
+      try {
+        console.log("Initializing Google Sign-In singleton...");
+        googleObj.accounts.id.initialize({
+          client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
+          callback: handleGoogleCredentialResponse,
+        });
+        googleBtnInitialized.current = true;
+      } catch(e) {
+        console.warn("GSI Logger override catch", e);
+      }
+    }
 
-        // Try to render standard button on login modal if element exists
-        const btnModal = document.getElementById("google-signin-btn-modal");
-        if (btnModal && !btnModal.hasChildNodes()) {
-          googleObj.accounts.id.renderButton(btnModal, {
-            theme: "outline",
-            shape: "pill",
-            size: "large",
-            width: 320,
-            text: "signin_with"
-          });
-        }
+    const renderButtons = () => {
+      // Try to render standard button on landing page if element exists
+      const btnLanding = document.getElementById("google-signin-btn");
+      if (btnLanding && !btnLanding.hasChildNodes()) {
+        googleObj.accounts.id.renderButton(btnLanding, {
+          theme: "outline",
+          shape: "pill",
+          size: "large",
+          width: 320,
+          text: "signin_with"
+        });
+      }
+
+      // Try to render standard button on login modal if element exists
+      const btnModal = document.getElementById("google-signin-btn-modal");
+      if (btnModal && !btnModal.hasChildNodes()) {
+        googleObj.accounts.id.renderButton(btnModal, {
+          theme: "outline",
+          shape: "pill",
+          size: "large",
+          width: 320,
+          text: "signin_with"
+        });
       }
     };
 
-    // Run immediately and also set a slight timeout to ensure components are painted
-    initAndRenderGoogleBtn();
-    const timer = setTimeout(initAndRenderGoogleBtn, 300);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [user, showLoginModal, loginProvider, handleGoogleCredentialResponse]);
+    renderButtons();
+    // Re-check after small delay for modal transitions
+    const timer = setTimeout(renderButtons, 500);
+    return () => clearTimeout(timer);
+  }, [user, showLoginModal, loginProvider]); // Removed handleGoogleCredentialResponse to avoid re-init
 
   // Drag and drop setup for slip
   const handleDrag = (e: React.DragEvent) => {

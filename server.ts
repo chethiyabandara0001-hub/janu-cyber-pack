@@ -93,129 +93,179 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
-// Helper to mark database as seeded
-async function markSeeded(): Promise<void> {
-  try {
-    const database = getDb();
-    await setDoc(doc(database, "settings", "seeding_state"), { seeded: true });
-  } catch (e) {}
-}
+let seedingPromise: Promise<boolean> | null = null;
 
-// Seed helper for complete recovery
-async function seedAllData(force = false) {
-  try {
-    console.log(`Starting Database Seeding (force=${force})...`);
-    const database = getDb();
-    
-    // 1. Packages
-    const pkgSnap = await getDocs(collection(database, "packages"));
-    if (force || pkgSnap.size === 0) {
-      if (force) {
-        for (const d of pkgSnap.docs) await deleteDoc(doc(database, "packages", d.id));
-      }
-      for (const p of INITIAL_PACKAGES) await setDoc(doc(database, "packages", p.id), p);
-      console.log("Seeded Packages.");
+async function seedAllData(force = false): Promise<boolean> {
+  if (seedingPromise) {
+    if (!force) {
+      console.log("[SEED] Seeding is already in progress, returning active promise...");
+      return seedingPromise;
     }
-
-    // 2. Posts
-    const postSnap = await getDocs(collection(database, "posts"));
-    if (force || postSnap.size === 0) {
-      if (force) {
-        for (const d of postSnap.docs) await deleteDoc(doc(database, "posts", d.id));
-      }
-      for (const p of INITIAL_POSTS) await setDoc(doc(database, "posts", p.id), p);
-      console.log("Seeded Posts.");
-    }
-
-    // 3. Contact & Announcement (Settings)
-    const contactRef = doc(database, "settings", "contact");
-    const annRef = doc(database, "settings", "announcement");
-    const adRef = doc(database, "settings", "ads");
-
-    const contactSnap = await getDoc(contactRef);
-    if (force || !contactSnap.exists()) {
-      await setDoc(contactRef, INITIAL_CONTACT);
-      console.log("Seeded Contact.");
-    }
-
-    const annSnap = await getDoc(annRef);
-    if (force || !annSnap.exists()) {
-      await setDoc(annRef, INITIAL_ANNOUNCEMENT);
-      console.log("Seeded Announcement.");
-    }
-
-    const adSnap = await getDoc(adRef);
-    if (force || !adSnap.exists()) {
-      await setDoc(adRef, {
-        dayTimeAdCode: "https://t.me/janucyberpack",
-        nightTimeAdCode: "https://t.me/janucyberpack"
-      });
-      console.log("Seeded Ads.");
-    }
-
-    // 4. Free Packages
-    const freePkgSnap = await getDocs(collection(database, "free_packages"));
-    if (force || freePkgSnap.size === 0) {
-      if (force) {
-        for (const d of freePkgSnap.docs) await deleteDoc(doc(database, "free_packages", d.id));
-      }
-      const initialFree = [
-        {
-          id: "free-dialog-mobile-social",
-          isp: "Dialog",
-          packageType: "Mobile",
-          packageName: "Social Media Pack",
-          price: "Free",
-          code: "WGRD-DIALOG-SOC-99X-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-dialog-mobile-zoom",
-          isp: "Dialog",
-          packageType: "Mobile",
-          packageName: "Zoom Unlimited",
-          price: "Free",
-          code: "VMESS-DIALOG-ZM-22K-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-mobitel-mobile-tiktok",
-          isp: "Mobitel",
-          packageType: "Mobile",
-          packageName: "TikTok Heavy",
-          price: "Free",
-          code: "TROJAN-MOBITEL-TT-44W-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-hutch-router-anytime",
-          isp: "Hutch",
-          packageType: "Router",
-          packageName: "Anytime Free VPN",
-          price: "Free",
-          code: "SSH-HUTCH-RTR-77N-FREE",
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: "free-airtel-fiber-yt",
-          isp: "Airtel",
-          packageType: "Fiber",
-          packageName: "YouTube Unlimited",
-          price: "Free",
-          code: "V2RAY-AIRTEL-YT-88Q-FREE",
-          createdAt: new Date().toISOString()
-        }
-      ];
-      for (const p of initialFree) await setDoc(doc(database, "free_packages", p.id), p);
-      console.log("Seeded Free Packages.");
-    }
-
-    await markSeeded();
-    return true;
-  } catch (err) {
-    console.error("Seeding operation failed:", err);
-    return false;
   }
+
+  const performSeeding = async (): Promise<boolean> => {
+    try {
+      const database = getDb();
+      const seedStateRef = doc(database, "settings", "seeding_state");
+      
+      if (!force) {
+        try {
+          const seedStateSnap = await getDoc(seedStateRef);
+          if (seedStateSnap.exists() && seedStateSnap.data()?.seeded) {
+            console.log("[SEED] Database already marked as seeded. Skipping.");
+            return true;
+          }
+        } catch (dbErr) {
+          console.warn("[SEED] Failed to read seed state, proceeding with tentative seeding:", dbErr);
+        }
+      }
+
+      console.log(`[SEED] Executing database seed (force=${force})...`);
+
+      // 1. Seed Packages
+      try {
+        const pkgSnap = await getDocs(collection(database, "packages"));
+        if (force || pkgSnap.size === 0) {
+          if (force) {
+            for (const d of pkgSnap.docs) await deleteDoc(doc(database, "packages", d.id));
+          }
+          for (const p of INITIAL_PACKAGES) await setDoc(doc(database, "packages", p.id), p);
+          console.log("[SEED] Seeded Packages successfully.");
+        }
+      } catch (err) {
+        console.error("[SEED] Error seeding Packages:", err);
+      }
+
+      // 2. Seed Posts
+      try {
+        const postSnap = await getDocs(collection(database, "posts"));
+        if (force || postSnap.size === 0) {
+          if (force) {
+            for (const d of postSnap.docs) await deleteDoc(doc(database, "posts", d.id));
+          }
+          for (const p of INITIAL_POSTS) await setDoc(doc(database, "posts", p.id), p);
+          console.log("[SEED] Seeded Posts successfully.");
+        }
+      } catch (err) {
+        console.error("[SEED] Error seeding Posts:", err);
+      }
+
+      // 3. Seed Contact, Announcement and Ads Settings
+      try {
+        const contactRef = doc(database, "settings", "contact");
+        await setDoc(contactRef, INITIAL_CONTACT);
+        
+        const annRef = doc(database, "settings", "announcement");
+        await setDoc(annRef, INITIAL_ANNOUNCEMENT);
+
+        const adRef = doc(database, "settings", "ads");
+        const adSnap = await getDoc(adRef);
+        if (force || !adSnap.exists()) {
+          await setDoc(adRef, {
+            dayTimeAdCode: "https://t.me/janucyberpack",
+            nightTimeAdCode: "https://t.me/janucyberpack"
+          });
+        }
+        console.log("[SEED] Seeded Settings successfully.");
+      } catch (err) {
+        console.error("[SEED] Error seeding settings:", err);
+      }
+
+      // 4. Seed Free Packages
+      try {
+        const freePkgSnap = await getDocs(collection(database, "free_packages"));
+        if (force || freePkgSnap.size === 0) {
+          if (force) {
+            for (const d of freePkgSnap.docs) await deleteDoc(doc(database, "free_packages", d.id));
+          }
+          const initialFree = [
+            {
+              id: "free-dialog-mobile-social",
+              isp: "Dialog" as const,
+              packageType: "Mobile" as const,
+              packageName: "Social Media Pack",
+              price: "Free",
+              code: "WGRD-DIALOG-SOC-99X-FREE",
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: "free-dialog-mobile-zoom",
+              isp: "Dialog" as const,
+              packageType: "Mobile" as const,
+              packageName: "Zoom Unlimited",
+              price: "Free",
+              code: "VMESS-DIALOG-ZM-22K-FREE",
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: "free-mobitel-mobile-tiktok",
+              isp: "Mobitel" as const,
+              packageType: "Mobile" as const,
+              packageName: "TikTok Heavy",
+              price: "Free",
+              code: "TROJAN-MOBITEL-TT-44W-FREE",
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: "free-hutch-router-anytime",
+              isp: "Hutch" as const,
+              packageType: "Router" as const,
+              packageName: "Anytime Free VPN",
+              price: "Free",
+              code: "SSH-HUTCH-RTR-77N-FREE",
+              createdAt: new Date().toISOString()
+            },
+            {
+              id: "free-airtel-fiber-yt",
+              isp: "Airtel" as const,
+              packageType: "Fiber" as const,
+              packageName: "YouTube Unlimited",
+              price: "Free",
+              code: "V2RAY-AIRTEL-YT-88Q-FREE",
+              createdAt: new Date().toISOString()
+            }
+          ];
+          for (const p of initialFree) await setDoc(doc(database, "free_packages", p.id), p);
+          console.log("[SEED] Seeded Free Packages successfully.");
+        }
+      } catch (err) {
+        console.error("[SEED] Error seeding free packages:", err);
+      }
+
+      // 5. Seed Admin Master User profile
+      try {
+        const userRef = doc(database, "users", "admin-master-account");
+        await setDoc(userRef, {
+          uid: "admin-master-account",
+          email: "chethiyabandara0001@gmail.com",
+          displayName: "Super Admin",
+          role: "admin",
+          createdAt: new Date().toISOString()
+        });
+        console.log("[SEED] Seeded Admin profile successfully.");
+      } catch (err) {
+        console.error("[SEED] Error seeding admin user:", err);
+      }
+
+      // Mark as fully seeded
+      try {
+        await setDoc(seedStateRef, { seeded: true });
+        console.log("[SEED] Database seeding completion marked.");
+      } catch (err) {
+        console.warn("[SEED] Failed to mark seeded flag in settings:", err);
+      }
+
+      return true;
+    } catch (globalErr) {
+      console.error("[CRITICAL-SEED-ERROR] Seeding process failed:", globalErr);
+      return false;
+    } finally {
+      seedingPromise = null;
+    }
+  };
+
+  seedingPromise = performSeeding();
+  return seedingPromise;
 }
 
 // Helper methods to connect Firestore queries securely
@@ -223,19 +273,16 @@ async function getPackages(): Promise<Package[]> {
   try {
     const database = getDb();
     const snap = await getDocs(collection(database, "packages"));
-    if (snap.size === 0) {
-      await seedAllData();
-      const freshSnap = await getDocs(collection(database, "packages"));
-      const list: Package[] = [];
-      freshSnap.forEach(d => list.push(d.data() as Package));
-      return list;
-    }
     const list: Package[] = [];
     snap.forEach(d => list.push(d.data() as Package));
+    if (list.length === 0) {
+      seedAllData(false).catch(err => console.error("Database seed error:", err));
+      return INITIAL_PACKAGES;
+    }
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "packages");
-    return [];
+    return INITIAL_PACKAGES;
   }
 }
 
@@ -243,19 +290,16 @@ async function getPosts(): Promise<Post[]> {
   try {
     const database = getDb();
     const snap = await getDocs(collection(database, "posts"));
-    if (snap.size === 0) {
-      await seedAllData();
-      const freshSnap = await getDocs(collection(database, "posts"));
-      const list: Post[] = [];
-      freshSnap.forEach(d => list.push(d.data() as Post));
-      return list;
-    }
     const list: Post[] = [];
     snap.forEach(d => list.push(d.data() as Post));
+    if (list.length === 0) {
+      seedAllData(false).catch(err => console.error("Database seed error:", err));
+      return INITIAL_POSTS;
+    }
     return list;
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "posts");
-    return [];
+    return INITIAL_POSTS;
   }
 }
 
@@ -267,7 +311,7 @@ async function getContact(): Promise<ContactDetails> {
     if (snap.exists()) {
       return snap.data() as ContactDetails;
     } else {
-      await seedAllData();
+      seedAllData(false).catch(err => console.error("Database seed error:", err));
       return INITIAL_CONTACT;
     }
   } catch (e) {
@@ -284,7 +328,7 @@ async function getAnnouncement(): Promise<HomeAnnouncement> {
     if (snap.exists()) {
       return snap.data() as HomeAnnouncement;
     } else {
-      await seedAllData();
+      seedAllData(false).catch(err => console.error("Database seed error:", err));
       return INITIAL_ANNOUNCEMENT;
     }
   } catch (e) {
@@ -301,7 +345,7 @@ async function getAdSettings(): Promise<AdSettings> {
     if (snap.exists()) {
       return snap.data() as AdSettings;
     } else {
-      await seedAllData();
+      seedAllData(false).catch(err => console.error("Database seed error:", err));
       return {
         dayTimeAdCode: "https://t.me/janucyberpack",
         nightTimeAdCode: "https://t.me/janucyberpack"
@@ -323,7 +367,6 @@ async function getSupportMessages(): Promise<SupportMessage[]> {
     const list: SupportMessage[] = [];
     snap.forEach(d => {
       const data = d.data() as SupportMessage;
-      // Ensure missing or invalid fields don't cause fatal downstream errors during sorting
       if (!data.timestamp) data.timestamp = new Date().toISOString(); 
       list.push(data);
     });
@@ -346,7 +389,8 @@ async function getUsers(): Promise<any[]> {
     const list: any[] = [];
     snap.forEach(d => list.push(d.data()));
     if (list.length === 0) {
-      const initialUsers = [
+      seedAllData(false).catch(err => console.error("Database seed error:", err));
+      return [
         {
           uid: "user-demotesting-1",
           email: "demo@datastore.shop",
@@ -369,10 +413,6 @@ async function getUsers(): Promise<any[]> {
           createdAt: new Date().toISOString()
         }
       ];
-      for (const u of initialUsers) {
-        await setDoc(doc(database, "users", u.uid), u);
-        list.push(u);
-      }
     }
     return list;
   } catch (e) {
@@ -446,7 +486,8 @@ async function getFreePackages(): Promise<FreePackage[]> {
     const list: FreePackage[] = [];
     snap.forEach(d => list.push(d.data() as FreePackage));
     if (list.length === 0) {
-      const initialFree = [
+      seedAllData(false).catch(err => console.error("Database seed error:", err));
+      return [
         {
           id: "free-dialog-mobile-social",
           isp: "Dialog" as const,
@@ -493,10 +534,6 @@ async function getFreePackages(): Promise<FreePackage[]> {
           createdAt: new Date().toISOString()
         }
       ];
-      for (const fp of initialFree) {
-        await setDoc(doc(database, "free_packages", fp.id), fp);
-        list.push(fp);
-      }
     }
     return list;
   } catch (e) {

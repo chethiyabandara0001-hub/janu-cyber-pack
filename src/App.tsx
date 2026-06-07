@@ -994,13 +994,15 @@ export default function App() {
     const googleObj = (window as any).google;
     if (!googleObj?.accounts?.id) return;
 
-    if (!googleBtnInitialized.current) {
+    const win = window as any;
+    if (!win.__google_gsi_initialized && !googleBtnInitialized.current) {
       try {
         console.log("Initializing Google Sign-In singleton...");
         googleObj.accounts.id.initialize({
           client_id: (import.meta as any).env.VITE_GOOGLE_CLIENT_ID || "1081766323785-o7vdqe5lqqjpl01psororlv1s8ctggjs.apps.googleusercontent.com",
           callback: handleGoogleCredentialResponse,
         });
+        win.__google_gsi_initialized = true;
         googleBtnInitialized.current = true;
       } catch(e) {
         console.warn("GSI Logger override catch", e);

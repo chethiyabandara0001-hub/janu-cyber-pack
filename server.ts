@@ -275,15 +275,18 @@ function saveBase64Image(base64Str: string): string {
 
     const filename = `slip_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${extension}`;
     const uploadsDir = path.join(process.cwd(), "uploads");
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    
+    try {
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      const filePath = path.join(uploadsDir, filename);
+      fs.writeFileSync(filePath, dataBuffer);
+      return `/uploads/${filename}`;
+    } catch (fsErr) {
+      console.warn("Local storage write failed (could be a read-only serverless environment), falling back to base64 encoding:", fsErr);
+      return base64Str;
     }
-
-    const filePath = path.join(uploadsDir, filename);
-    fs.writeFileSync(filePath, dataBuffer);
-
-    // Return the local server URL which will be stored in Firestore database
-    return `/uploads/${filename}`;
   } catch (e) {
     console.error("Failed to save base64 image to server filesystem:", e);
     return base64Str;
@@ -457,8 +460,12 @@ export async function createExpressApp() {
 
   // Ensure uploads directory exists and expose it as static folder
   const uploadsDir = path.join(process.cwd(), "uploads");
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
+  try {
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+  } catch (e) {
+    console.warn("Could not create uploads directory in read-only environment (Serverless/Vercel handles static assets differently):", e);
   }
   app.use("/uploads", express.static(uploadsDir));
 

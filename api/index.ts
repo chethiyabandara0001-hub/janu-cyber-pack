@@ -1,5 +1,5 @@
 // @ts-ignore
-import { createExpressApp } from "../dist/server.cjs";
+import { createExpressApp } from "../server";
 
 let appPromise: any = null;
 

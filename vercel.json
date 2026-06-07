@@ -10,27 +10,7 @@
       "destination": "/api/index.ts"
     },
     {
-      "source": "/sitemap.xml",
-      "destination": "/api/index.ts"
-    },
-    {
-      "source": "/robots.txt",
-      "destination": "/api/index.ts"
-    },
-    {
-      "source": "/favicon.ico",
-      "destination": "/api/index.ts"
-    },
-    {
-      "source": "/favicon.png",
-      "destination": "/api/index.ts"
-    },
-    {
-      "source": "/uploads/(.*)",
-      "destination": "/api/index.ts"
-    },
-    {
-      "source": "/((?!api|sitemaps|sitemap\\.xml|robots\\.txt|favicon\\.ico|favicon\\.png|uploads).*)",
+      "source": "/((?!api|sitemaps).*)",
       "destination": "/index.html"
     }
   ]

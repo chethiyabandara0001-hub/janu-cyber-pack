@@ -7,7 +7,7 @@ import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePacka
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "./src/mockData";
 
 // Initialize Firebase JS SDK
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { 
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection 
 } from "firebase/firestore";
@@ -48,7 +48,7 @@ try {
   };
 }
 
-const firebaseApp = initializeApp(firebaseConfig);
+const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
 
 // Error handling in compliance with Phase 3 of Firebase Integration Skill
@@ -473,19 +473,39 @@ export async function createExpressApp() {
   
   // Sitemap routes for SEO ranking
   app.get("/sitemap.xml", (req, res) => {
-    res.sendFile(path.join(process.cwd(), "public", "sitemap.xml"));
+    const p = path.join(process.cwd(), "public", "sitemap.xml");
+    if (fs.existsSync(p)) {
+      res.sendFile(p);
+    } else {
+      res.status(404).send("Sitemap not found");
+    }
   });
 
   app.get("/robots.txt", (req, res) => {
-    res.sendFile(path.join(process.cwd(), "public", "robots.txt"));
+    const p = path.join(process.cwd(), "public", "robots.txt");
+    if (fs.existsSync(p)) {
+      res.sendFile(p);
+    } else {
+      res.status(404).send("Robots configuration not found");
+    }
   });
 
   app.get("/favicon.png", (req, res) => {
-    res.sendFile(path.join(process.cwd(), "public", "favicon.png"));
+    const p = path.join(process.cwd(), "public", "favicon.png");
+    if (fs.existsSync(p)) {
+      res.sendFile(p);
+    } else {
+      res.status(404).send("Favicon not found");
+    }
   });
 
   app.get("/favicon.ico", (req, res) => {
-    res.sendFile(path.join(process.cwd(), "public", "favicon.ico"));
+    const p = path.join(process.cwd(), "public", "favicon.ico");
+    if (fs.existsSync(p)) {
+      res.sendFile(p);
+    } else {
+      res.status(404).send("Favicon icon not found");
+    }
   });
   
   app.get("/sitemaps", (req, res) => {
@@ -1678,7 +1698,7 @@ PersistentKeepalive = 25`;
       appType: "spa",
     });
     app.use(vite.middlewares);
-  } else {
+  } else if (!process.env.VERCEL) {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {

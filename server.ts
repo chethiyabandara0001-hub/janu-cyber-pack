@@ -28,15 +28,9 @@ try {
   if (fs.existsSync(firebaseConfigPath)) {
     const config = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
     firebaseConfig = { ...firebaseConfig, ...config };
-  } else {
-    const parentPath = path.join(process.cwd(), "..", "firebase-applet-config.json");
-    if (fs.existsSync(parentPath)) {
-      const config = JSON.parse(fs.readFileSync(parentPath, "utf8"));
-      firebaseConfig = { ...firebaseConfig, ...config };
-    }
   }
 } catch (err) {
-  console.warn("Could not load firebase-applet-config.json, using hardcoded fallback");
+  console.warn("Skipping external firebase config load.");
 }
 
 let firebaseApp: FirebaseApp;
@@ -530,9 +524,42 @@ export async function createExpressApp() {
   const app = express();
   const PORT = 3000;
   
+  // High-priority global error handler definition
+  const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
+    console.error(`[CRITICAL-SERVER-ERROR] Unhandled error at ${req.method} ${req.url}:`, err);
+    // Ensure we always return JSON to prevent frontend "Invalid JSON" parse errors
+    if (!res.headersSent) {
+      res.status(500).json({ 
+        error: "Internal Server Error", 
+        message: err.message || String(err),
+        stack: process.env.NODE_ENV === "production" ? undefined : err.stack
+      });
+    }
+  };
+
   app.set("trust proxy", 1); // Trust first proxy (like Cloudflare)
   app.use(cors({ origin: true, credentials: true })); // Allow all cross origin requests (useful behind CF)
   
+  // Essential body parsing
+  app.use(express.json({ limit: "15mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+
+  // Emergency Database Repair Route (can be called via browser)
+  app.get("/api/admin/emergency-repair", async (req, res) => {
+    try {
+      const { key } = req.query;
+      // Simple guard to prevent accidental resets
+      if (key !== "reset123") {
+        return res.status(403).send("Missing repair key. Usage: /api/admin/emergency-repair?key=reset123");
+      }
+      console.log("[EMERGENCY] Running full database re-seed...");
+      await seedAllData(true);
+      res.send("<h1>Database Reset Success!</h1><p>The collections have been restored to factory defaults. Direct <a href='/'>back to app</a></p>");
+    } catch (e) {
+      res.status(500).send("Repair failed: " + String(e));
+    }
+  });
+
   // Custom CORS headers to ensure CF doesn't block custom auth headers
   app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-Requester-Uid, Authorization");
@@ -1783,6 +1810,8 @@ PersistentKeepalive = 25`;
       res.status(500).json({ error: String(e) });
     }
   });
+
+  app.use(errorHandler);
 
   // Serve static assets in production
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {

@@ -117,16 +117,19 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errMessage = error instanceof Error ? error.message : String(error);
   const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
+    error: errMessage,
     authInfo: {
       userId: "server-runtime-context"
     },
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.error('[FIRESTORE-ERROR]:', JSON.stringify(errInfo));
+  // In production, we don't want to throw and crash the route if we can return a safe default
+  // But we'll keep the throw for fatal errors that the route's catch block will handle
+  throw error; 
 }
 
 let seedingPromise: Promise<boolean> | null = null;
@@ -636,60 +639,54 @@ export async function createExpressApp() {
   // Dynamic boot testing & fallback to (default) if custom database not found
   try {
     const database = getDb();
-    console.log(`[BOOT] Testing connection to custom database ID: ${firebaseConfig.firestoreDatabaseId || "(default)"}...`);
-    // Safe timeout to prevent blocking during build setups or slow DNS resolution
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Database connection timeout")), 2000));
-    const queryPromise = getDocs(collection(database, "settings"));
-    await Promise.race([queryPromise, timeoutPromise]);
-    console.log("[BOOT] Database connection tested successfully.");
-  } catch (error: any) {
-    const errMsg = error ? (error.message || String(error)) : "";
-    console.warn(`[BOOT] Connection to custom database failed: ${errMsg}`);
+    const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
+    console.log(`[BOOT] Testing connection to database ID: ${dbId}...`);
     
-    const isDatabaseNotFoundError = 
-      errMsg.toLowerCase().includes("not-found") ||
-      errMsg.toLowerCase().includes("not_found") ||
-      errMsg.toLowerCase().includes("does not exist") ||
-      errMsg.toLowerCase().includes("invalid database id");
-
-    if (isDatabaseNotFoundError && firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)" && !isUsingFallbackDefaultDb) {
-      console.warn("[BOOT] Custom database not active. Switching database ID to '(default)'...");
-      getDb(true); // force swap to default database
-      console.log("[BOOT] Dynamic '(default)' database fallback complete.");
+    // Check if we can at least reach the collections
+    const queryPromise = getDocs(collection(database, "settings"));
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
+    
+    await Promise.race([queryPromise, timeoutPromise]);
+    console.log("[BOOT] Database connection verified successfully.");
+  } catch (error: any) {
+    console.warn(`[BOOT] Initial database connection check failed/timed out: ${error?.message || error}`);
+    
+    // If we were trying a custom DB and it failed, fallback to default immediately on boot
+    if (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)" && !isUsingFallbackDefaultDb) {
+      console.warn("[BOOT] Potential invalid Database ID. Falling back to '(default)'...");
+      getDb(true); 
     }
   }
 
-  // One-time automatic cleanup to honor user's directive: "Clean the firebase database to nothing"
-  const wipeTrackFile = path.join(process.cwd(), ".database_wiped");
-  if (!fs.existsSync(wipeTrackFile)) {
-    completeDatabaseWipe().then(() => {
-      fs.writeFileSync(wipeTrackFile, "wiped", "utf8");
-      console.log("[BOOT] Database wiped clean successfully to honor user request.");
-    }).catch(err => {
-      console.error("[BOOT] One-time database wipe failed:", err);
-    });
+  // One-time automatic cleanup - only in cloud environments if not already marked
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    const database = getDb();
+    getDoc(doc(database, "settings", "seeding_state")).then(snap => {
+      if (!snap.exists() || !snap.data()?.wiped) {
+        console.log("[BOOT-ONETIME] Database wipe triggered to honor cleanup request...");
+        completeDatabaseWipe().catch(err => console.error("[BOOT-WIPE-FAILED]", err));
+      }
+    }).catch(() => {});
   }
   
   // High-priority global error handler definition
   const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {
-    console.error(`[CRITICAL-SERVER-ERROR] Unhandled error at ${req.method} ${req.url}:`, err);
-    // Ensure we always return JSON to prevent frontend "Invalid JSON" parse errors
-    if (!res.headersSent) {
-      res.status(500).json({ 
-        error: "Internal Server Error", 
-        message: err.message || String(err),
-        stack: process.env.NODE_ENV === "production" ? undefined : err.stack
-      });
+    console.error(`[UNHANDLED-EXCEPTION] ${req.method} ${req.url}:`, err);
+    
+    if (res.headersSent) {
+      return next(err);
     }
+
+    res.status(500).json({ 
+      error: "Internal Server Error", 
+      message: err instanceof Error ? err.message : String(err),
+      type: "unhandled_exception"
+    });
   };
 
   app.set("trust proxy", 1); // Trust first proxy (like Cloudflare)
   app.use(cors({ origin: true, credentials: true })); // Allow all cross origin requests (useful behind CF)
   
-  // Essential body parsing
-  app.use(express.json({ limit: "15mb" }));
-  app.use(express.urlencoded({ extended: true, limit: "15mb" }));
-
   // Emergency Database Repair Route (can be called via browser)
   app.get("/api/admin/emergency-repair", async (req, res) => {
     try {
@@ -1115,26 +1112,34 @@ export async function createExpressApp() {
     next();
   });
 
-  // 1. Core Config / Initial Data endpoint
   app.get("/api/initial-data", async (req, res) => {
     try {
-      const p = await getPackages();
-      const pt = await getPosts();
-      const cn = await getContact();
-      const an = await getAnnouncement();
-      const fp = await getFreePackages();
-      const fr = await getFreeRequests();
+      // Use Promise.allSettled to be ultra-resilient to individual collection failures
+      const results = await Promise.allSettled([
+        getPackages(),
+        getPosts(),
+        getContact(),
+        getAnnouncement(),
+        getFreePackages(),
+        getFreeRequests()
+      ]);
 
-      res.json({
-        packages: p,
-        posts: pt,
-        contact: cn,
-        announcement: an,
-        freePackages: fp,
-        freeRequests: fr
+      const data = {
+        packages: results[0].status === 'fulfilled' ? results[0].value : [],
+        posts: results[1].status === 'fulfilled' ? results[1].value : [],
+        contact: results[2].status === 'fulfilled' ? results[2].value : INITIAL_CONTACT,
+        announcement: results[3].status === 'fulfilled' ? results[3].value : INITIAL_ANNOUNCEMENT,
+        freePackages: results[4].status === 'fulfilled' ? results[4].value : [],
+        freeRequests: results[5].status === 'fulfilled' ? results[5].value : []
+      };
+
+      res.json(data);
+    } catch (e: any) {
+      console.error("[API-INITIAL-DATA-CRASH]:", e);
+      res.status(500).json({ 
+        error: "Failed to fetch initial data",
+        details: e?.message || String(e)
       });
-    } catch (e) {
-      res.status(500).json({ error: String(e) });
     }
   });
 

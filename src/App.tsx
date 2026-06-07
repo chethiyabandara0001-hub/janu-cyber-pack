@@ -718,6 +718,7 @@ export default function App() {
   // Reset & Restore initial default packages, free packages, and posts from the server database
   const handleRestoreDefaults = async () => {
     setAdminLoading(true);
+    setAdminManageMessage(null);
     try {
       const res = await fetch('/api/admin/restore-defaults', {
         method: 'POST',
@@ -726,13 +727,26 @@ export default function App() {
         }
       });
       const data = await res.json();
-      if (data.success) {
+      if (data.success || res.ok) {
         setShowRestoreConfirm(false);
+        setAdminManageMessage({
+          type: 'success',
+          text: 'Database successfully restored to original factory default packages, posts, and free VPN listings!'
+        });
         await fetchAllData();
         await fetchAdminStats();
+      } else {
+        setAdminManageMessage({
+          type: 'error',
+          text: data.error || 'Failed to restore default configuration.'
+        });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setAdminManageMessage({
+        type: 'error',
+        text: 'Network error connecting to administrative restore module: ' + (e?.message || String(e))
+      });
     } finally {
       setAdminLoading(false);
     }

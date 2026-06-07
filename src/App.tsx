@@ -41,6 +41,9 @@ const getTierPriceDisplay = (tierInput: string): string => {
   return 'LKR 200';
 };
 
+// Initialize and render standard Google Sign-In button
+const googleBtnInitialized = { current: false };
+
 export default function App() {
   // Theme state: 'cyberpunk-dark' | 'cyberpunk-light'
   const [theme, setTheme] = useState<'cyberpunk-dark' | 'cyberpunk-light'>(() => {
@@ -612,13 +615,17 @@ export default function App() {
   useEffect(() => {
     let intervalId: any;
     if (isSupportModalOpen && user) {
+      console.log("Starting support message polling for user...");
       fetchSupportMessages();
       intervalId = setInterval(() => {
         fetchSupportMessages();
       }, 15000);
     }
     return () => {
-      if (intervalId) clearInterval(intervalId);
+      if (intervalId) {
+        console.log("Stopping support message polling.");
+        clearInterval(intervalId);
+      }
     };
   }, [isSupportModalOpen, user]);
 
@@ -983,7 +990,6 @@ export default function App() {
   };
 
   // Initialize and render standard Google Sign-In button
-  const googleBtnInitialized = useRef(false);
   useEffect(() => {
     const initAndRenderGoogleBtn = () => {
       const googleObj = (window as any).google;

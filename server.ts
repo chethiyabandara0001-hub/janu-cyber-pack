@@ -12,44 +12,50 @@ import {
   getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection 
 } from "firebase/firestore/lite";
 
-let firebaseConfig: any;
+let firebaseConfig: any = {
+  projectId: "gen-lang-client-0008438867",
+  appId: "1:796923319104:web:5408ce4861d12aec6460a5",
+  apiKey: "AIzaSyClstsLmizDZJ6OD_WnKaSE06yIwHdtq-8",
+  authDomain: "gen-lang-client-0008438867.firebaseapp.com",
+  firestoreDatabaseId: "ai-studio-05efdffc-31e5-48da-b96f-d2964f93684b",
+  storageBucket: "gen-lang-client-0008438867.firebasestorage.app",
+  messagingSenderId: "796923319104",
+  measurementId: ""
+};
+
 try {
   const firebaseConfigPath = path.join(process.cwd(), "firebase-applet-config.json");
   if (fs.existsSync(firebaseConfigPath)) {
-    firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
+    console.log("Loading firebase-applet-config.json from cwd...");
+    const config = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf8"));
+    firebaseConfig = { ...firebaseConfig, ...config };
   } else {
-    let currentDirName = ".";
-    try {
-      currentDirName = __dirname;
-    } catch (e) {
-      currentDirName = ".";
-    }
-    const localPath = path.join(currentDirName, "firebase-applet-config.json");
-    const parentPath = path.join(currentDirName, "..", "firebase-applet-config.json");
-    if (fs.existsSync(localPath)) {
-      firebaseConfig = JSON.parse(fs.readFileSync(localPath, "utf8"));
-    } else if (fs.existsSync(parentPath)) {
-      firebaseConfig = JSON.parse(fs.readFileSync(parentPath, "utf8"));
-    } else {
-      throw new Error("File not found");
+    const parentPath = path.join(process.cwd(), "..", "firebase-applet-config.json");
+    if (fs.existsSync(parentPath)) {
+      console.log("Loading firebase-applet-config.json from parent...");
+      const config = JSON.parse(fs.readFileSync(parentPath, "utf8"));
+      firebaseConfig = { ...firebaseConfig, ...config };
     }
   }
 } catch (err) {
-  // Robust hardcoded fallback of the production keys to prevent Vercel boot failures
-  firebaseConfig = {
-    projectId: "gen-lang-client-0008438867",
-    appId: "1:796923319104:web:5408ce4861d12aec6460a5",
-    apiKey: "AIzaSyClstsLmizDZJ6OD_WnKaSE06yIwHdtq-8",
-    authDomain: "gen-lang-client-0008438867.firebaseapp.com",
-    firestoreDatabaseId: "ai-studio-05efdffc-31e5-48da-b96f-d2964f93684b",
-    storageBucket: "gen-lang-client-0008438867.firebasestorage.app",
-    messagingSenderId: "796923319104",
-    measurementId: ""
-  };
+  console.warn("Could not load firebase-applet-config.json, using hardcoded fallback:", err);
 }
 
 const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
+
+// Test connection on boot as per skill requirements
+async function testDbConnection() {
+  try {
+    console.log(`Verifying Firestore connection for DB: ${firebaseConfig.firestoreDatabaseId}...`);
+    // Lite SDK getDocs is a good lightweight test
+    const snap = await getDocs(collection(db, "settings"));
+    console.log(`Firestore connection verified. Settings collection docs: ${snap.size}`);
+  } catch (e) {
+    console.error("Firestore connection test FAILED:", e);
+  }
+}
+testDbConnection();
 
 // Error handling in compliance with Phase 3 of Firebase Integration Skill
 enum OperationType {
@@ -201,17 +207,17 @@ async function getSupportMessages(): Promise<SupportMessage[]> {
     const list: SupportMessage[] = [];
     snap.forEach(d => {
       const data = d.data() as SupportMessage;
-      // Ensure missing fields don't cause fatal downstream errors
+      // Ensure missing or invalid fields don't cause fatal downstream errors during sorting
       if (!data.timestamp) data.timestamp = new Date().toISOString(); 
       list.push(data);
     });
     return list.sort((a, b) => {
-      const timeA = new Date(a.timestamp || 0).getTime();
-      const timeB = new Date(b.timestamp || 0).getTime();
+      const timeA = Date.parse(a.timestamp || "") || 0;
+      const timeB = Date.parse(b.timestamp || "") || 0;
       return timeA - timeB;
     });
   } catch (e) {
-    console.error("Error in getSupportMessages:", e);
+    console.error("Error in getSupportMessages collection fetch:", e);
     handleFirestoreError(e, OperationType.GET, "support_messages");
     return [];
   }
@@ -1210,15 +1216,20 @@ export async function createExpressApp() {
   app.get("/api/support-messages", async (req, res) => {
     try {
       const { userId } = req.query;
+      console.log(`[GET /api/support-messages] userId parameter: ${userId}`);
       const allMsgs = await getSupportMessages();
       if (userId) {
-        const userMsgs = allMsgs.filter(m => m.userId === userId);
-        return res.json(userMsgs);
+        const filtered = allMsgs.filter(m => m.userId === userId);
+        return res.json(filtered);
       }
       res.json(allMsgs);
     } catch (e) {
-      console.error("[GET /api/support-messages] Error:", e);
-      res.status(500).json({ error: String(e), stack: (e as any)?.stack || '' });
+      console.error("[GET /api/support-messages] Unhandled internal error:", e);
+      res.status(500).json({ 
+        error: "Internal Server Error during support message retrieval",
+        details: String(e),
+        stack: (e as any)?.stack || '' 
+      });
     }
   });
 

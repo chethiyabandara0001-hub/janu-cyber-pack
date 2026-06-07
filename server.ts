@@ -35,16 +35,45 @@ try {
 
 let firebaseApp: FirebaseApp;
 let db: Firestore;
+let isUsingFallbackDefaultDb = false;
 
-function getDb(): Firestore {
+function getDb(forceDefault = false): Firestore {
+  if (forceDefault) {
+    try {
+      firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+      db = getFirestore(firebaseApp);
+      isUsingFallbackDefaultDb = true;
+      console.log("[BOOT] Firestore forced fallback to default database ID ('(default)')");
+    } catch (e) {
+      console.error("[CRITICAL] Forced fallback database initialization failed:", e);
+    }
+    return db;
+  }
+
   if (!db) {
     try {
       firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-      db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
-      console.log(`[BOOT] Firestore initialized for DB: ${firebaseConfig.firestoreDatabaseId}`);
+      // Try to use the configured database ID
+      const customDbId = firebaseConfig.firestoreDatabaseId;
+      if (customDbId && customDbId !== "(default)" && !isUsingFallbackDefaultDb) {
+        db = getFirestore(firebaseApp, customDbId);
+        console.log(`[BOOT] Firestore initialized for DB: ${customDbId}`);
+      } else {
+        db = getFirestore(firebaseApp);
+        isUsingFallbackDefaultDb = true;
+        console.log("[BOOT] Firestore initialized for default DB '(default)'");
+      }
     } catch (e) {
       console.error("[CRITICAL] Firebase initialization failed:", e);
-      throw e;
+      // Fallback to default DB immediately if it crashes
+      try {
+        db = getFirestore(firebaseApp);
+        isUsingFallbackDefaultDb = true;
+        console.log("[BOOT] Firestore fallback initialized for default DB after initial crash");
+      } catch (fallbackErr) {
+        console.error("[CRITICAL] Fallback Firebase initialization also failed:", fallbackErr);
+        throw e;
+      }
     }
   }
   return db;
@@ -560,6 +589,38 @@ import cors from "cors";
 export async function createExpressApp() {
   const app = express();
   const PORT = 3000;
+
+  // Dynamic boot testing & fallback to (default) if custom database not found
+  try {
+    const database = getDb();
+    console.log(`[BOOT] Testing connection to custom database ID: ${firebaseConfig.firestoreDatabaseId || "(default)"}...`);
+    // Safe timeout to prevent blocking during build setups or slow DNS resolution
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Database connection timeout")), 2000));
+    const queryPromise = getDocs(collection(database, "settings"));
+    await Promise.race([queryPromise, timeoutPromise]);
+    console.log("[BOOT] Database connection tested successfully.");
+  } catch (error: any) {
+    const errMsg = error ? (error.message || String(error)) : "";
+    console.warn(`[BOOT] Connection to custom database failed: ${errMsg}`);
+    
+    const isDatabaseNotFoundError = 
+      errMsg.toLowerCase().includes("not-found") ||
+      errMsg.toLowerCase().includes("not_found") ||
+      errMsg.toLowerCase().includes("database") ||
+      errMsg.toLowerCase().includes("does not exist") ||
+      errMsg.toLowerCase().includes("invalid database id");
+
+    if (isDatabaseNotFoundError && firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)" && !isUsingFallbackDefaultDb) {
+      console.warn("[BOOT] Custom database not active. Switching database ID to '(default)'...");
+      getDb(true); // force swap to default database
+      console.log("[BOOT] Dynamic '(default)' database fallback complete.");
+    }
+  }
+
+  // Pre-seed the database in background safely if empty
+  seedAllData(false).catch(err => {
+    console.warn("[BOOT] Async background database seed warning:", err);
+  });
   
   // High-priority global error handler definition
   const errorHandler: express.ErrorRequestHandler = (err, req, res, next) => {

@@ -1,0 +1,156 @@
+{
+  "users": {
+    "admin-master-account": {
+      "uid": "admin-master-account",
+      "email": "chethiyabandara0001@gmail.com",
+      "role": "admin",
+      "displayName": "Super Admin",
+      "timestamp": "2026-06-07T15:04:47.554Z"
+    }
+  },
+  "packages": {
+    "pack-wg-unlimited": {
+      "id": "pack-wg-unlimited",
+      "title": "Super WireGuard Premium Unlimited",
+      "description": "High speed, ultra-secure tunneling protocol optimized for maximum bandwidth. Perfect for continuous heavy media streaming and ultra low-latency gaming with extreme privacy protocols.",
+      "price": 1500,
+      "priceCurrency": "LKR",
+      "validityDays": 30,
+      "bandwidthGB": "Unlimited",
+      "vpnTypeName": "WireGuard",
+      "isFeatured": true,
+      "status": "active"
+    },
+    "pack-vmess-pro": {
+      "id": "pack-vmess-pro",
+      "title": "VMess Stealth Protocol 100GB",
+      "description": "Bypass toughest region-blocks and strong firewalls using advanced VMess protocol with encrypted headers. Includes high-performance dynamic route optimization.",
+      "price": 950,
+      "priceCurrency": "LKR",
+      "validityDays": 30,
+      "bandwidthGB": "100 GB",
+      "vpnTypeName": "Vmess",
+      "isFeatured": true,
+      "status": "active"
+    },
+    "pack-ssh-tunnel": {
+      "id": "pack-ssh-tunnel",
+      "title": "Secure SSH Direct Tunnel",
+      "description": "Classic high-speed SSH Direct tunnel server with custom payloads supported. Best for custom-config injection, network tinkering, and low-latency packet tunneling.",
+      "price": 600,
+      "priceCurrency": "LKR",
+      "validityDays": 30,
+      "bandwidthGB": "75 GB",
+      "vpnTypeName": "SSH",
+      "isFeatured": false,
+      "status": "active"
+    },
+    "pack-v2ray-ultra": {
+      "id": "pack-v2ray-ultra",
+      "title": "V2Ray X-TLS Extreme Unlimited",
+      "description": "State of the art dynamic transport protocol. Unblock any website and secure connection utilizing modern encryption with dynamic routing controls.",
+      "price": 1750,
+      "priceCurrency": "LKR",
+      "validityDays": 30,
+      "bandwidthGB": "Unlimited",
+      "vpnTypeName": "V2Ray",
+      "isFeatured": true,
+      "status": "active"
+    }
+  },
+  "posts": {
+    "post-1": {
+      "id": "post-1",
+      "title": "How to setup WireGuard on Windows, Android and iOS",
+      "excerpt": "Step-by-step beginner-friendly tutorial to load your custom high-speed WireGuard configuration file.",
+      "content": "### Setting up WireGuard on Your Devices\n\nWireGuard is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. It is designed as a general-purpose VPN for running on embedded interfaces and supercomputers alike. Here is how to configure it:\n\n1. **Download the App**: Install WireGuard from the official stores for Windows, macOS, Android, or iOS.\n2. **Import Configuration**: Open the app and import the `.conf` file or scan the QR Code received in your inbox.\n3. **Connect**: Tap or click \"Activate\" to instantly encrypt your entire network connection!\n\nNo logs are kept, and speeds are up to 6x faster than standard OpenVPN!",
+      "category": "featured",
+      "author": "Admin Support",
+      "date": "2026-05-24"
+    },
+    "post-2": {
+      "id": "post-2",
+      "title": "Bypassing ISP Throttling with Stealthed VMess Protocol",
+      "excerpt": "Learn about VMess dynamic transport headers and why it is the ultimate option in highly restricted networks.",
+      "content": "### Stealthed VMess and V2Ray Explained\n\nVMess is a state-space network protocol designed for clients to proxy connections through highly secured outbound networks.\n\n* **Dynamic Websocket Tunneling**: Encapsulates packets to look like harmless HTTPS web chats.\n* **Header Customization**: Prevents Deep Packet Inspection (DPI) trackers from matching patterns.\n* **Multi-Node Fallbacks**: Intelligently tests and swaps servers if network latency rises.",
+      "category": "recent",
+      "author": "Network Team",
+      "date": "2026-05-26"
+    },
+    "post-3": {
+      "id": "post-3",
+      "title": "Data Store Server Upgrades: Double Bandwidth Nodes",
+      "excerpt": "We have upgraded our core Singapore, Tokyo, and US gateway endpoints to 10Gbps uplinks.",
+      "content": "We are thrilled to announce that our primary server hubs are now fully upgraded!\n\nAll customers holding active **WireGuard** and **VMess** subscriptions will automatically benefit from:\n- Improved latencies by an average of 40%\n- Double bandwidth allocations for cap-based plans at no extra cost\n- Enhanced multi-user stability during peak hours\n\nThank you for trusting **Data Store** as your primary premium VPN network provider!",
+      "category": "news",
+      "author": "Engineering",
+      "date": "2026-05-27"
+    }
+  },
+  "free_packages": {
+    "free-dialog-mobile-social": {
+      "id": "free-dialog-mobile-social",
+      "isp": "Dialog",
+      "packageType": "Mobile",
+      "packageName": "Social Media Pack",
+      "price": "Free",
+      "code": "WGRD-DIALOG-SOC-99X-FREE",
+      "createdAt": "2026-06-07T15:04:51.520Z"
+    },
+    "free-dialog-mobile-zoom": {
+      "id": "free-dialog-mobile-zoom",
+      "isp": "Dialog",
+      "packageType": "Mobile",
+      "packageName": "Zoom Unlimited",
+      "price": "Free",
+      "code": "VMESS-DIALOG-ZM-22K-FREE",
+      "createdAt": "2026-06-07T15:04:51.520Z"
+    },
+    "free-mobitel-mobile-tiktok": {
+      "id": "free-mobitel-mobile-tiktok",
+      "isp": "Mobitel",
+      "packageType": "Mobile",
+      "packageName": "TikTok Heavy",
+      "price": "Free",
+      "code": "TROJAN-MOBITEL-TT-44W-FREE",
+      "createdAt": "2026-06-07T15:04:51.520Z"
+    },
+    "free-hutch-router-anytime": {
+      "id": "free-hutch-router-anytime",
+      "isp": "Hutch",
+      "packageType": "Router",
+      "packageName": "Anytime Free VPN",
+      "price": "Free",
+      "code": "SSH-HUTCH-RTR-77N-FREE",
+      "createdAt": "2026-06-07T15:04:51.520Z"
+    },
+    "free-airtel-fiber-yt": {
+      "id": "free-airtel-fiber-yt",
+      "isp": "Airtel",
+      "packageType": "Fiber",
+      "packageName": "YouTube Unlimited",
+      "price": "Free",
+      "code": "V2RAY-AIRTEL-YT-88Q-FREE",
+      "createdAt": "2026-06-07T15:04:51.520Z"
+    }
+  },
+  "settings": {
+    "seeding_state": {
+      "seeded": true
+    },
+    "contact": {
+      "phone": "+94 77 123 4567",
+      "email": "support@datastore.shop",
+      "telegramChannel": "https://t.me/DataStoreVPNChannel",
+      "telegramBotUser": "@DataStoreVPNSecureBot",
+      "address": "No 45, Galle Road, Colombo 03, Sri Lanka",
+      "workingHours": "24/7 Priority Automated System / 08:30 AM - 10:00 PM Live Admin Support"
+    },
+    "announcement": {
+      "title": "🎉 Premium Network Upgrades Completed 🎉",
+      "subtitle": "Enjoy lightning fast internet with low-latency and absolute privacy.",
+      "announcementText": "We have completed our global node synchronization. All premium WireGuard, Vmess, and SSH servers are fully online on full speeds. Upload any payment slips under your account for automatic delivery in minutes!",
+      "showAnnouncement": true
+    }
+  }
+}

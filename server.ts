@@ -90,6 +90,13 @@ async function testDbConnection() {
   }
 }
 
+async function markSeeded(): Promise<void> {
+  try {
+    const database = getDb();
+    await setDoc(doc(database, "settings", "seeding_state"), { seeded: true });
+  } catch (e) {}
+}
+
 // Error handling in compliance with Phase 3 of Firebase Integration Skill
 enum OperationType {
   CREATE = 'create',
@@ -606,7 +613,6 @@ export async function createExpressApp() {
     const isDatabaseNotFoundError = 
       errMsg.toLowerCase().includes("not-found") ||
       errMsg.toLowerCase().includes("not_found") ||
-      errMsg.toLowerCase().includes("database") ||
       errMsg.toLowerCase().includes("does not exist") ||
       errMsg.toLowerCase().includes("invalid database id");
 

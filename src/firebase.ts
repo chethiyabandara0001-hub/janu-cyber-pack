@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
+import { getFirestore } from 'firebase/firestore';
 import defaultFirebaseConfig from '../firebase-applet-config.json';
 
 // Support Vercel environment variables block with fallback to JSON
@@ -13,9 +14,15 @@ const firebaseConfig = {
   appId: (import.meta.env?.VITE_FIREBASE_APP_ID) || defaultFirebaseConfig.appId,
 };
 
+const customDatabaseId = defaultFirebaseConfig.firestoreDatabaseId || "(default)";
+
 // Initialize Firebase safely
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+export const db = customDatabaseId && customDatabaseId !== "(default)"
+  ? getFirestore(app, customDatabaseId)
+  : getFirestore(app);
+
 

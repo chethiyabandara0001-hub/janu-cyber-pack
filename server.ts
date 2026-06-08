@@ -639,36 +639,38 @@ export async function createExpressApp() {
   const PORT = 3000;
 
   // Dynamic boot testing & fallback to (default) if custom database not found
-  try {
-    const database = getDb();
-    const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
-    console.log(`[BOOT] Testing connection to database ID: ${dbId}...`);
-    
-    // Check if we can at least reach the collections
-    const queryPromise = getDocs(collection(database, "settings"));
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000));
-    
-    await Promise.race([queryPromise, timeoutPromise]);
-    console.log("[BOOT] Database connection verified successfully.");
-  } catch (error: any) {
-    console.warn(`[BOOT] Initial database connection check failed/timed out: ${error?.message || error}`);
-    
-    // If we were trying a custom DB and it failed, fallback to default immediately on boot
-    if (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)" && !isUsingFallbackDefaultDb) {
-      console.warn("[BOOT] Potential invalid Database ID. Falling back to '(default)'...");
-      getDb(true); 
-    }
-  }
-
-  // One-time automatic cleanup - only in cloud environments if not already marked
-  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
-    const database = getDb();
-    getDoc(doc(database, "settings", "seeding_state")).then(snap => {
-      if (!snap.exists() || !snap.data()?.wiped) {
-        console.log("[BOOT-ONETIME] Database wipe triggered to honor cleanup request...");
-        completeDatabaseWipe().catch(err => console.error("[BOOT-WIPE-FAILED]", err));
+  if (!process.env.VERCEL) {
+    try {
+      const database = getDb();
+      const dbId = firebaseConfig.firestoreDatabaseId || "(default)";
+      console.log(`[BOOT] Testing connection to database ID: ${dbId}...`);
+      
+      // Check if we can at least reach the collections without blocking indefinitely
+      const queryPromise = getDocs(collection(database, "settings"));
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2000));
+      
+      await Promise.race([queryPromise, timeoutPromise]);
+      console.log("[BOOT] Database connection verified successfully.");
+    } catch (error: any) {
+      console.warn(`[BOOT] Initial database connection check failed/timed out: ${error?.message || error}`);
+      
+      // If we were trying a custom DB and it failed, fallback to default immediately on boot
+      if (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== "(default)" && !isUsingFallbackDefaultDb) {
+        console.warn("[BOOT] Potential invalid Database ID. Falling back to '(default)'...");
+        getDb(true); 
       }
-    }).catch(() => {});
+    }
+
+    // One-time automatic cleanup in non-vercel environments
+    const wipeTrackFile = path.join(process.cwd(), ".database_wiped");
+    if (!fs.existsSync(wipeTrackFile)) {
+      completeDatabaseWipe().then(() => {
+        fs.writeFileSync(wipeTrackFile, "wiped", "utf8");
+        console.log("[BOOT] Database wiped clean successfully to honor user request.");
+      }).catch(err => {
+        console.error("[BOOT] One-time database wipe failed:", err);
+      });
+    }
   }
   
   // High-priority global error handler definition

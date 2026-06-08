@@ -1,6 +1,5 @@
 // @ts-ignore
-// FIXED: Appended explicit .ts file extension for strict ESM compilation tracking
-import { createExpressApp } from "../server.ts";
+import { createExpressApp } from "../server";
 
 let appPromise: any = null;
 
@@ -22,3 +21,4 @@ export default async function handler(req: any, res: any) {
     }
   }
 }
+

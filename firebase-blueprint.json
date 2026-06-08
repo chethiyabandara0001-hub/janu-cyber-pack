@@ -136,6 +136,15 @@
         "requestedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "userId", "userEmail", "isp", "packageType", "packageName", "price", "codeReceived", "requestedAt"]
+    },
+    "MaintenanceSettings": {
+      "title": "MaintenanceSettings",
+      "description": "Toggle configuration for system-wide routine maintenance notification",
+      "type": "object",
+      "properties": {
+        "maintenanceMode": { "type": "boolean" }
+      },
+      "required": ["maintenanceMode"]
     }
   },
   "firestore": {
@@ -162,6 +171,10 @@
     "settings/announcement": {
       "schema": "HomeAnnouncement",
       "description": "Singleton configuration document for top alert marquee"
+    },
+    "settings/maintenance": {
+      "schema": "MaintenanceSettings",
+      "description": "Singleton configuration document for site-wide maintenance Mode indicator"
     },
     "free_packages/{packageId}": {
       "schema": "FreePackage",

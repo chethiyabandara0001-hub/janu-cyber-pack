@@ -120,6 +120,10 @@ export interface AdSettings extends DatabaseDoc {
   nightTimeAdCode: string;
 }
 
+export interface MaintenanceSettings extends DatabaseDoc {
+  maintenanceMode: boolean;
+}
+
 export interface SupportMessage extends DatabaseDoc {
   id: string;
   userId: string;
@@ -138,4 +142,5 @@ export interface AppState {
   announcement: HomeAnnouncement;
   freePackages?: FreePackage[];
   freeRequests?: FreeRequest[];
+  maintenance?: MaintenanceSettings;
 }

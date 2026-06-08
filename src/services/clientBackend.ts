@@ -37,6 +37,10 @@ async function ensureSeeded() {
         ...INITIAL_ANNOUNCEMENT,
         integritySalt: DB_INTEGRITY_SALT
       });
+      await setDoc(doc(db, "settings", "maintenance"), {
+        maintenanceMode: false,
+        integritySalt: DB_INTEGRITY_SALT
+      });
       
       // Default Ad Settings (Day & Night redirects)
       await setDoc(doc(db, "settings", "ads"), {
@@ -221,11 +225,12 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   // 1. Initial Data load
   if (path === "/api/initial-data" && method === "GET") {
     await ensureSeeded();
-    const [packages, posts, contactSnap, announcementSnap, freePackages, freeRequests] = await Promise.all([
+    const [packages, posts, contactSnap, announcementSnap, maintenanceSnap, freePackages, freeRequests] = await Promise.all([
       getCollectionDocs("packages"),
       getCollectionDocs("posts"),
       getDoc(doc(db, "settings", "contact")),
       getDoc(doc(db, "settings", "announcement")),
+      getDoc(doc(db, "settings", "maintenance")),
       getCollectionDocs("free_packages"),
       getCollectionDocs("free_requests")
     ]);
@@ -237,6 +242,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
         posts,
         contact: contactSnap.exists() ? contactSnap.data() : INITIAL_CONTACT,
         announcement: announcementSnap.exists() ? announcementSnap.data() : INITIAL_ANNOUNCEMENT,
+        maintenance: maintenanceSnap.exists() ? maintenanceSnap.data() : { maintenanceMode: false },
         freePackages,
         freeRequests
       }
@@ -836,6 +842,12 @@ PersistentKeepalive = 25`;
     const announcement = await getJsonBody(init);
     await setDoc(doc(db, "settings", "announcement"), { ...announcement, integritySalt: DB_INTEGRITY_SALT });
     return { status: 200, data: { status: "success", announcement } };
+  }
+
+  if (path === "/api/admin/maintenance/save" && method === "POST") {
+    const maintenance = await getJsonBody(init);
+    await setDoc(doc(db, "settings", "maintenance"), { ...maintenance, integritySalt: DB_INTEGRITY_SALT });
+    return { status: 200, data: { status: "success", maintenance } };
   }
 
   return {

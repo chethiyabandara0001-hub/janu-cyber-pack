@@ -9,7 +9,7 @@ import {
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
   ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw,
-  Sun, Moon, Loader2, Zap, ArrowRight
+  Sun, Moon, Loader2, Zap, ArrowRight, Wrench
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -127,6 +127,7 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [contact, setContact] = useState<ContactDetails | null>(null);
   const [announcement, setAnnouncement] = useState<HomeAnnouncement | null>(null);
+  const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false);
   const [userSlips, setUserSlips] = useState<PaymentSlip[]>([]);
   const [freePackages, setFreePackages] = useState<FreePackage[]>([]);
   const [freeRequests, setFreeRequests] = useState<FreeRequest[]>([]);
@@ -327,6 +328,7 @@ export default function App() {
       setPosts(data?.posts || []);
       setContact(data?.contact || null);
       setAnnouncement(data?.announcement || null);
+      setMaintenanceMode(data?.maintenance?.maintenanceMode || false);
       setFreePackages(data?.freePackages || []);
       setFreeRequests(data?.freeRequests || []);
     } catch (e) {
@@ -1463,6 +1465,27 @@ export default function App() {
     }
   };
 
+  // Admin toggle Site Maintenance Mode
+  const handleToggleMaintenance = async () => {
+    try {
+      const nextMode = !maintenanceMode;
+      const res = await fetch('/api/admin/maintenance/save', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
+        body: JSON.stringify({ maintenanceMode: nextMode })
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        fetchAllData();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
@@ -1642,6 +1665,30 @@ export default function App() {
           )}
         </div>
 
+        {/* SITE MAINTENANCE MODE BANNER */}
+        {maintenanceMode && (activeTab === 'home' || activeTab === 'dashboard') && (
+          <div className="bg-amber-500/10 border-b border-amber-500/30 animate-fade-in">
+            <div className="max-w-7xl mx-auto px-6 py-4 sm:px-8 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="p-2 bg-amber-500/20 text-amber-400 rounded-lg shrink-0">
+                  <Wrench className="w-5 h-5 animate-bounce" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-bold text-white tracking-tight">
+                    Site maintenance is going on, we'll be back soon.
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                    We are performing routine server upgrades. Service performance might be temporarily affected.
+                  </p>
+                </div>
+              </div>
+              <span className="hidden sm:inline-block px-2.5 py-1 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-full uppercase tracking-wider font-mono">
+                UNDER MAINTENANCE
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* CORE ANNOUNCEMENT JUMBOTRON */}
         {announcement?.showAnnouncement && activeTab === 'home' && (
           <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800">
@@ -1787,6 +1834,27 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap gap-2 shrink-0">
+                {/* 🛠️ Site Maintenance Mode Switch */}
+                <button
+                  type="button"
+                  onClick={handleToggleMaintenance}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-2.5 transition-all duration-200 cursor-pointer ${
+                    maintenanceMode
+                      ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 shadow-md shadow-amber-950/20'
+                      : 'bg-slate-900 border-slate-850 text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title="Toggle Site Maintenance Mode Marquee visibility globally"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <Wrench className={`w-3.5 h-3.5 ${maintenanceMode ? 'animate-bounce text-amber-400' : 'text-slate-500'}`} />
+                    <span>Maintenance</span>
+                  </div>
+                  {/* Switch Pill */}
+                  <div className={`w-7 h-4 rounded-full p-0.5 transition-colors duration-200 flex items-center ${maintenanceMode ? 'bg-amber-500' : 'bg-slate-700'}`}>
+                    <div className={`w-3 h-3 rounded-full bg-slate-950 transition-transform duration-200 ${maintenanceMode ? 'translate-x-3 bg-white' : 'translate-x-0'}`} />
+                  </div>
+                </button>
+
                 <button
                   type="button"
                   onClick={fetchAdminStats}
@@ -2619,6 +2687,43 @@ export default function App() {
                   </button>
                 </form>
               )}
+            </div>
+
+            {/* 5b. SITE MAINTENANCE MODE */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 animate-fade-in">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+                <Wrench className="w-4 h-4 text-amber-500" />
+                🛠️ 5.b Site Maintenance Mode
+              </h3>
+
+              <div className="text-xs text-slate-400 leading-relaxed">
+                <p>Toggle this setting to activate the global site maintenance marquee. If turned on, standard users will see an alert notice at the top of the Home Dashboard and Account screen:</p>
+                <div className="mt-2 p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-amber-500 font-medium">
+                  "Site maintenance is going on, we'll be back soon."
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={handleToggleMaintenance}
+                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors duration-150 flex items-center gap-2 border cursor-pointer select-none ${
+                    maintenanceMode
+                      ? 'bg-amber-500 hover:bg-amber-600 border-amber-500 text-slate-950'
+                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-850 hover:text-white'
+                  }`}
+                >
+                  <Wrench className="w-3.5 h-3.5" />
+                  {maintenanceMode ? 'Turn Off Maintenance Mode' : 'Turn On Maintenance Mode'}
+                </button>
+
+                <div className="flex items-center gap-2 text-xs">
+                  <span className={`w-2.5 h-2.5 rounded-full ${maintenanceMode ? 'bg-amber-500 animate-pulse' : 'bg-slate-600'}`} />
+                  <span className="text-slate-400 font-mono">
+                    Status: <strong className={maintenanceMode ? 'text-amber-400 font-bold' : 'text-slate-300'}>{maintenanceMode ? 'ACTIVE' : 'INACTIVE'}</strong>
+                  </span>
+                </div>
+              </div>
             </div>
 
             {/* 6. FREE DATA SETTINGS & UPLOAD VOUCHER CODES */}

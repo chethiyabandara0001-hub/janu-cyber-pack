@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 
 // Import types
-import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, AdSettings, SupportMessage } from "./src/types";
+import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, AdSettings, SupportMessage, MaintenanceSettings } from "./src/types";
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "./src/mockData";
 
 const DB_INTEGRITY_SALT = "secured_by_janucyberpack_signature_token_2026";
@@ -203,6 +203,9 @@ async function seedAllData(force = false): Promise<boolean> {
         
         const annRef = doc(database, "settings", "announcement");
         await setDoc(annRef, INITIAL_ANNOUNCEMENT);
+
+        const maintRef = doc(database, "settings", "maintenance");
+        await setDoc(maintRef, { maintenanceMode: false, integritySalt: DB_INTEGRITY_SALT });
 
         const adRef = doc(database, "settings", "ads");
         const adSnap = await getDoc(adRef);
@@ -478,6 +481,26 @@ async function getAnnouncement(): Promise<HomeAnnouncement> {
       subtitle: "",
       announcementText: "",
       showAnnouncement: false
+    };
+  }
+}
+
+async function getMaintenance(): Promise<MaintenanceSettings> {
+  try {
+    const database = getDb();
+    const ref = doc(database, "settings", "maintenance");
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return snap.data() as MaintenanceSettings;
+    } else {
+      return {
+        maintenanceMode: false
+      };
+    }
+  } catch (e) {
+    handleFirestoreError(e, OperationType.GET, "settings/maintenance");
+    return {
+      maintenanceMode: false
     };
   }
 }
@@ -1126,6 +1149,7 @@ export async function createExpressApp() {
         getPosts(),
         getContact(),
         getAnnouncement(),
+        getMaintenance(),
         getFreePackages(),
         getFreeRequests()
       ]);
@@ -1135,8 +1159,9 @@ export async function createExpressApp() {
         posts: results[1].status === 'fulfilled' ? results[1].value : [],
         contact: results[2].status === 'fulfilled' ? results[2].value : INITIAL_CONTACT,
         announcement: results[3].status === 'fulfilled' ? results[3].value : INITIAL_ANNOUNCEMENT,
-        freePackages: results[4].status === 'fulfilled' ? results[4].value : [],
-        freeRequests: results[5].status === 'fulfilled' ? results[5].value : []
+        maintenance: results[4].status === 'fulfilled' ? results[4].value : { maintenanceMode: false },
+        freePackages: results[5].status === 'fulfilled' ? results[5].value : [],
+        freeRequests: results[6].status === 'fulfilled' ? results[6].value : []
       };
 
       res.json(data);
@@ -1877,6 +1902,19 @@ PersistentKeepalive = 25`;
       const updated = { ...current, ...req.body, integritySalt: DB_INTEGRITY_SALT };
       await setDoc(ref, updated);
       res.json({ status: "success", announcement: updated });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // 4f. Update site maintenance mode (Admin Only)
+  app.post("/api/admin/maintenance/save", adminGuard, async (req, res) => {
+    try {
+      const ref = doc(getDb(), "settings", "maintenance");
+      const current = await getMaintenance();
+      const updated = { ...current, ...req.body, integritySalt: DB_INTEGRITY_SALT };
+      await setDoc(ref, updated);
+      res.json({ status: "success", maintenance: updated });
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }

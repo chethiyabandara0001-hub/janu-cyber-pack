@@ -1920,6 +1920,92 @@ PersistentKeepalive = 25`;
     }
   });
 
+  // 4g. Backup all data to a local JSON file (Admin Only)
+  app.post("/api/admin/backup/save-to-file", adminGuard, async (req, res) => {
+    try {
+      const results = await Promise.allSettled([
+        getPackages(),
+        getPosts(),
+        getContact(),
+        getAnnouncement(),
+        getMaintenance(),
+        getAdSettings(),
+        getSupportMessages(),
+        getUsers(),
+        getSlips(),
+        getFreePackages(),
+        getFreeRequests()
+      ]);
+
+      const backupData = {
+        packages: results[0].status === 'fulfilled' ? results[0].value : [],
+        posts: results[1].status === 'fulfilled' ? results[1].value : [],
+        contact: results[2].status === 'fulfilled' ? results[2].value : {},
+        announcement: results[3].status === 'fulfilled' ? results[3].value : {},
+        maintenance: results[4].status === 'fulfilled' ? results[4].value : { maintenanceMode: false },
+        adSettings: results[5].status === 'fulfilled' ? results[5].value : {},
+        supportMessages: results[6].status === 'fulfilled' ? results[6].value : [],
+        users: results[7].status === 'fulfilled' ? results[7].value : [],
+        slips: results[8].status === 'fulfilled' ? results[8].value : [],
+        freePackages: results[9].status === 'fulfilled' ? results[9].value : [],
+        freeRequests: results[10].status === 'fulfilled' ? results[10].value : []
+      };
+
+      const backupFilePath = path.join(process.cwd(), "src/data-backup.json");
+      fs.writeFileSync(backupFilePath, JSON.stringify(backupData, null, 2), "utf8");
+
+      res.json({ status: "success", message: "Data backed up successfully to src/data-backup.json", data: backupData });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // 4h. Retrieve and download the current backup JSON file (Admin Only)
+  app.get("/api/admin/backup/download", adminGuard, async (req, res) => {
+    try {
+      const backupFilePath = path.join(process.cwd(), "src/data-backup.json");
+      if (fs.existsSync(backupFilePath)) {
+        const fileContent = fs.readFileSync(backupFilePath, "utf8");
+        res.setHeader("Content-Disposition", "attachment; filename=data-backup.json");
+        res.setHeader("Content-Type", "application/json");
+        return res.send(fileContent);
+      } else {
+        // Fallback: compile fresh data and return it
+        const results = await Promise.allSettled([
+          getPackages(),
+          getPosts(),
+          getContact(),
+          getAnnouncement(),
+          getMaintenance(),
+          getAdSettings(),
+          getSupportMessages(),
+          getUsers(),
+          getSlips(),
+          getFreePackages(),
+          getFreeRequests()
+        ]);
+        const backupData = {
+          packages: results[0].status === 'fulfilled' ? results[0].value : [],
+          posts: results[1].status === 'fulfilled' ? results[1].value : [],
+          contact: results[2].status === 'fulfilled' ? results[2].value : {},
+          announcement: results[3].status === 'fulfilled' ? results[3].value : {},
+          maintenance: results[4].status === 'fulfilled' ? results[4].value : { maintenanceMode: false },
+          adSettings: results[5].status === 'fulfilled' ? results[5].value : {},
+          supportMessages: results[6].status === 'fulfilled' ? results[6].value : [],
+          users: results[7].status === 'fulfilled' ? results[7].value : [],
+          slips: results[8].status === 'fulfilled' ? results[8].value : [],
+          freePackages: results[9].status === 'fulfilled' ? results[9].value : [],
+          freeRequests: results[10].status === 'fulfilled' ? results[10].value : []
+        };
+        res.setHeader("Content-Disposition", "attachment; filename=data-backup.json");
+        res.setHeader("Content-Type", "application/json");
+        return res.json(backupData);
+      }
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   // 4e. Update user details directly (Admin Only)
   app.post("/api/admin/users/save-bandwidth", adminGuard, async (req, res) => {
     try {

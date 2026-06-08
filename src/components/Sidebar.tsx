@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Inbox, Layers, Server, Sparkles, Database, ChevronRight, ChevronLeft, Globe, LogIn, Loader2 
+  Inbox, Layers, Server, Sparkles, Database, ChevronRight, ChevronLeft, Globe, LogIn, Loader2, Settings
 } from 'lucide-react';
 import { User } from '../types';
 import { AnimatePresence, motion } from 'motion/react';
@@ -8,8 +8,8 @@ import { AnimatePresence, motion } from 'motion/react';
 interface SidebarProps {
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (val: boolean) => void;
-  activeTab: 'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps';
-  setActiveTab: (tab: 'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps') => void;
+  activeTab: 'home' | 'packages' | 'dashboard' | 'admin' | 'site-settings' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps';
+  setActiveTab: (tab: 'home' | 'packages' | 'dashboard' | 'admin' | 'site-settings' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps') => void;
   user: User | null;
   setLoginProvider: (provider: 'google' | 'email') => void;
   setShowLoginModal: (show: boolean) => void;
@@ -156,6 +156,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Database className="w-4 h-4 text-amber-500 shrink-0" />
               {!sidebarCollapsed && <span className="animate-fade-in">Admin Panel ⭐</span>}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('site-settings')}
+              className={`w-full py-2.5 rounded-lg flex items-center transition text-left cursor-pointer text-xs mt-1.5 ${
+                sidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'
+              } ${
+                activeTab === 'site-settings' 
+                  ? 'bg-indigo-500/10 text-indigo-400 font-bold border border-indigo-500/10' 
+                  : 'hover:bg-slate-800/60 hover:text-slate-200 text-slate-400 border border-transparent'
+              }`}
+              title="Site Settings & System Configurations"
+            >
+              <Settings className="w-4 h-4 text-indigo-400 shrink-0" />
+              {!sidebarCollapsed && <span className="animate-fade-in">Site Settings</span>}
             </button>
           </div>
         )}

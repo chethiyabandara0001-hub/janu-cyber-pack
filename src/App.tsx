@@ -64,14 +64,16 @@ export default function App() {
     localStorage.setItem('janu-sidebar-collapsed', String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps'
-  const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps'>(() => {
+  // Navigation: 'home' | 'packages' | 'announcements' | 'dashboard' | 'admin' | 'site-settings' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps'
+  const [activeTab, setActiveTab] = useState<'home' | 'packages' | 'dashboard' | 'admin' | 'site-settings' | 'free-vpn' | 'privacy' | 'terms' | 'sitemaps'>(() => {
     const path = window.location.pathname;
     if (path === '/privacy') return 'privacy';
     if (path === '/terms') return 'terms';
     if (path === '/sitemaps') return 'sitemaps';
     if (path === '/packages') return 'packages';
     if (path === '/free-vpn') return 'free-vpn';
+    if (path === '/admin') return 'admin';
+    if (path === '/site-settings') return 'site-settings';
     return 'home';
   });
 
@@ -89,6 +91,10 @@ export default function App() {
         setActiveTab('packages');
       } else if (path === '/free-vpn') {
         setActiveTab('free-vpn');
+      } else if (path === '/admin') {
+        setActiveTab('admin');
+      } else if (path === '/site-settings') {
+        setActiveTab('site-settings');
       } else if (path === '/') {
         setActiveTab('home');
       }
@@ -131,6 +137,10 @@ export default function App() {
   const [userSlips, setUserSlips] = useState<PaymentSlip[]>([]);
   const [freePackages, setFreePackages] = useState<FreePackage[]>([]);
   const [freeRequests, setFreeRequests] = useState<FreeRequest[]>([]);
+
+  // Backup file state variables
+  const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
+  const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Free VPN Client selection states
   const [selectedFreeIsp, setSelectedFreeIsp] = useState<'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel'>('Dialog');
@@ -204,6 +214,7 @@ export default function App() {
   const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
   const [showRestoreConfirm, setShowRestoreConfirm] = useState<boolean>(false);
   const [showWipeConfirm, setShowWipeConfirm] = useState<boolean>(false);
+  const [showWipeConfirmDouble, setShowWipeConfirmDouble] = useState<boolean>(false);
   const [slipVerificationFilter, setSlipVerificationFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [adminNotes, setAdminNotes] = useState<string>('');
   const [customVpnCode, setCustomVpnCode] = useState<string>('');
@@ -1486,6 +1497,67 @@ export default function App() {
     }
   };
 
+  // Admin trigger data backup to local JSON file
+  const handleSaveBackupToFile = async () => {
+    setIsBackingUp(true);
+    setBackupMessage(null);
+    try {
+      const res = await fetch('/api/admin/backup/save-to-file', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setBackupMessage({
+          type: 'success',
+          text: `Data successfully saved and updated in 'src/data-backup.json'! File size is now ${JSON.stringify(data.data).length} bytes.`
+        });
+      } else {
+        setBackupMessage({
+          type: 'error',
+          text: data.error || 'Failed to save data backup.'
+        });
+      }
+    } catch (e: any) {
+      setBackupMessage({
+        type: 'error',
+        text: 'Connection or system error during backup write: ' + (e?.message || String(e))
+      });
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
+  // Admin trigger backup download directly
+  const handleDownloadBackupFile = async () => {
+    try {
+      const res = await fetch('/api/admin/backup/download', {
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
+      const data = await res.json();
+      const filename = "data-backup.json";
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      setBackupMessage({
+        type: 'error',
+        text: 'Failed to stream files: ' + (e?.message || String(e))
+      });
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
@@ -1496,6 +1568,7 @@ export default function App() {
           activeTab === 'dashboard' ? "My Secure VPN Dashboard | Janu Cyber Pack" :
           activeTab === 'free-vpn' ? "Get Free Daily VPN Configs (Dialog, Mobitel, Hutch) | Janu Cyber Pack" :
           activeTab === 'admin' ? "Admin Portal | Janu Cyber Pack" :
+          activeTab === 'site-settings' ? "Site Settings & Configurations | Janu Cyber Pack" :
           activeTab === 'privacy' ? "Privacy Policy & No-Logs Commitment | Janu Cyber Pack" :
           activeTab === 'terms' ? "Terms of Service & Usage Standards | Janu Cyber Pack" :
           activeTab === 'sitemaps' ? "Sitemaps Navigation Index | Janu Cyber Pack" :
@@ -1567,6 +1640,7 @@ export default function App() {
               {activeTab === 'free-vpn' && "FREE VPN"}
               {activeTab === 'dashboard' && "MY ACCOUNT"}
               {activeTab === 'admin' && "ADMIN PANEL"}
+              {activeTab === 'site-settings' && "SITE CONFIGURER"}
               {activeTab === 'privacy' && "PRIVACY POLICY"}
               {activeTab === 'terms' && "TERMS OF SERVICE"}
               {activeTab === 'sitemaps' && "SITEMAPS VISUAL DIRECTORY"}
@@ -1656,12 +1730,20 @@ export default function App() {
             FREE VPN
           </button>
           {user?.role === 'admin' && (
-            <button 
-              onClick={() => setActiveTab('admin')}
-              className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition snap-center font-mono ${activeTab === 'admin' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm shadow-amber-950/40' : 'text-amber-500/60 border border-transparent'}`}
-            >
-              ADMIN ⭐
-            </button>
+            <>
+              <button 
+                onClick={() => setActiveTab('admin')}
+                className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition snap-center font-mono ${activeTab === 'admin' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 shadow-sm shadow-amber-950/40' : 'text-amber-500/60 border border-transparent'}`}
+              >
+                ADMIN ⭐
+              </button>
+              <button 
+                onClick={() => setActiveTab('site-settings')}
+                className={`shrink-0 px-4 py-2 text-[10px] sm:text-xs font-bold rounded-xl transition snap-center font-mono ${activeTab === 'site-settings' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-sm shadow-indigo-950/40' : 'text-slate-400 border border-transparent'}`}
+              >
+                SETTINGS ⚙️
+              </button>
+            </>
           )}
         </div>
 
@@ -1834,27 +1916,6 @@ export default function App() {
               </div>
 
               <div className="flex flex-wrap gap-2 shrink-0">
-                {/* 🛠️ Site Maintenance Mode Switch */}
-                <button
-                  type="button"
-                  onClick={handleToggleMaintenance}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-2.5 transition-all duration-200 cursor-pointer ${
-                    maintenanceMode
-                      ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 shadow-md shadow-amber-950/20'
-                      : 'bg-slate-900 border-slate-850 text-slate-400 hover:text-white hover:bg-slate-800'
-                  }`}
-                  title="Toggle Site Maintenance Mode Marquee visibility globally"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Wrench className={`w-3.5 h-3.5 ${maintenanceMode ? 'animate-bounce text-amber-400' : 'text-slate-500'}`} />
-                    <span>Maintenance</span>
-                  </div>
-                  {/* Switch Pill */}
-                  <div className={`w-7 h-4 rounded-full p-0.5 transition-colors duration-200 flex items-center ${maintenanceMode ? 'bg-amber-500' : 'bg-slate-700'}`}>
-                    <div className={`w-3 h-3 rounded-full bg-slate-950 transition-transform duration-200 ${maintenanceMode ? 'translate-x-3 bg-white' : 'translate-x-0'}`} />
-                  </div>
-                </button>
-
                 <button
                   type="button"
                   onClick={fetchAdminStats}
@@ -1884,62 +1945,6 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setShowResetConfirm(false)}
-                      className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-
-                {!showRestoreConfirm ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowRestoreConfirm(true)}
-                    className="px-3 py-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-lg flex items-center gap-1 transition cursor-pointer"
-                  >
-                    <Database className="w-3.5 h-3.5" /> Restore Defaults
-                  </button>
-                ) : (
-                  <div className="flex gap-1.5 items-center bg-emerald-950/20 border border-emerald-500/20 rounded-lg px-2 py-0.5 block">
-                    <span className="text-[10px] text-emerald-400 font-mono">Restore packages & posts?</span>
-                    <button
-                      type="button"
-                      onClick={handleRestoreDefaults}
-                      className="px-2 py-1 text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded transition cursor-pointer"
-                    >
-                      Yes, Restore
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowRestoreConfirm(false)}
-                      className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-
-                {!showWipeConfirm ? (
-                  <button
-                    type="button"
-                    onClick={() => setShowWipeConfirm(true)}
-                    className="px-3 py-1.5 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/20 rounded-lg flex items-center gap-1 transition cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Wipe Database
-                  </button>
-                ) : (
-                  <div className="flex gap-1.5 items-center bg-rose-950/20 border border-rose-500/20 rounded-lg px-2 py-0.5">
-                    <span className="text-[10px] text-rose-400 font-mono">Wipe everything?</span>
-                    <button
-                      type="button"
-                      onClick={handleWipeDatabase}
-                      className="px-2 py-1 text-[10px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded transition cursor-pointer"
-                    >
-                      Yes, Wipe Clean
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowWipeConfirm(false)}
                       className="px-2 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
                     >
                       Cancel
@@ -2689,43 +2694,6 @@ export default function App() {
               )}
             </div>
 
-            {/* 5b. SITE MAINTENANCE MODE */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 animate-fade-in">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
-                <Wrench className="w-4 h-4 text-amber-500" />
-                🛠️ 5.b Site Maintenance Mode
-              </h3>
-
-              <div className="text-xs text-slate-400 leading-relaxed">
-                <p>Toggle this setting to activate the global site maintenance marquee. If turned on, standard users will see an alert notice at the top of the Home Dashboard and Account screen:</p>
-                <div className="mt-2 p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-amber-500 font-medium">
-                  "Site maintenance is going on, we'll be back soon."
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4 pt-2">
-                <button
-                  type="button"
-                  onClick={handleToggleMaintenance}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors duration-150 flex items-center gap-2 border cursor-pointer select-none ${
-                    maintenanceMode
-                      ? 'bg-amber-500 hover:bg-amber-600 border-amber-500 text-slate-950'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-850 hover:text-white'
-                  }`}
-                >
-                  <Wrench className="w-3.5 h-3.5" />
-                  {maintenanceMode ? 'Turn Off Maintenance Mode' : 'Turn On Maintenance Mode'}
-                </button>
-
-                <div className="flex items-center gap-2 text-xs">
-                  <span className={`w-2.5 h-2.5 rounded-full ${maintenanceMode ? 'bg-amber-500 animate-pulse' : 'bg-slate-600'}`} />
-                  <span className="text-slate-400 font-mono">
-                    Status: <strong className={maintenanceMode ? 'text-amber-400 font-bold' : 'text-slate-300'}>{maintenanceMode ? 'ACTIVE' : 'INACTIVE'}</strong>
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* 6. FREE DATA SETTINGS & UPLOAD VOUCHER CODES */}
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6">
               <div className="border-b border-slate-800 pb-3">
@@ -3045,19 +3013,248 @@ export default function App() {
                 </div>
               </div>
 
+
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: SITE SETTINGS & PORTALS CONFIGURATION */}
+        {activeTab === 'site-settings' && user?.role === 'admin' && (
+          <div className="space-y-8 animate-fade-in w-full max-w-full overflow-x-auto lg:overflow-x-visible scrollbar-thin scrollbar-thumb-slate-800 pb-4">
+            <div className="border-b border-slate-800 pb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2 font-display">
+                  <Settings className="w-5 h-5 text-indigo-400" />
+                  SYSTEM & PORTALS CONFIGURATION
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Manage live maintenance status, update bypass gateways, backup schema files, and reload structural parameters</p>
+              </div>
             </div>
 
-            {/* 7. ADVERTISEMENT PORTALS & BYPASS REDIRECTION CONFIGURATOR */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6 mt-8">
+            {/* Layout grids for Settings */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* Site Maintenance Mode Control Card */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-amber-500" />
+                  🛠️ Site Maintenance Mode
+                </h3>
+
+                <div className="text-xs text-slate-400 leading-relaxed">
+                  <p>Toggle this setting to activate the global site maintenance marquee. If turned on, standard users will see an alert notice at the top of the Home Dashboard and Account screen:</p>
+                  <div className="mt-2 p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-amber-500 font-medium">
+                    "Site maintenance is going on, we'll be back soon."
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4 pt-2">
+                  <button
+                    type="button"
+                    onClick={handleToggleMaintenance}
+                    className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors duration-150 flex items-center gap-2 border cursor-pointer select-none ${
+                      maintenanceMode
+                        ? 'bg-amber-500 hover:bg-amber-600 border-amber-500 text-slate-950'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-850 hover:text-white'
+                    }`}
+                  >
+                    <Wrench className="w-3.5 h-3.5" />
+                    {maintenanceMode ? 'Turn Off Maintenance Mode' : 'Turn On Maintenance Mode'}
+                  </button>
+
+                  <div className="flex items-center gap-2 text-xs">
+                    <span className={`w-2.5 h-2.5 rounded-full ${maintenanceMode ? 'bg-amber-500 animate-pulse' : 'bg-slate-600'}`} />
+                    <span className="text-slate-400 font-mono">
+                      Status: <strong className={maintenanceMode ? 'text-amber-400 font-bold' : 'text-slate-300'}>{maintenanceMode ? 'ACTIVE' : 'INACTIVE'}</strong>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Site Reload Defaults Control Card */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4 text-emerald-400" />
+                  ⚙️ Site Reload Defaults
+                </h3>
+
+                <div className="text-xs text-slate-400 leading-relaxed">
+                  <p>Restore the application's packages, configurations, and post data back to seed defaults. This action will reload seed records into active Firestore catalogs.</p>
+                </div>
+
+                <div className="pt-2">
+                  {!showRestoreConfirm ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowRestoreConfirm(true)}
+                      className="px-4 py-2 text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 rounded-lg flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <Database className="w-3.5 h-3.5" /> Restore Defaults
+                    </button>
+                  ) : (
+                    <div className="flex gap-2 items-center bg-emerald-950/20 border border-emerald-500/20 rounded-lg px-3 py-1.5 inline-flex">
+                      <span className="text-[11px] text-emerald-400 font-mono font-bold">Restore packages & posts?</span>
+                      <button
+                        type="button"
+                        onClick={handleRestoreDefaults}
+                        className="px-2.5 py-1 text-[10px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded transition cursor-pointer"
+                      >
+                        Yes, Restore
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setShowRestoreConfirm(false)}
+                        className="px-2.5 py-1 text-[10px] text-slate-400 hover:text-white transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Database Backup & Download Card */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+                <Database className="w-4 h-4 text-indigo-400" />
+                📦 Database Backup & Download Center
+              </h3>
+
+              <div className="text-xs text-slate-400 leading-relaxed">
+                <p>Compile a complete full-schema backup of all live Firestore instances directly into the site's local filesystem file <code className="text-indigo-400 px-1 bg-slate-950 rounded border border-slate-850">src/data-backup.json</code>, or stream and download a local client-side copy instantly.</p>
+              </div>
+
+              {backupMessage && (
+                <div className={`p-3 rounded-lg text-xs leading-normal border ${
+                  backupMessage.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'
+                }`}>
+                  {backupMessage.text}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={isBackingUp}
+                  onClick={handleSaveBackupToFile}
+                  className={`px-4 py-2.5 text-xs font-bold rounded-lg transition-colors border cursor-pointer select-none flex items-center gap-2 ${
+                    isBackingUp
+                      ? 'bg-slate-950 border-slate-800 text-slate-500 cursor-not-allowed'
+                      : 'bg-indigo-500 hover:bg-indigo-600 border-indigo-500 text-white'
+                  }`}
+                >
+                  {isBackingUp ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Database className="w-3.5 h-3.5" />
+                  )}
+                  {isBackingUp ? 'Saving Backup...' : 'Save Database to JSON File'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadBackupFile}
+                  className="px-4 py-2.5 text-xs font-bold rounded-lg transition-colors border border-slate-800 bg-slate-950 text-slate-350 hover:bg-slate-850 hover:text-white flex items-center gap-2 cursor-pointer select-none"
+                >
+                  <FileText className="w-3.5 h-3.5 text-slate-400" />
+                  Download Backup JSON Asset
+                </button>
+              </div>
+            </div>
+
+            {/* Danger Zone: Wipe Database and Clean Slate */}
+            <div className="bg-slate-900 border border-red-950/40 rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
+              <h3 className="text-sm font-bold text-rose-400 uppercase tracking-wider border-b border-rose-950/25 pb-3 flex items-center gap-2">
+                <Trash2 className="w-4 h-4 text-rose-500" />
+                ⚠️ Danger Zone: Clear Complete Database
+              </h3>
+
+              <div className="text-xs text-slate-400 leading-relaxed">
+                <p>Erase all packages, news posts, free configuration codes, user subscriptions, slips, and messaging databases permanently. <strong>This action is highly destructive and cannot be undone.</strong></p>
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center gap-4">
+                {!showWipeConfirm && !showWipeConfirmDouble ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowWipeConfirm(true);
+                      setShowWipeConfirmDouble(false);
+                    }}
+                    className="px-4 py-2.5 text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500 hover:text-white rounded-lg flex items-center gap-2 transition duration-200 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Wipe Entire Database
+                  </button>
+                ) : showWipeConfirm && !showWipeConfirmDouble ? (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl space-y-2 w-full max-w-md animate-fade-in">
+                    <p className="text-[11px] font-bold text-rose-400 font-mono">⚠️ [FIRST ACTION] Are you absolutely sure? This will delete all users, posts, packages and configs!</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowWipeConfirm(false);
+                          setShowWipeConfirmDouble(true);
+                        }}
+                        className="px-3 py-1.5 text-[10px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded transition cursor-pointer"
+                      >
+                        Yes, I am sure
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowWipeConfirm(false);
+                          setShowWipeConfirmDouble(false);
+                        }}
+                        className="px-3 py-1.5 text-[10px] text-slate-400 hover:text-white bg-slate-950 border border-slate-800 rounded transition cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-red-600/15 border border-red-500/30 rounded-xl space-y-2 w-full max-w-md">
+                    <p className="text-[11px] font-extrabold text-red-400 uppercase tracking-wide">🚨 [CRITICAL ACTION] CONFIRM TWICE - CLICK ONCE MORE TO ERASE ALL INSTANCES FOREVER!</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setShowWipeConfirmDouble(false);
+                          setShowWipeConfirm(false);
+                          await handleWipeDatabase();
+                        }}
+                        className="px-3 py-1.5 text-[10px] font-black text-white bg-red-600 hover:bg-red-700 rounded transition cursor-pointer"
+                      >
+                        YES, PERMANENTLY ERASE FOREVER
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowWipeConfirm(false);
+                          setShowWipeConfirmDouble(false);
+                        }}
+                        className="px-3 py-1.5 text-[10px] text-slate-400 hover:text-white bg-slate-950 border border-slate-800 rounded transition cursor-pointer"
+                      >
+                        Abort Wipe
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ADVERTISEMENT PORTALS & REDIRECTION CONFIGURATOR */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6">
               {user?.email && (
                 (() => {
                   const isSuperAdmin = user.email.toLowerCase() === "chethiyabandara0001@gmail.com";
                   return (
-                    <>
+                    <div className="space-y-6">
                       <div className="border-b border-slate-800 pb-3">
                         <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
                           <Globe className="w-4 h-4 text-indigo-400" />
-                          🛡️ 7. ADVERTISEMENT PORTALS & REDIRECTION CONFIGURATOR
+                          🛡️ ADVERTISEMENT PORTALS & REDIRECTION CONFIGURATOR
                         </h3>
                         <p className="text-xs text-slate-400 mt-1">
                           {isSuperAdmin 
@@ -3161,11 +3358,12 @@ export default function App() {
 
                         </form>
                       </div>
-                    </>
+                    </div>
                   );
                 })()
               )}
             </div>
+
           </div>
         )}
       </div>

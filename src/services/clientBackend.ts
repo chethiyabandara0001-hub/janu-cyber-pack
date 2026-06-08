@@ -850,6 +850,104 @@ PersistentKeepalive = 25`;
     return { status: 200, data: { status: "success", maintenance } };
   }
 
+  if (path === "/api/admin/backup/save-to-file" && method === "POST") {
+    const [
+      packages,
+      posts,
+      contactSnap,
+      announcementSnap,
+      maintenanceSnap,
+      adSnap,
+      supportMessages,
+      users,
+      slips,
+      freePackages,
+      freeRequests
+    ] = await Promise.all([
+      getCollectionDocs("packages"),
+      getCollectionDocs("posts"),
+      getDoc(doc(db, "settings", "contact")),
+      getDoc(doc(db, "settings", "announcement")),
+      getDoc(doc(db, "settings", "maintenance")),
+      getDoc(doc(db, "settings", "ads")),
+      getCollectionDocs("support_messages"),
+      getCollectionDocs("users"),
+      getCollectionDocs("slips"),
+      getCollectionDocs("free_packages"),
+      getCollectionDocs("free_requests")
+    ]);
+
+    const backupData = {
+      packages,
+      posts,
+      contact: contactSnap.exists() ? contactSnap.data() : {},
+      announcement: announcementSnap.exists() ? announcementSnap.data() : {},
+      maintenance: maintenanceSnap.exists() ? maintenanceSnap.data() : { maintenanceMode: false },
+      adSettings: adSnap.exists() ? adSnap.data() : {},
+      supportMessages,
+      users,
+      slips,
+      freePackages,
+      freeRequests
+    };
+
+    return {
+      status: 200,
+      data: {
+        status: "success",
+        message: "Data backed up successfully (locally compiled)",
+        data: backupData
+      }
+    };
+  }
+
+  if (path === "/api/admin/backup/download" && method === "GET") {
+    const [
+      packages,
+      posts,
+      contactSnap,
+      announcementSnap,
+      maintenanceSnap,
+      adSnap,
+      supportMessages,
+      users,
+      slips,
+      freePackages,
+      freeRequests
+    ] = await Promise.all([
+      getCollectionDocs("packages"),
+      getCollectionDocs("posts"),
+      getDoc(doc(db, "settings", "contact")),
+      getDoc(doc(db, "settings", "announcement")),
+      getDoc(doc(db, "settings", "maintenance")),
+      getDoc(doc(db, "settings", "ads")),
+      getCollectionDocs("support_messages"),
+      getCollectionDocs("users"),
+      getCollectionDocs("slips"),
+      getCollectionDocs("free_packages"),
+      getCollectionDocs("free_requests")
+    ]);
+
+    const backupData = {
+      packages,
+      posts,
+      contact: contactSnap.exists() ? contactSnap.data() : {},
+      announcement: announcementSnap.exists() ? announcementSnap.data() : {},
+      maintenance: maintenanceSnap.exists() ? maintenanceSnap.data() : { maintenanceMode: false },
+      adSettings: adSnap.exists() ? adSnap.data() : {},
+      supportMessages,
+      users,
+      slips,
+      freePackages,
+      freeRequests
+    };
+
+    return {
+      status: 200,
+      data: backupData
+    };
+  }
+
   return {
     status: 404,
     data: { error: `Client API route [${method}] ${path} not implemented.` }

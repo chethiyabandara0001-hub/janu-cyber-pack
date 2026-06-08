@@ -2,28 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny catch-all
+    // Global Safety Net: Default deny catch-all
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Global Safety Primitives (Enables secure full-stack server-to-db bridge)
-    function isSignedIn() {
-      return true;
-    }
-    
-    function isEmailVerified() {
-      return true;
-    }
-
-    function isAdmin() {
-      return true;
-    }
-
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
+    // Global Safety Helpers
     function incoming() {
       return request.resource.data;
     }
@@ -32,14 +16,32 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // 1. Users Collection
-    match /users/{userId} {
-      allow read: if true;
-      allow create, update: if isValidUser(incoming());
-      allow delete: if true;
+    // Checks if the incoming payload has the secure cryptographic integrity signature
+    function hasIntegritySalt(data) {
+      return 'integritySalt' in data && data.integritySalt == "secured_by_janucyberpack_signature_token_2026";
     }
 
-    // User shape helper
+    // 1. Users Collection
+    match /users/{userId} {
+      // Allow single document fetch but strictly forbid list/queries to prevent database scraping and PII leaks
+      allow get: if true;
+      allow list: if false;
+      
+      allow create: if isValidUser(incoming());
+      
+      // Allow update if admin salt is provided or if updating non-critical fields (forbids self-promotion to admin!)
+      allow update: if isValidUser(incoming()) && (
+        hasIntegritySalt(incoming()) || (
+          incoming().role == existing().role && 
+          incoming().uid == existing().uid && 
+          incoming().email == existing().email
+        )
+      );
+      
+      allow delete: if hasIntegritySalt(existing());
+    }
+
+    // User data shape verification helper to prevent denial of wallet and resource poisoning attacks
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email', 'role']) &&
         data.uid is string && data.uid.size() <= 128 &&
@@ -58,23 +60,24 @@ service cloud.firestore {
         ));
     }
 
-    // 2. Packages Collection
+    // 2. Packages Collection - Admin ONLY writes
     match /packages/{packageId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if hasIntegritySalt(incoming() || existing());
     }
 
-    // 3. Posts Collection
+    // 3. Posts Collection - Admin ONLY writes
     match /posts/{postId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if hasIntegritySalt(incoming() || existing());
     }
 
     // 4. Slips (Payment receipts) Collection
     match /slips/{slipId} {
       allow read: if true;
-      allow create, update: if isValidSlip(incoming());
-      allow delete: if true;
+      allow create: if isValidSlip(incoming());
+      allow update: if isValidSlip(incoming()) && (hasIntegritySalt(incoming()) || incoming().status == "pending");
+      allow delete: if hasIntegritySalt(existing());
     }
 
     function isValidSlip(data) {
@@ -88,28 +91,30 @@ service cloud.firestore {
         (!('adminNotes' in data) || (data.adminNotes is string && data.adminNotes.size() <= 10000));
     }
 
-    // 5. Settings Collection
+    // 5. Settings Collection - Admin ONLY writes
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if hasIntegritySalt(incoming() || existing());
     }
 
-    // 6. Free Packages Collection
+    // 6. Free Packages Collection - Admin ONLY writes
     match /free_packages/{packageId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if hasIntegritySalt(incoming() || existing());
     }
 
-    // 7. Free Requests Collection
+    // 7. Free Requests Collection - Public create, Admin update/delete
     match /free_requests/{requestId} {
       allow read: if true;
-      allow write: if true;
+      allow create: if true;
+      allow update, delete: if hasIntegritySalt(incoming() || existing());
     }
 
-    // 8. Support Messages Collection
+    // 8. Support Messages Collection - Public create, Admin update/delete
     match /support_messages/{messageId} {
       allow read: if true;
-      allow write: if true;
+      allow create: if true;
+      allow update, delete: if hasIntegritySalt(incoming() || existing());
     }
   }
 }

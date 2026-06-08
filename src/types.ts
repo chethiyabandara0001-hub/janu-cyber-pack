@@ -3,7 +3,16 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export interface User {
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+export interface DatabaseDoc {
+  integritySalt?: string;
+}
+
+export interface User extends DatabaseDoc {
   uid: string;
   email: string;
   displayName: string;
@@ -19,7 +28,7 @@ export interface User {
   };
 }
 
-export interface Package {
+export interface Package extends DatabaseDoc {
   id: string;
   title: string;
   description: string;
@@ -34,7 +43,7 @@ export interface Package {
   packageType?: 'Mobile' | 'Router' | 'Fiber';
 }
 
-export interface Post {
+export interface Post extends DatabaseDoc {
   id: string;
   title: string;
   excerpt: string;
@@ -44,7 +53,7 @@ export interface Post {
   date: string;
 }
 
-export interface PaymentSlip {
+export interface PaymentSlip extends DatabaseDoc {
   id: string;
   userId: string;
   userEmail: string;
@@ -63,7 +72,7 @@ export interface PaymentSlip {
   tier?: string;
 }
 
-export interface ContactDetails {
+export interface ContactDetails extends DatabaseDoc {
   phone: string;
   email: string;
   telegramChannel: string;
@@ -76,14 +85,14 @@ export interface ContactDetails {
   bankAccountName?: string;
 }
 
-export interface HomeAnnouncement {
+export interface HomeAnnouncement extends DatabaseDoc {
   title: string;
   subtitle: string;
   announcementText: string;
   showAnnouncement: boolean;
 }
 
-export interface FreePackage {
+export interface FreePackage extends DatabaseDoc {
   id: string;
   isp: 'Dialog' | 'Mobitel' | 'Hutch' | 'Airtel';
   packageType: 'Mobile' | 'Router' | 'Fiber';
@@ -93,7 +102,7 @@ export interface FreePackage {
   createdAt?: string;
 }
 
-export interface FreeRequest {
+export interface FreeRequest extends DatabaseDoc {
   id: string;
   userId: string;
   userEmail: string;
@@ -106,12 +115,12 @@ export interface FreeRequest {
   requestedAt: string;
 }
 
-export interface AdSettings {
+export interface AdSettings extends DatabaseDoc {
   dayTimeAdCode: string;
   nightTimeAdCode: string;
 }
 
-export interface SupportMessage {
+export interface SupportMessage extends DatabaseDoc {
   id: string;
   userId: string;
   userEmail: string;

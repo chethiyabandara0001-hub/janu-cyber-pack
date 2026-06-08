@@ -25,6 +25,7 @@ import { FreeVpnView } from './components/FreeVpnView';
 import { PrivacyView } from './components/PrivacyView';
 import { TermsView } from './components/TermsView';
 import { SitemapsView } from './components/SitemapsView';
+import { customFetch as fetch } from './services/clientBackend';
 
 const getTierPriceDisplay = (tierInput: string): string => {
   const normalized = (tierInput || '').trim().toLowerCase();

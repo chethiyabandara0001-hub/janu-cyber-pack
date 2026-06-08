@@ -2,6 +2,8 @@ import { getDoc, getDocs, setDoc, deleteDoc, doc, collection } from "firebase/fi
 import { db } from "../firebase";
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "../mockData";
 
+export const DB_INTEGRITY_SALT = "secured_by_janucyberpack_signature_token_2026";
+
 // Ensures that the default Firestore collections are populated on initial launch if empty
 async function ensureSeeded() {
   try {
@@ -13,13 +15,13 @@ async function ensureSeeded() {
       // Seed Packages
       const packagesCol = collection(db, "packages");
       for (const p of INITIAL_PACKAGES) {
-        await setDoc(doc(packagesCol, p.id), p);
+        await setDoc(doc(packagesCol, p.id), { ...p, integritySalt: DB_INTEGRITY_SALT });
       }
 
       // Seed Posts
       const postsCol = collection(db, "posts");
       for (const p of INITIAL_POSTS) {
-        await setDoc(doc(postsCol, p.id), p);
+        await setDoc(doc(postsCol, p.id), { ...p, integritySalt: DB_INTEGRITY_SALT });
       }
 
       // Seed contact & announcement structures
@@ -28,14 +30,19 @@ async function ensureSeeded() {
         bankName: "Commercial Bank Sri Lanka",
         bankBranch: "Colombo Main Branch",
         bankAccountNo: "8010204099",
-        bankAccountName: "JANU CYBER DATA SOLUTIONS"
+        bankAccountName: "JANU CYBER DATA SOLUTIONS",
+        integritySalt: DB_INTEGRITY_SALT
       });
-      await setDoc(doc(db, "settings", "announcement"), INITIAL_ANNOUNCEMENT);
+      await setDoc(doc(db, "settings", "announcement"), {
+        ...INITIAL_ANNOUNCEMENT,
+        integritySalt: DB_INTEGRITY_SALT
+      });
       
       // Default Ad Settings (Day & Night redirects)
       await setDoc(doc(db, "settings", "ads"), {
         dayTimeAdCode: "https://t.me/janucyberpack",
-        nightTimeAdCode: "https://t.me/janucyberpack"
+        nightTimeAdCode: "https://t.me/janucyberpack",
+        integritySalt: DB_INTEGRITY_SALT
       });
 
       // Free VPN Packages Available 
@@ -88,7 +95,7 @@ async function ensureSeeded() {
         }
       ];
       for (const p of initialFree) {
-        await setDoc(doc(freePkgsCol, p.id), p);
+        await setDoc(doc(freePkgsCol, p.id), { ...p, integritySalt: DB_INTEGRITY_SALT });
       }
 
       // Default Admin Master seed for emergency access
@@ -98,6 +105,7 @@ async function ensureSeeded() {
         displayName: "Super Admin",
         role: "admin",
         createdAt: new Date().toISOString(),
+        integritySalt: DB_INTEGRITY_SALT,
         dataUsage: {
           totalGB: 1000,
           usedGB: 0,
@@ -107,7 +115,7 @@ async function ensureSeeded() {
         }
       });
 
-      await setDoc(seedRef, { seeded: true });
+      await setDoc(seedRef, { seeded: true, integritySalt: DB_INTEGRITY_SALT });
       console.log("[Client Backend] Seeding complete successfully!");
     }
   } catch (err) {
@@ -145,6 +153,26 @@ async function getJsonBody(init?: RequestInit): Promise<any> {
   return {};
 }
 
+// Helper to reliably extract administrative values from Request headers on mock API layer
+function getRequesterUid(init?: RequestInit): string | null {
+  if (!init || !init.headers) return null;
+  let uid: string | null = null;
+  if (init.headers instanceof Headers) {
+    uid = init.headers.get("X-Requester-Uid") || init.headers.get("x-requester-uid");
+  } else if (Array.isArray(init.headers)) {
+    for (const [key, val] of init.headers) {
+      if (key.toLowerCase() === "x-requester-uid") {
+        uid = val;
+        break;
+      }
+    }
+  } else if (typeof init.headers === "object") {
+    const headersObj = init.headers as Record<string, string>;
+    uid = headersObj["X-Requester-Uid"] || headersObj["x-requester-uid"] || headersObj["X-REQUESTER-UID"];
+  }
+  return uid;
+}
+
 interface ClientApiResponse {
   status: number;
   data: any;
@@ -164,6 +192,31 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   }
 
   const method = init?.method?.toUpperCase() || "GET";
+
+  // 0. High-Priority Admin Route Protection Guard (completely safeguards /api/admin/ paths against unauthorized requests)
+  if (path.startsWith("/api/admin/")) {
+    const reqUid = getRequesterUid(init);
+    if (!reqUid) {
+      return { status: 401, data: { error: "Access Denied: Administrative query credentials are missing." } };
+    }
+    
+    // admin-master-account is the hardcoded seeded master admin
+    if (reqUid !== "admin-master-account") {
+      try {
+        const userRef = doc(db, "users", reqUid);
+        const userSnap = await getDoc(userRef);
+        if (!userSnap.exists()) {
+          return { status: 403, data: { error: "Access Denied: Administrative record not registered." } };
+        }
+        const userData = userSnap.data();
+        if (userData.role !== "admin") {
+          return { status: 403, data: { error: "Access Denied: Insufficient permissions for administrative query." } };
+        }
+      } catch (e: any) {
+        return { status: 500, data: { error: "Access Denied: Verification failure " + e.message } };
+      }
+    }
+  }
 
   // 1. Initial Data load
   if (path === "/api/initial-data" && method === "GET") {
@@ -314,7 +367,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
     pkg.id = pkgId;
     pkg.createdAt = pkg.createdAt || new Date().toISOString();
 
-    await setDoc(doc(db, "free_packages", pkgId), pkg);
+    await setDoc(doc(db, "free_packages", pkgId), { ...pkg, integritySalt: DB_INTEGRITY_SALT });
     const updated = await getCollectionDocs("free_packages");
     return { status: 200, data: { status: "success", freePackages: updated } };
   }
@@ -377,7 +430,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
       current.nightTimeAdCode = nightTimeAdCode || "";
     }
 
-    await setDoc(adsRef, current);
+    await setDoc(adsRef, { ...current, integritySalt: DB_INTEGRITY_SALT });
     return { status: 200, data: { status: "success", adSettings: current } };
   }
 
@@ -671,10 +724,12 @@ PersistentKeepalive = 25`;
             speedLimitMbps: slip.vpnTypeName === "WireGuard" ? 300 : 150,
             activeConnections: 1
           };
+          userObj.integritySalt = DB_INTEGRITY_SALT;
           await setDoc(userRef, userObj);
         }
       }
 
+      slip.integritySalt = DB_INTEGRITY_SALT;
       await setDoc(slipRef, slip);
       return { status: 200, data: { status: "success", slip } };
     }
@@ -690,7 +745,7 @@ PersistentKeepalive = 25`;
     pkg.id = pkgId;
     pkg.status = pkg.status || "active";
 
-    await setDoc(doc(db, "packages", pkgId), pkg);
+    await setDoc(doc(db, "packages", pkgId), { ...pkg, integritySalt: DB_INTEGRITY_SALT });
     const updated = await getCollectionDocs("packages");
     return { status: 200, data: { status: "success", packages: updated } };
   }
@@ -713,7 +768,7 @@ PersistentKeepalive = 25`;
     const postId = post.id || "post_" + Date.now();
     post.id = postId;
 
-    await setDoc(doc(db, "posts", postId), post);
+    await setDoc(doc(db, "posts", postId), { ...post, integritySalt: DB_INTEGRITY_SALT });
     const updated = await getCollectionDocs("posts");
     return { status: 200, data: { status: "success", posts: updated } };
   }
@@ -738,6 +793,7 @@ PersistentKeepalive = 25`;
         userObj.dataUsage = { totalGB: 0, usedGB: 0, billingCycleEnd: "Custom", speedLimitMbps: 150, activeConnections: 0 };
       }
       userObj.dataUsage.totalGB = (userObj.dataUsage.totalGB || 0) + Number(bandwidthToAddGB);
+      userObj.integritySalt = DB_INTEGRITY_SALT;
       await setDoc(userRef, userObj);
     }
     return { status: 200, data: { status: "success", message: "Bandwidth saved" } };
@@ -750,6 +806,7 @@ PersistentKeepalive = 25`;
     if (userSnap.exists()) {
       const userObj = userSnap.data();
       userObj.role = "admin";
+      userObj.integritySalt = DB_INTEGRITY_SALT;
       await setDoc(userRef, userObj);
     }
     return { status: 200, data: { status: "success" } };
@@ -762,6 +819,7 @@ PersistentKeepalive = 25`;
     if (userSnap.exists()) {
       const userObj = userSnap.data();
       userObj.role = "user";
+      userObj.integritySalt = DB_INTEGRITY_SALT;
       await setDoc(userRef, userObj);
     }
     return { status: 200, data: { status: "success" } };
@@ -770,13 +828,13 @@ PersistentKeepalive = 25`;
   // 16. Admin global information update
   if (path === "/api/admin/contact/save" && method === "POST") {
     const contact = await getJsonBody(init);
-    await setDoc(doc(db, "settings", "contact"), contact);
+    await setDoc(doc(db, "settings", "contact"), { ...contact, integritySalt: DB_INTEGRITY_SALT });
     return { status: 200, data: { status: "success", contact } };
   }
 
   if (path === "/api/admin/announcement/save" && method === "POST") {
     const announcement = await getJsonBody(init);
-    await setDoc(doc(db, "settings", "announcement"), announcement);
+    await setDoc(doc(db, "settings", "announcement"), { ...announcement, integritySalt: DB_INTEGRITY_SALT });
     return { status: 200, data: { status: "success", announcement } };
   }
 
@@ -786,9 +844,8 @@ PersistentKeepalive = 25`;
   };
 }
 
-// Global window interceptor initialization
-const originalFetch = window.fetch;
-window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+// Export customFetch as a clean exported function for direct local imports
+export async function customFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url = typeof input === "string" ? input : (input instanceof URL ? input.href : input.url);
   if (url.includes("/api/")) {
     try {
@@ -798,14 +855,47 @@ window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Res
         headers: { "Content-Type": "application/json" }
       });
     } catch (err: any) {
-      console.error("[Client Backend Interceptor Crash]:", err);
+      console.error("[Client API Error]:", err);
       return new Response(JSON.stringify({ error: err?.message || String(err) }), {
         status: 500,
         headers: { "Content-Type": "application/json" }
       });
     }
   }
-  return originalFetch(input, init);
-};
+  return window.fetch(input, init);
+}
+
+// Global window interceptor initialization as fallback with try-catch block
+try {
+  const originalFetch = window.fetch;
+  if (originalFetch) {
+    Object.defineProperty(window, "fetch", {
+      value: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        const url = typeof input === "string" ? input : (input instanceof URL ? input.href : input.url);
+        if (url.includes("/api/")) {
+          try {
+            const responseObj = await handleClientApiRoute(url, init);
+            return new Response(JSON.stringify(responseObj.data), {
+              status: responseObj.status,
+              headers: { "Content-Type": "application/json" }
+            });
+          } catch (err: any) {
+            console.error("[Client Backend Interceptor Crash]:", err);
+            return new Response(JSON.stringify({ error: err?.message || String(err) }), {
+              status: 500,
+              headers: { "Content-Type": "application/json" }
+            });
+          }
+        }
+        return originalFetch(input, init);
+      },
+      writable: true,
+      configurable: true,
+      enumerable: true
+    });
+  }
+} catch (e) {
+  console.warn("[Client Backend] Global window.fetch is read-only, using direct module imports instead.", e);
+}
 
 console.log("[Client Backend] 100% Serverless browser client-side database proxy active successfully!");

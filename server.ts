@@ -6,6 +6,8 @@ import fs from "fs";
 import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, AdSettings, SupportMessage } from "./src/types";
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "./src/mockData";
 
+const DB_INTEGRITY_SALT = "secured_by_janucyberpack_signature_token_2026";
+
 // Initialize Firebase JS SDK
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { 
@@ -1767,10 +1769,12 @@ PersistentKeepalive = 25`;
             speedLimitMbps: slip.vpnTypeName === "WireGuard" ? 300 : 150,
             activeConnections: 1
           };
+          userObj.integritySalt = DB_INTEGRITY_SALT;
           await setDoc(userRef, userObj);
         }
       }
 
+      slip.integritySalt = DB_INTEGRITY_SALT;
       await setDoc(slipRef, slip);
       res.json({ status: "success", slip });
     } catch (e) {
@@ -1791,7 +1795,7 @@ PersistentKeepalive = 25`;
       pkg.id = pkgId;
       pkg.status = pkg.status || "active";
 
-      await setDoc(doc(getDb(), "packages", pkgId), pkg);
+      await setDoc(doc(getDb(), "packages", pkgId), { ...pkg, integritySalt: DB_INTEGRITY_SALT });
 
       const updated = await getPackages();
       res.json({ status: "success", packages: updated });
@@ -1828,7 +1832,7 @@ PersistentKeepalive = 25`;
       post.date = post.date || new Date().toISOString().substring(0, 10);
       post.author = post.author || "Admin";
 
-      await setDoc(doc(getDb(), "posts", postId), post);
+      await setDoc(doc(getDb(), "posts", postId), { ...post, integritySalt: DB_INTEGRITY_SALT });
 
       const updated = await getPosts();
       res.json({ status: "success", posts: updated });
@@ -1857,7 +1861,7 @@ PersistentKeepalive = 25`;
     try {
       const ref = doc(getDb(), "settings", "contact");
       const current = await getContact();
-      const updated = { ...current, ...req.body };
+      const updated = { ...current, ...req.body, integritySalt: DB_INTEGRITY_SALT };
       await setDoc(ref, updated);
       res.json({ status: "success", contact: updated });
     } catch (e) {
@@ -1870,7 +1874,7 @@ PersistentKeepalive = 25`;
     try {
       const ref = doc(getDb(), "settings", "announcement");
       const current = await getAnnouncement();
-      const updated = { ...current, ...req.body };
+      const updated = { ...current, ...req.body, integritySalt: DB_INTEGRITY_SALT };
       await setDoc(ref, updated);
       res.json({ status: "success", announcement: updated });
     } catch (e) {
@@ -1899,6 +1903,7 @@ PersistentKeepalive = 25`;
             activeConnections: 1
           };
         }
+        userObj.integritySalt = DB_INTEGRITY_SALT;
         await setDoc(userRef, userObj);
         return res.json({ status: "success", user: userObj });
       }
@@ -1923,6 +1928,7 @@ PersistentKeepalive = 25`;
         // Update existing user role
         const userRef = doc(getDb(), "users", targetUser.uid);
         targetUser.role = "admin";
+        targetUser.integritySalt = DB_INTEGRITY_SALT;
         await setDoc(userRef, targetUser);
         const updatedUsersList = await getUsers();
         return res.json({ status: "success", message: `Successfully promoted ${targetEmail} to Administrator`, users: updatedUsersList });
@@ -1935,6 +1941,7 @@ PersistentKeepalive = 25`;
           displayName: targetEmail.split("@")[0],
           role: "admin",
           createdAt: new Date().toISOString(),
+          integritySalt: DB_INTEGRITY_SALT,
           dataUsage: {
             totalGB: 150,
             usedGB: 0,
@@ -1975,6 +1982,7 @@ PersistentKeepalive = 25`;
       }
 
       userObj.role = "user";
+      userObj.integritySalt = DB_INTEGRITY_SALT;
       await setDoc(userRef, userObj);
 
       const updatedUsersList = await getUsers();

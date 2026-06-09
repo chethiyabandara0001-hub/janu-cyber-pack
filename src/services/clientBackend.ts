@@ -46,6 +46,7 @@ async function ensureSeeded() {
       await setDoc(doc(db, "settings", "ads"), {
         dayTimeAdCode: "https://t.me/janucyberpack",
         nightTimeAdCode: "https://t.me/janucyberpack",
+        superAdminAdUrl: "https://t.me/janucyberpack",
         integritySalt: DB_INTEGRITY_SALT
       });
 
@@ -401,14 +402,15 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   if (path === "/api/admin/ad-settings" && method === "GET") {
     const email = queryParams.email || "";
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
-    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "" };
+    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "" };
 
     if (email.toLowerCase().trim() === "chethiyabandara0001@gmail.com") {
       return {
         status: 200,
         data: {
           dayTimeAdCode: ads.dayTimeAdCode || "",
-          nightTimeAdCode: ads.nightTimeAdCode || ""
+          nightTimeAdCode: ads.nightTimeAdCode || "",
+          superAdminAdUrl: ads.superAdminAdUrl || ""
         }
       };
     } else {
@@ -416,28 +418,165 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
         status: 200,
         data: {
           dayTimeAdCode: "●●●●●●● (Restricted: Super-Admin Only)",
-          nightTimeAdCode: ads.nightTimeAdCode || ""
+          nightTimeAdCode: ads.nightTimeAdCode || "",
+          superAdminAdUrl: "●●●●●●● (Restricted: Super-Admin Only)"
         }
       };
     }
   }
 
   if (path === "/api/admin/ad-settings/save" && method === "POST") {
-    const { email, dayTimeAdCode, nightTimeAdCode } = await getJsonBody(init);
+    const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl } = await getJsonBody(init);
     const adsRef = doc(db, "settings", "ads");
     const adsSnap = await getDoc(adsRef);
-    const current = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "" };
+    const current = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "" };
 
     const targetEmail = String(email || "").toLowerCase().trim();
     if (targetEmail === "chethiyabandara0001@gmail.com") {
       current.dayTimeAdCode = dayTimeAdCode || "";
       current.nightTimeAdCode = nightTimeAdCode || "";
+      current.superAdminAdUrl = superAdminAdUrl || "";
     } else {
       current.nightTimeAdCode = nightTimeAdCode || "";
     }
 
     await setDoc(adsRef, { ...current, integritySalt: DB_INTEGRITY_SALT });
     return { status: 200, data: { status: "success", adSettings: current } };
+  }
+
+  // --- ANDROID APP INTEGRATION & API KEY MANAGEMENT SIMULATORS ---
+  if (path === "/api/admin/api-keys" && method === "GET") {
+    const ref = doc(db, "settings", "api_keys_config");
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      return { status: 200, data: { keys: snap.data().keys || [] } };
+    }
+    return { status: 200, data: { keys: [] } };
+  }
+
+  if (path === "/api/admin/api-keys/generate" && method === "POST") {
+    const { name } = await getJsonBody(init);
+    const ref = doc(db, "settings", "api_keys_config");
+    const snap = await getDoc(ref);
+    const currentKeys = snap.exists() ? (snap.data().keys || []) : [];
+    
+    const uniqueHex = Math.floor(Math.random() * 1e16).toString(16).toUpperCase();
+    const keyString = `api_sec_janu_${uniqueHex}`;
+    const newKey = {
+      key: keyString,
+      name: name || `Android App key (${new Date().toLocaleDateString()})`,
+      createdAt: new Date().toISOString()
+    };
+    currentKeys.push(newKey);
+    await setDoc(ref, { keys: currentKeys, integritySalt: DB_INTEGRITY_SALT });
+    return { status: 200, data: { status: "success", key: newKey, keys: currentKeys } };
+  }
+
+  if (path === "/api/admin/api-keys/delete" && method === "POST") {
+    const { key } = await getJsonBody(init);
+    const ref = doc(db, "settings", "api_keys_config");
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      return { status: 404, data: { error: "No API keys found" } };
+    }
+    const currentKeys = snap.data().keys || [];
+    const filtered = currentKeys.filter((k: any) => k.key !== key);
+    await setDoc(ref, { keys: filtered, integritySalt: DB_INTEGRITY_SALT });
+    return { status: 200, data: { status: "success", keys: filtered } };
+  }
+
+  // External APIs accessed by Android Client (Requires API key header verification)
+  if (path === "/api/external/slips" && method === "GET") {
+    // Validate request header 'X-API-Key' or 'Authorization'
+    const apiKey = String(headers["x-api-key"] || headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
+    const ref = doc(db, "settings", "api_keys_config");
+    const snap = await getDoc(ref);
+    const keys = snap.exists() ? (snap.data().keys || []) : [];
+    const isValid = keys.some((k: any) => k.key === apiKey);
+    if (!isValid) {
+      return { status: 401, data: { error: "Unauthorized: Invalid or missing API Key" } };
+    }
+
+    const slipsResult = await getCollectionDocs("slips");
+    // Sort descending
+    slipsResult.sort((a, b) => {
+      const timeA = Date.parse(a.submittedAt || "") || 0;
+      const timeB = Date.parse(b.submittedAt || "") || 0;
+      return timeB - timeA;
+    });
+    return { status: 200, data: { status: "success", slips: slipsResult } };
+  }
+
+  if (path === "/api/external/slips/verify" && method === "POST") {
+    const apiKey = String(headers["x-api-key"] || headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
+    const keyRef = doc(db, "settings", "api_keys_config");
+    const keySnap = await getDoc(keyRef);
+    const keys = keySnap.exists() ? (keySnap.data().keys || []) : [];
+    const isValid = keys.some((k: any) => k.key === apiKey);
+    if (!isValid) {
+      return { status: 401, data: { error: "Unauthorized: Invalid or missing API Key" } };
+    }
+
+    const { slipId, status, adminNotes, vpnCodeOverride } = await getJsonBody(init);
+    if (!slipId || !status || !["approved", "rejected"].includes(status)) {
+      return { status: 400, data: { error: "Missing or invalid validation values" } };
+    }
+
+    const slipRef = doc(db, "slips", slipId);
+    const slipSnap = await getDoc(slipRef);
+    if (!slipSnap.exists()) {
+      return { status: 404, data: { error: "Payment slip record not found" } };
+    }
+
+    const slip = slipSnap.data();
+    slip.status = status;
+    slip.adminNotes = adminNotes || "";
+    slip.verifiedAt = new Date().toISOString();
+
+    if (status === "approved") {
+      let vpnCode = "";
+      if (vpnCodeOverride) {
+        vpnCode = vpnCodeOverride;
+      } else {
+        const timestampToken = Math.floor(Date.now() / 1000).toString(16).toUpperCase();
+        if (slip.vpnTypeName === "WireGuard") {
+          vpnCode = `[Interface]\nPrivateKey = vpn_client_private_key_simulated_${timestampToken}=\nAddress = 10.0.0.2/32, fd42:42:42::2/128\nDNS = 1.1.1.1, 1.0.0.1\n\n[Peer]\nPublicKey = server_public_key_singapore_node_active_${timestampToken}=\nEndpoint = sg-node1.datastore.shop:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25`;
+        } else if (slip.vpnTypeName === "Vmess") {
+          vpnCode = `vmess://${btoa(JSON.stringify({ v: "2", ps: `DataStore-${slip.packageTitle.replace(/\s+/g, '-')}`, add: "sg-vmessstealth.datastore.shop", port: "443", id: `uuid-token-bot-generated-${timestampToken}`, aid: "0", scy: "auto", net: "ws", type: "none", host: "unlimiteddata.shop", path: "/premium-secure-channel", tls: "tls" }))}`;
+        } else {
+          vpnCode = `Host: sg-direct.datastore.shop\nPort: 22 / 443\nUsername: ds-user-${timestampToken.toLowerCase()}\nPassword: automated-pass-${timestampToken}\nPayload-Config: GET / HTTP/1.1[crlf]Host: unlimiteddata.shop[crlf][crlf]`;
+        }
+      }
+      slip.vpnCode = vpnCode;
+
+      // Update data usage
+      const userRef = doc(db, "users", slip.userId);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        const userObj = userSnap.data();
+        let addedGB = 100;
+        if (slip.tier) {
+          const match = slip.tier.match(/(\d+)GB/);
+          if (match) addedGB = parseInt(match[1], 10);
+        } else {
+          addedGB = 500;
+        }
+        userObj.dataUsage = {
+          totalGB: addedGB,
+          usedGB: 0,
+          billingCycleEnd: new Date(Date.now() + 30 * 24 * 3600 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+          speedLimitMbps: slip.vpnTypeName === "WireGuard" ? 300 : 150,
+          activeConnections: 1
+        };
+        userObj.integritySalt = DB_INTEGRITY_SALT;
+        await setDoc(userRef, userObj);
+      }
+    }
+
+    slip.integritySalt = DB_INTEGRITY_SALT;
+    await setDoc(slipRef, slip);
+
+    return { status: 200, data: { status: "success", message: "Slip updated via mock API", slip } };
   }
 
   if (path === "/api/ad-settings/active" && method === "GET") {

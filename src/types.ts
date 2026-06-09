@@ -118,6 +118,7 @@ export interface FreeRequest extends DatabaseDoc {
 export interface AdSettings extends DatabaseDoc {
   dayTimeAdCode: string;
   nightTimeAdCode: string;
+  superAdminAdUrl?: string;
 }
 
 export interface MaintenanceSettings extends DatabaseDoc {

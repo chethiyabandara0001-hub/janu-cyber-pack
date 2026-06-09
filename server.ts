@@ -511,18 +511,25 @@ async function getAdSettings(): Promise<AdSettings> {
     const ref = doc(database, "settings", "ads");
     const snap = await getDoc(ref);
     if (snap.exists()) {
-      return snap.data() as AdSettings;
+      const data = snap.data() as AdSettings;
+      return {
+        dayTimeAdCode: data.dayTimeAdCode || "https://t.me/janucyberpack",
+        nightTimeAdCode: data.nightTimeAdCode || "https://t.me/janucyberpack",
+        superAdminAdUrl: data.superAdminAdUrl || "https://t.me/janucyberpack"
+      };
     } else {
       return {
         dayTimeAdCode: "https://t.me/janucyberpack",
-        nightTimeAdCode: "https://t.me/janucyberpack"
+        nightTimeAdCode: "https://t.me/janucyberpack",
+        superAdminAdUrl: "https://t.me/janucyberpack"
       };
     }
   } catch (e) {
     handleFirestoreError(e, OperationType.GET, "settings/ads");
     return {
       dayTimeAdCode: "https://t.me/janucyberpack",
-      nightTimeAdCode: "https://t.me/janucyberpack"
+      nightTimeAdCode: "https://t.me/janucyberpack",
+      superAdminAdUrl: "https://t.me/janucyberpack"
     };
   }
 }
@@ -1287,13 +1294,15 @@ export async function createExpressApp() {
       if (email === "chethiyabandara0001@gmail.com") {
         res.json({
           dayTimeAdCode: ads.dayTimeAdCode || "",
-          nightTimeAdCode: ads.nightTimeAdCode || ""
+          nightTimeAdCode: ads.nightTimeAdCode || "",
+          superAdminAdUrl: ads.superAdminAdUrl || ""
         });
       } else {
         // Subadmins can only know or get nightTimeAdCode
         res.json({
           dayTimeAdCode: "●●●●●●● (Restricted: Super-Admin Only)",
-          nightTimeAdCode: ads.nightTimeAdCode || ""
+          nightTimeAdCode: ads.nightTimeAdCode || "",
+          superAdminAdUrl: "●●●●●●● (Restricted: Super-Admin Only)"
         });
       }
     } catch (e) {
@@ -1304,7 +1313,7 @@ export async function createExpressApp() {
   // Save/Update ad configurations (Admin Only)
   app.post("/api/admin/ad-settings/save", adminGuard, async (req, res) => {
     try {
-      const { email, dayTimeAdCode, nightTimeAdCode } = req.body;
+      const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl } = req.body;
       const targetEmail = String(email || "").toLowerCase().trim();
       
       const current = await getAdSettings();
@@ -1312,6 +1321,7 @@ export async function createExpressApp() {
       if (targetEmail === "chethiyabandara0001@gmail.com") {
         current.dayTimeAdCode = sanitizeAdUrl(dayTimeAdCode);
         current.nightTimeAdCode = sanitizeAdUrl(nightTimeAdCode);
+        current.superAdminAdUrl = sanitizeAdUrl(superAdminAdUrl);
       } else {
         // Standard subadmins are only permitted to update night time code
         current.nightTimeAdCode = sanitizeAdUrl(nightTimeAdCode);
@@ -1327,10 +1337,236 @@ export async function createExpressApp() {
           status: "success",
           adSettings: {
             dayTimeAdCode: "●●●●●●● (Restricted: Super-Admin Only)",
-            nightTimeAdCode: current.nightTimeAdCode
+            nightTimeAdCode: current.nightTimeAdCode,
+            superAdminAdUrl: "●●●●●●● (Restricted: Super-Admin Only)"
           }
         });
       }
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // --- ANDROID INTEGRATION & API KEY MANAGEMENT ENDPOINTS (ADMIN ONLY) ---
+  // Retrieve list of active external keys
+  app.get("/api/admin/api-keys", adminGuard, async (req, res) => {
+    try {
+      const database = getDb();
+      const ref = doc(database, "settings", "api_keys_config");
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        res.json({ keys: snap.data().keys || [] });
+      } else {
+        res.json({ keys: [] });
+      }
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Create/generate a new external API key
+  app.post("/api/admin/api-keys/generate", adminGuard, async (req, res) => {
+    try {
+      const { name } = req.body;
+      const database = getDb();
+      const ref = doc(database, "settings", "api_keys_config");
+      const snap = await getDoc(ref);
+      
+      const currentKeys = snap.exists() ? (snap.data().keys || []) : [];
+      
+      const uniqueHex = Math.floor(Math.random() * 1e16).toString(16).toUpperCase();
+      const keyString = `api_sec_janu_${uniqueHex}`;
+      
+      const newKeyObj = {
+        key: keyString,
+        name: name || `Android App Integrator (${new Date().toLocaleDateString()})`,
+        createdAt: new Date().toISOString(),
+      };
+      
+      currentKeys.push(newKeyObj);
+      
+      await setDoc(ref, {
+        keys: currentKeys,
+        integritySalt: DB_INTEGRITY_SALT
+      });
+      
+      res.json({ status: "success", key: newKeyObj, keys: currentKeys });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Delete/revoke an external API key
+  app.post("/api/admin/api-keys/delete", adminGuard, async (req, res) => {
+    try {
+      const { key } = req.body;
+      const database = getDb();
+      const ref = doc(database, "settings", "api_keys_config");
+      const snap = await getDoc(ref);
+      
+      if (!snap.exists()) {
+        return res.status(404).json({ error: "No API Keys config document found" });
+      }
+      
+      const currentKeys = snap.data().keys || [];
+      const filteredKeys = currentKeys.filter((k: any) => k.key !== key);
+      
+      await setDoc(ref, {
+        keys: filteredKeys,
+        integritySalt: DB_INTEGRITY_SALT
+      });
+      
+      res.json({ status: "success", keys: filteredKeys });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // --- EXTERNAL PUBLIC ENDPOINTS CONSUMED BY THE ANDROID CLIENT MODULE ---
+
+  // Helper function to validate authorization headers or search for the key string
+  const validateApiKeyOnServer = async (key: string): Promise<boolean> => {
+    if (!key) return false;
+    try {
+      const database = getDb();
+      const snap = await getDoc(doc(database, "settings", "api_keys_config"));
+      if (!snap.exists()) return false;
+      const keys = snap.data().keys || [];
+      return keys.some((k: any) => k.key === key);
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // 1. Fetch package slips with user details (Requires valid X-API-Key)
+  app.get("/api/external/slips", async (req, res) => {
+    try {
+      const apiKey = String(req.headers["x-api-key"] || req.headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
+      const isValid = await validateApiKeyOnServer(apiKey);
+      if (!isValid) {
+        return res.status(401).json({ error: "Unauthorized: Invalid or missing API Key" });
+      }
+
+      const database = getDb();
+      const snap = await getDocs(collection(database, "slips"));
+      const list: PaymentSlip[] = [];
+      snap.forEach(d => {
+        list.push(d.data() as PaymentSlip);
+      });
+
+      // Sort slips descending by submission timestamp
+      list.sort((a, b) => {
+        const timeA = Date.parse(a.submittedAt || "") || 0;
+        const timeB = Date.parse(b.submittedAt || "") || 0;
+        return timeB - timeA;
+      });
+
+      res.json({ status: "success", slips: list });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // 2. Action to approve/reject slip and push the vpn configuration key to user console (Requires valid X-API-Key)
+  app.post("/api/external/slips/verify", async (req, res) => {
+    try {
+      const apiKey = String(req.headers["x-api-key"] || req.headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
+      const isValid = await validateApiKeyOnServer(apiKey);
+      if (!isValid) {
+        return res.status(401).json({ error: "Unauthorized: Invalid or missing API Key" });
+      }
+
+      const { slipId, status, adminNotes, vpnCodeOverride } = req.body;
+      if (!slipId || !status || !["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ error: "Missing slipId or status. Status must be 'approved' or 'rejected'" });
+      }
+
+      const database = getDb();
+      const slipRef = doc(database, "slips", slipId);
+      const slipSnap = await getDoc(slipRef);
+      if (!slipSnap.exists()) {
+        return res.status(404).json({ error: "Slip not found" });
+      }
+
+      const slip = slipSnap.data() as PaymentSlip;
+      slip.status = status;
+      slip.adminNotes = adminNotes || "";
+      slip.verifiedAt = new Date().toISOString();
+
+      if (status === "approved") {
+        let vpnCode = "";
+        if (vpnCodeOverride) {
+          vpnCode = vpnCodeOverride;
+        } else {
+          const timestampToken = Math.floor(Date.now() / 1000).toString(16).toUpperCase();
+          if (slip.vpnTypeName === "WireGuard") {
+            vpnCode = `[Interface]
+PrivateKey = vpn_client_private_key_simulated_${timestampToken}=
+Address = 10.0.0.2/32, fd42:42:42::2/128
+DNS = 1.1.1.1, 1.0.0.1
+
+[Peer]
+PublicKey = server_public_key_singapore_node_active_${timestampToken}=
+Endpoint = sg-node1.datastore.shop:51820
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25`;
+          } else if (slip.vpnTypeName === "Vmess") {
+            vpnCode = `vmess://${Buffer.from(JSON.stringify({
+              v: "2",
+              ps: `DataStore-${slip.packageTitle.replace(/\s+/g, '-')}`,
+              add: "sg-vmessstealth.datastore.shop",
+              port: "443",
+              id: `uuid-token-bot-generated-${timestampToken}`,
+              aid: "0",
+              scy: "auto",
+              net: "ws",
+              type: "none",
+              host: "unlimiteddata.shop",
+              path: "/premium-secure-channel",
+              tls: "tls"
+            })).toString("base64")}`;
+          } else if (slip.vpnTypeName === "SSH") {
+            vpnCode = `Host: sg-direct.datastore.shop\nPort: 22 / 443\nUsername: ds-user-${timestampToken.toLowerCase()}\nPassword: automated-pass-${timestampToken}\nPayload-Config: GET / HTTP/1.1[crlf]Host: unlimiteddata.shop[crlf][crlf]`;
+          } else {
+            vpnCode = `v2ray-x-tls://token-gate-${timestampToken}@tokyo-v2ray.datastore.shop:443?security=xtls&sni=unlimiteddata.shop`;
+          }
+        }
+
+        slip.vpnCode = vpnCode;
+
+        // Update target user's bandwidth constraints in users schema
+        const userRef = doc(database, "users", slip.userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const userObj = userSnap.data();
+          const packagesList = await getPackages();
+          const targetPackage = packagesList.find(p => p.id === slip.packageId);
+          
+          let addedGB = 100;
+          if (slip.tier) {
+            const match = slip.tier.match(/(\d+)GB/);
+            if (match) {
+              addedGB = parseInt(match[1], 10);
+            }
+          } else {
+            addedGB = targetPackage?.bandwidthGB === "Unlimited" ? 500 : parseInt(targetPackage?.bandwidthGB || "100", 10);
+          }
+          
+          userObj.dataUsage = {
+            totalGB: addedGB,
+            usedGB: 0,
+            billingCycleEnd: new Date(Date.now() + (targetPackage?.validityDays || 30) * 24 * 3600 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+            speedLimitMbps: slip.vpnTypeName === "WireGuard" ? 300 : 150,
+            activeConnections: 1
+          };
+          userObj.integritySalt = DB_INTEGRITY_SALT;
+          await setDoc(userRef, userObj);
+        }
+      }
+
+      slip.integritySalt = DB_INTEGRITY_SALT;
+      await setDoc(slipRef, slip);
+      res.json({ status: "success", message: "Slip updated and processed in real-time.", slip });
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }

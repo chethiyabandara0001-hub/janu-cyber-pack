@@ -9,7 +9,7 @@ import {
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
   ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw,
-  Sun, Moon, Loader2, Zap, ArrowRight, Wrench
+  Sun, Moon, Loader2, Zap, ArrowRight, Wrench, Key
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -164,8 +164,15 @@ export default function App() {
   // Administrative Ad Codes configuration states
   const [adminDayTimeAdCode, setAdminDayTimeAdCode] = useState<string>('');
   const [adminNightTimeAdCode, setAdminNightTimeAdCode] = useState<string>('');
+  const [adminSuperAdUrl, setAdminSuperAdUrl] = useState<string>('');
   const [isSavingAdSettings, setIsSavingAdSettings] = useState<boolean>(false);
   const [adSettingsMessage, setAdSettingsMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // External Android API Keys States
+  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [newKeyName, setNewKeyName] = useState<string>('');
+  const [isGeneratingKey, setIsGeneratingKey] = useState<boolean>(false);
+  const [apiKeysMessage, setApiKeysMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // User Ad Redirections Tracking State (0 to 10)
   const [adRedirectionCount, setAdRedirectionCount] = useState<number>(0);
@@ -487,6 +494,7 @@ export default function App() {
         const data = await res.json();
         setAdminDayTimeAdCode(data.dayTimeAdCode || '');
         setAdminNightTimeAdCode(data.nightTimeAdCode || '');
+        setAdminSuperAdUrl(data.superAdminAdUrl || '');
       }
     } catch (e) {
       console.error("Failed to load ad settings", e);
@@ -509,7 +517,8 @@ export default function App() {
         body: JSON.stringify({
           email: user.email,
           dayTimeAdCode: adminDayTimeAdCode,
-          nightTimeAdCode: adminNightTimeAdCode
+          nightTimeAdCode: adminNightTimeAdCode,
+          superAdminAdUrl: adminSuperAdUrl
         })
       });
       const data = await res.json();
@@ -520,11 +529,83 @@ export default function App() {
       if (data.adSettings) {
         setAdminDayTimeAdCode(data.adSettings.dayTimeAdCode || '');
         setAdminNightTimeAdCode(data.adSettings.nightTimeAdCode || '');
+        setAdminSuperAdUrl(data.adSettings.superAdminAdUrl || '');
       }
     } catch (err: any) {
       setAdSettingsMessage({ type: 'error', text: err.message || 'Error saving ad configurations' });
     } finally {
       setIsSavingAdSettings(false);
+    }
+  };
+
+  // Load Android API integrated keys
+  const fetchApiKeys = async () => {
+    if (!user || user.role !== 'admin') return;
+    try {
+      const res = await fetch('/api/admin/api-keys', {
+        headers: {
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setApiKeys(data.keys || []);
+      }
+    } catch (e) {
+      console.error("Failed to load api keys", e);
+    }
+  };
+
+  // Generate new API Key
+  const handleGenerateApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || user.role !== 'admin') return;
+    setIsGeneratingKey(true);
+    setApiKeysMessage(null);
+    try {
+      const res = await fetch('/api/admin/api-keys/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
+        body: JSON.stringify({ name: newKeyName })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to generate API Key');
+      }
+      setApiKeys(data.keys || []);
+      setNewKeyName('');
+      setApiKeysMessage({ type: 'success', text: `Key generated successfully! copied to panel below.` });
+    } catch (err: any) {
+      setApiKeysMessage({ type: 'error', text: err.message || 'Error generating API Key' });
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
+  // Revoke/Delete API Key
+  const handleDeleteApiKey = async (keyToDelete: string) => {
+    if (!user || user.role !== 'admin') return;
+    setApiKeysMessage(null);
+    try {
+      const res = await fetch('/api/admin/api-keys/delete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        },
+        body: JSON.stringify({ key: keyToDelete })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to revoke API Key');
+      }
+      setApiKeys(data.keys || []);
+      setApiKeysMessage({ type: 'success', text: 'API Key revoked successfully.' });
+    } catch (err: any) {
+      setApiKeysMessage({ type: 'error', text: err.message || 'Error revoking API Key' });
     }
   };
 
@@ -812,9 +893,14 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (activeTab === 'admin' && user?.role === 'admin') {
-      fetchAdminStats();
-      fetchAdSettings();
+    if (user?.role === 'admin') {
+      if (activeTab === 'admin') {
+        fetchAdminStats();
+        fetchAdSettings();
+      } else if (activeTab === 'site-settings') {
+        fetchAdSettings();
+        fetchApiKeys();
+      }
     }
   }, [activeTab, user]);
 
@@ -3284,44 +3370,69 @@ export default function App() {
                           )}
 
                           {isSuperAdmin ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                              {/* Day Time Ad Box */}
-                              <div className="bg-slate-950 p-5 rounded-xl border border-slate-850 space-y-3">
-                                <div className="flex items-center justify-between">
-                                  <label className="block text-white font-bold font-mono">☀️ Day Time Ad Portal (06:00 - 18:00):</label>
-                                  <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded font-mono">
-                                    Super-Admin Only
-                                  </span>
+                            <div className="space-y-6">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                {/* Day Time Ad Box */}
+                                <div className="bg-slate-950 p-5 rounded-xl border border-slate-850 space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-white font-bold font-mono">☀️ Day Time Ad Portal (06:00 - 18:00):</label>
+                                    <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded font-mono">
+                                      Super-Admin Only
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={adminDayTimeAdCode}
+                                    onChange={(e) => setAdminDayTimeAdCode(e.target.value)}
+                                    placeholder="e.g. https://best-adsite.com/campaign-day"
+                                    className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                                  />
+                                  <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
+                                    This portal active link will automatically direct client verification pathways from 06:00 AM to 05:59 PM. Anything regarding this is hidden securely in server headers.
+                                  </p>
                                 </div>
-                                <input
-                                  type="text"
-                                  value={adminDayTimeAdCode}
-                                  onChange={(e) => setAdminDayTimeAdCode(e.target.value)}
-                                  placeholder="e.g. https://best-adsite.com/campaign-day"
-                                  className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
-                                />
-                                <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
-                                  This portal active link will automatically direct client verification pathways from 06:00 AM to 05:59 PM. Anything regarding this is hidden securely in server headers.
-                                </p>
+
+                                {/* Night Time Ad Box */}
+                                <div className="bg-slate-950 p-5 rounded-xl border border-slate-855 space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <label className="block text-white font-bold font-mono">🌙 Night Time Ad Portal (18:00 - 06:00):</label>
+                                    <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">
+                                      Sub-Admin Authorized
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={adminNightTimeAdCode}
+                                    onChange={(e) => setAdminNightTimeAdCode(e.target.value)}
+                                    placeholder="e.g. https://best-adsite.com/campaign-night"
+                                    className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                                  />
+                                  <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
+                                    This active link governs client traffic during night hours (06:00 PM to 05:59 AM). Standard subadministrators possess editing rights.
+                                  </p>
+                                </div>
                               </div>
 
-                              {/* Night Time Ad Box */}
-                              <div className="bg-slate-950 p-5 rounded-xl border border-slate-855 space-y-3">
+                              {/* Super-Admin Custom Ad URL/Bypass Code Entrance Area */}
+                              <div className="bg-slate-950 p-5 rounded-xl border border-amber-500/20 space-y-3 max-w-full">
                                 <div className="flex items-center justify-between">
-                                  <label className="block text-white font-bold font-mono">🌙 Night Time Ad Portal (18:00 - 06:00):</label>
-                                  <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">
-                                    Sub-Admin Authorized
+                                  <label className="block text-amber-400 font-extrabold font-mono uppercase tracking-wider flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                                    👑 Super-Admin Exclsive Ad Campaign URL / Bypass Gateway:
+                                  </label>
+                                  <span className="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold uppercase">
+                                    Root Restricted
                                   </span>
                                 </div>
                                 <input
                                   type="text"
-                                  value={adminNightTimeAdCode}
-                                  onChange={(e) => setAdminNightTimeAdCode(e.target.value)}
-                                  placeholder="e.g. https://best-adsite.com/campaign-night"
-                                  className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                                  value={adminSuperAdUrl}
+                                  onChange={(e) => setAdminSuperAdUrl(e.target.value)}
+                                  placeholder="e.g. https://best-adsite.com/special-super-gateway-bypass"
+                                  className="w-full bg-slate-900 border border-amber-500/20 focus:border-amber-500 rounded p-3 text-white outline-none font-mono text-[11px]"
                                 />
-                                <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
-                                  This active link governs client traffic during night hours (06:00 PM to 05:59 AM). Standard subadministrators possess editing rights.
+                                <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                                  This special entrance area configures a secondary priority high-authority gateway. Sub-administrators have absolutely no viewing or editing access to this route.
                                 </p>
                               </div>
                             </div>
@@ -3364,6 +3475,81 @@ export default function App() {
               )}
             </div>
 
+          </div>
+        )}
+
+        {/* EXTERNAL ANDROID APP INTEGRATION - API KEY GENERATOR */}
+        {activeTab === 'site-settings' && user?.role === 'admin' && (
+          <div className="mt-8 bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6">
+            <div className="border-b border-slate-800 pb-3">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+                <Key className="w-4 h-4 text-emerald-400" />
+                🛡️ ANDROID APP INTEGRATION API KEYS
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Configure API keys to securely connect your external Android App to this platform, allowing it to verify slips and provision VPN logic remotely.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <form onSubmit={handleGenerateApiKey} className="flex gap-2">
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="App Identity / Key Label"
+                  className="flex-1 bg-slate-950 border border-slate-800 rounded p-2 text-white outline-none focus:border-emerald-500 font-mono text-[11px]"
+                  title="Optionally provide a label for this key."
+                />
+                <button
+                  type="submit"
+                  disabled={isGeneratingKey}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded transition font-mono uppercase text-[10px] cursor-pointer flex whitespace-nowrap items-center gap-2"
+                >
+                  <Plus className="w-3 h-3" />
+                  {isGeneratingKey ? 'Generating...' : 'Generate New Key'}
+                </button>
+              </form>
+
+              {apiKeysMessage && (
+                <div className={`p-3 rounded-xl border font-mono text-[11px] ${
+                  apiKeysMessage.type === 'success' 
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                    : 'bg-red-500/10 border-red-500/20 text-red-400'
+                }`}>
+                  {apiKeysMessage.text}
+                </div>
+              )}
+
+              <div className="space-y-2 mt-4">
+                {apiKeys.length === 0 ? (
+                  <div className="p-4 text-center border border-slate-800 rounded-xl bg-slate-950/50">
+                    <p className="text-xs text-slate-500 font-mono">No API Keys Generated.</p>
+                  </div>
+                ) : (
+                  apiKeys.map((k: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-slate-950 border border-slate-800 rounded-xl gap-4">
+                      <div className="min-w-0 flex-1 space-y-1 overflow-hidden">
+                        <div className="flex items-center gap-2 py-0.5 whitespace-nowrap overflow-x-auto scrollbar-none">
+                          <code className="text-amber-400 font-bold font-mono text-[11px] bg-amber-500/10 px-2 py-0.5 rounded cursor-copy flex-shrink-0" onClick={() => navigator.clipboard.writeText(k.key)} title="Click to copy API Key">
+                            {k.key}
+                          </code>
+                        </div>
+                        <p className="text-[10px] text-slate-400 uppercase font-bold truncate">{k.name}</p>
+                        <p className="text-[9px] text-slate-500 font-mono">Created: {new Date(k.createdAt).toLocaleString()}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteApiKey(k.key)}
+                        className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition"
+                        title="Revoke / Delete Key"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -23,7 +23,6 @@ interface FreeVpnViewProps {
   setAdRedirectionCount: (val: number) => void;
   isLoadingActiveAd: boolean;
   handleTriggerAdRedirect: () => void;
-  handleResetAdClicks: () => void;
   isClaimingFree: boolean;
   handleClaimFreeVpn: (id: string) => void;
 }
@@ -49,7 +48,6 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
   setAdRedirectionCount,
   isLoadingActiveAd,
   handleTriggerAdRedirect,
-  handleResetAdClicks,
   isClaimingFree,
   handleClaimFreeVpn
 }) => {
@@ -321,7 +319,10 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                       {adRedirectionCount > 0 && (
                         <button
                           type="button"
-                          onClick={handleResetAdClicks}
+                          onClick={() => {
+                            localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, '0');
+                            setAdRedirectionCount(0);
+                          }}
                           className="text-[9px] text-red-400/80 hover:text-red-400 underline cursor-pointer"
                         >
                           Reset verification counter
@@ -442,7 +443,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                   .map((req) => (
                     <tr key={req.id} className="border-b border-slate-850/60 hover:bg-slate-950/20 transition-all">
                       <td className="py-3 text-slate-400 text-[11px]">
-                        {new Date(req.requestedAt).toLocaleString()}
+                        {req.requestedAt ? new Date(req.requestedAt).toLocaleString() : 'N/A'}
                       </td>
                       <td className="py-3">
                         <span className="font-bold text-white">{req.isp}</span>

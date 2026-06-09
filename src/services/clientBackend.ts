@@ -1,13 +1,60 @@
-import { getDoc, getDocs, setDoc, deleteDoc, doc, collection } from "firebase/firestore";
-import { db } from "../firebase";
+import { getDoc, getDocs, setDoc, deleteDoc, doc, collection, query, where } from "firebase/firestore";
+import { db, auth } from "../firebase";
 import { INITIAL_PACKAGES, INITIAL_POSTS, INITIAL_CONTACT, INITIAL_ANNOUNCEMENT } from "../mockData";
+
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export const DB_INTEGRITY_SALT = "secured_by_janucyberpack_signature_token_2026";
 
 // Ensures that the default Firestore collections are populated on initial launch if empty
 async function ensureSeeded() {
+  const seedRef = doc(db, "settings", "seeding_state");
   try {
-    const seedRef = doc(db, "settings", "seeding_state");
     const snap = await getDoc(seedRef);
     if (!snap.exists() || !snap.data()?.seeded) {
       console.log("[Client Backend] Seeding database collections...");
@@ -124,6 +171,9 @@ async function ensureSeeded() {
       console.log("[Client Backend] Seeding complete successfully!");
     }
   } catch (err) {
+    if (String(err).includes("permission")) {
+      handleFirestoreError(err, OperationType.WRITE, "settings/seeding_state");
+    }
     console.error("[Client Backend] Seeding failed, assuming existing database:", err);
   }
 }
@@ -139,6 +189,9 @@ async function getCollectionDocs(colName: string): Promise<any[]> {
     });
     return list;
   } catch (e) {
+    if (String(e).includes("permission")) {
+      handleFirestoreError(e, OperationType.LIST, colName);
+    }
     console.warn(`[Client Backend] Failed parsing collection: ${colName}`, e);
     return [];
   }
@@ -198,20 +251,6 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
 
   const method = init?.method?.toUpperCase() || "GET";
 
-  // Normalize headers into a case-insensitive lookup object for API routes
-  const headers: Record<string, string> = {};
-  if (init && init.headers) {
-    if (init.headers instanceof Headers) {
-      init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
-    } else if (Array.isArray(init.headers)) {
-      init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
-    } else {
-      Object.keys(init.headers).forEach(k => {
-        headers[k.toLowerCase()] = (init.headers as any)[k];
-      });
-    }
-  }
-
   // 0. High-Priority Admin Route Protection Guard (completely safeguards /api/admin/ paths against unauthorized requests)
   if (path.startsWith("/api/admin/")) {
     const reqUid = getRequesterUid(init);
@@ -264,72 +303,31 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
     };
   }
 
-  // 2. User Authentication Registration
-  if (path === "/api/auth/register" && method === "POST") {
-    const { email, password, displayName } = await getJsonBody(init);
-    if (!email) return { status: 400, data: { error: "Email is required" } };
-    if (!password || password.length < 4) {
-      return { status: 400, data: { error: "Password must be at least 4 characters long" } };
-    }
-
-    const users = await getCollectionDocs("users");
-    const existing = users.find(u => u.email?.toLowerCase() === email.toLowerCase().trim());
-    if (existing) {
-      return { status: 400, data: { error: "An account with this email already exists. Please log in instead." } };
-    }
-
-    const isAdminEmail = email.toLowerCase().trim() === "chethiyabandara0001@gmail.com" || email.toLowerCase().trim().includes("admin@");
-    const role = isAdminEmail ? "admin" : "user";
-    const uid = "user_" + Math.random().toString(36).substring(2, 11);
-
-    const newUser = {
-      uid,
-      email: email.trim(),
-      password,
-      displayName: displayName || email.split("@")[0],
-      role,
-      createdAt: new Date().toISOString(),
-      dataUsage: {
-        totalGB: 150,
-        usedGB: 0,
-        billingCycleEnd: "30 Days after package purchase",
-        speedLimitMbps: 200,
-        activeConnections: 0
+    // 2. User Authentication Registration
+    if (path === "/api/auth/register" && method === "POST") {
+      const { email, password, displayName } = await getJsonBody(init);
+      if (!email) return { status: 400, data: { error: "Email is required" } };
+      if (!password || password.length < 4) {
+        return { status: 400, data: { error: "Password must be at least 4 characters long" } };
       }
-    };
 
-    await setDoc(doc(db, "users", uid), newUser);
-    return { status: 200, data: { status: "success", user: newUser } };
-  }
+      try {
+        const usersCol = collection(db, "users");
+        const q = query(usersCol, where("email", "==", email.trim()));
+        const snap = await getDocs(q);
+        
+        if (!snap.empty) {
+          return { status: 400, data: { error: "An account with this email already exists. Please log in instead." } };
+        }
 
-  // 3. User Authentication Login
-  if (path === "/api/auth/sign-in" && method === "POST") {
-    const { email, password, provider, displayName } = await getJsonBody(init);
-    if (!email) return { status: 400, data: { error: "Email is required" } };
-
-    const users = await getCollectionDocs("users");
-    const user = users.find(u => u.email?.toLowerCase() === email.toLowerCase().trim());
-
-    if (provider === "email") {
-      if (!user) {
-        return { status: 400, data: { error: "Account not found. Please register to create an account first." } };
-      }
-      if (user.password && user.password !== password) {
-        return { status: 450, data: { error: "Invalid password. Please enter the correct password." } };
-      }
-      return { status: 200, data: { status: "success", user } };
-    } else {
-      // Social/Google Federated Authentication
-      if (user) {
-        return { status: 200, data: { status: "success", user } };
-      } else {
-        const uid = "user_" + Math.random().toString(36).substring(2, 11);
         const isAdminEmail = email.toLowerCase().trim() === "chethiyabandara0001@gmail.com" || email.toLowerCase().trim().includes("admin@");
         const role = isAdminEmail ? "admin" : "user";
+        const uid = "user_" + Math.random().toString(36).substring(2, 11);
 
         const newUser = {
           uid,
           email: email.trim(),
+          password,
           displayName: displayName || email.split("@")[0],
           role,
           createdAt: new Date().toISOString(),
@@ -344,9 +342,62 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
 
         await setDoc(doc(db, "users", uid), newUser);
         return { status: 200, data: { status: "success", user: newUser } };
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, "users");
       }
     }
-  }
+
+    // 3. User Authentication Login
+    if (path === "/api/auth/sign-in" && method === "POST") {
+      const { email, password, provider, displayName } = await getJsonBody(init);
+      if (!email) return { status: 400, data: { error: "Email is required" } };
+
+      try {
+        const usersCol = collection(db, "users");
+        const q = query(usersCol, where("email", "==", email.toLowerCase().trim()));
+        const snap = await getDocs(q);
+        const user = snap.empty ? null : snap.docs[0].data();
+
+        if (provider === "email") {
+          if (!user) {
+            return { status: 400, data: { error: "Account not found. Please register to create an account first." } };
+          }
+          if (user.password && user.password !== password) {
+            return { status: 450, data: { error: "Invalid password. Please enter the correct password." } };
+          }
+          return { status: 200, data: { status: "success", user } };
+        } else {
+          // Social/Google Federated Authentication
+          if (user) {
+            return { status: 200, data: { status: "success", user } };
+          } else {
+            const uid = "user_" + Math.random().toString(36).substring(2, 11);
+            const isAdminEmail = email.toLowerCase().trim() === "chethiyabandara0001@gmail.com" || email.toLowerCase().trim().includes("admin@");
+            const role = isAdminEmail ? "admin" : "user";
+
+            const newUser = {
+              uid,
+              email: email.trim(),
+              displayName: displayName || email.split("@")[0],
+              role,
+              createdAt: new Date().toISOString(),
+              dataUsage: {
+                totalGB: 150,
+                usedGB: 0,
+                billingCycleEnd: "30 Days after package purchase",
+                speedLimitMbps: 200,
+                activeConnections: 0
+              }
+            };
+
+            await setDoc(doc(db, "users", uid), newUser);
+            return { status: 200, data: { status: "success", user: newUser } };
+          }
+        }
+      } catch (e) {
+        handleFirestoreError(e, OperationType.GET, "users");
+      }
+    }
 
   // 4. Free Request Submission
   if (path === "/api/free-requests/submit" && method === "POST") {
@@ -456,141 +507,6 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
 
     await setDoc(adsRef, { ...current, integritySalt: DB_INTEGRITY_SALT });
     return { status: 200, data: { status: "success", adSettings: current } };
-  }
-
-  // --- ANDROID APP INTEGRATION & API KEY MANAGEMENT SIMULATORS ---
-  if (path === "/api/admin/api-keys" && method === "GET") {
-    const ref = doc(db, "settings", "api_keys_config");
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      return { status: 200, data: { keys: snap.data().keys || [] } };
-    }
-    return { status: 200, data: { keys: [] } };
-  }
-
-  if (path === "/api/admin/api-keys/generate" && method === "POST") {
-    const { name } = await getJsonBody(init);
-    const ref = doc(db, "settings", "api_keys_config");
-    const snap = await getDoc(ref);
-    const currentKeys = snap.exists() ? (snap.data().keys || []) : [];
-    
-    const uniqueHex = Math.floor(Math.random() * 1e16).toString(16).toUpperCase();
-    const keyString = `api_sec_janu_${uniqueHex}`;
-    const newKey = {
-      key: keyString,
-      name: name || `Android App key (${new Date().toLocaleDateString()})`,
-      createdAt: new Date().toISOString()
-    };
-    currentKeys.push(newKey);
-    await setDoc(ref, { keys: currentKeys, integritySalt: DB_INTEGRITY_SALT });
-    return { status: 200, data: { status: "success", key: newKey, keys: currentKeys } };
-  }
-
-  if (path === "/api/admin/api-keys/delete" && method === "POST") {
-    const { key } = await getJsonBody(init);
-    const ref = doc(db, "settings", "api_keys_config");
-    const snap = await getDoc(ref);
-    if (!snap.exists()) {
-      return { status: 404, data: { error: "No API keys found" } };
-    }
-    const currentKeys = snap.data().keys || [];
-    const filtered = currentKeys.filter((k: any) => k.key !== key);
-    await setDoc(ref, { keys: filtered, integritySalt: DB_INTEGRITY_SALT });
-    return { status: 200, data: { status: "success", keys: filtered } };
-  }
-
-  // External APIs accessed by Android Client (Requires API key header verification)
-  if (path === "/api/external/slips" && method === "GET") {
-    // Validate request header 'X-API-Key' or 'Authorization'
-    const apiKey = String(headers["x-api-key"] || headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
-    const ref = doc(db, "settings", "api_keys_config");
-    const snap = await getDoc(ref);
-    const keys = snap.exists() ? (snap.data().keys || []) : [];
-    const isValid = keys.some((k: any) => k.key === apiKey);
-    if (!isValid) {
-      return { status: 401, data: { error: "Unauthorized: Invalid or missing API Key" } };
-    }
-
-    const slipsResult = await getCollectionDocs("slips");
-    // Sort descending
-    slipsResult.sort((a, b) => {
-      const timeA = Date.parse(a.submittedAt || "") || 0;
-      const timeB = Date.parse(b.submittedAt || "") || 0;
-      return timeB - timeA;
-    });
-    return { status: 200, data: { status: "success", slips: slipsResult } };
-  }
-
-  if (path === "/api/external/slips/verify" && method === "POST") {
-    const apiKey = String(headers["x-api-key"] || headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
-    const keyRef = doc(db, "settings", "api_keys_config");
-    const keySnap = await getDoc(keyRef);
-    const keys = keySnap.exists() ? (keySnap.data().keys || []) : [];
-    const isValid = keys.some((k: any) => k.key === apiKey);
-    if (!isValid) {
-      return { status: 401, data: { error: "Unauthorized: Invalid or missing API Key" } };
-    }
-
-    const { slipId, status, adminNotes, vpnCodeOverride } = await getJsonBody(init);
-    if (!slipId || !status || !["approved", "rejected"].includes(status)) {
-      return { status: 400, data: { error: "Missing or invalid validation values" } };
-    }
-
-    const slipRef = doc(db, "slips", slipId);
-    const slipSnap = await getDoc(slipRef);
-    if (!slipSnap.exists()) {
-      return { status: 404, data: { error: "Payment slip record not found" } };
-    }
-
-    const slip = slipSnap.data();
-    slip.status = status;
-    slip.adminNotes = adminNotes || "";
-    slip.verifiedAt = new Date().toISOString();
-
-    if (status === "approved") {
-      let vpnCode = "";
-      if (vpnCodeOverride) {
-        vpnCode = vpnCodeOverride;
-      } else {
-        const timestampToken = Math.floor(Date.now() / 1000).toString(16).toUpperCase();
-        if (slip.vpnTypeName === "WireGuard") {
-          vpnCode = `[Interface]\nPrivateKey = vpn_client_private_key_simulated_${timestampToken}=\nAddress = 10.0.0.2/32, fd42:42:42::2/128\nDNS = 1.1.1.1, 1.0.0.1\n\n[Peer]\nPublicKey = server_public_key_singapore_node_active_${timestampToken}=\nEndpoint = sg-node1.datastore.shop:51820\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25`;
-        } else if (slip.vpnTypeName === "Vmess") {
-          vpnCode = `vmess://${btoa(JSON.stringify({ v: "2", ps: `DataStore-${slip.packageTitle.replace(/\s+/g, '-')}`, add: "sg-vmessstealth.datastore.shop", port: "443", id: `uuid-token-bot-generated-${timestampToken}`, aid: "0", scy: "auto", net: "ws", type: "none", host: "unlimiteddata.shop", path: "/premium-secure-channel", tls: "tls" }))}`;
-        } else {
-          vpnCode = `Host: sg-direct.datastore.shop\nPort: 22 / 443\nUsername: ds-user-${timestampToken.toLowerCase()}\nPassword: automated-pass-${timestampToken}\nPayload-Config: GET / HTTP/1.1[crlf]Host: unlimiteddata.shop[crlf][crlf]`;
-        }
-      }
-      slip.vpnCode = vpnCode;
-
-      // Update data usage
-      const userRef = doc(db, "users", slip.userId);
-      const userSnap = await getDoc(userRef);
-      if (userSnap.exists()) {
-        const userObj = userSnap.data();
-        let addedGB = 100;
-        if (slip.tier) {
-          const match = slip.tier.match(/(\d+)GB/);
-          if (match) addedGB = parseInt(match[1], 10);
-        } else {
-          addedGB = 500;
-        }
-        userObj.dataUsage = {
-          totalGB: addedGB,
-          usedGB: 0,
-          billingCycleEnd: new Date(Date.now() + 30 * 24 * 3600 * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-          speedLimitMbps: slip.vpnTypeName === "WireGuard" ? 300 : 150,
-          activeConnections: 1
-        };
-        userObj.integritySalt = DB_INTEGRITY_SALT;
-        await setDoc(userRef, userObj);
-      }
-    }
-
-    slip.integritySalt = DB_INTEGRITY_SALT;
-    await setDoc(slipRef, slip);
-
-    return { status: 200, data: { status: "success", message: "Slip updated via mock API", slip } };
   }
 
   if (path === "/api/ad-settings/active" && method === "GET") {

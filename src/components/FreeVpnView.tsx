@@ -23,6 +23,7 @@ interface FreeVpnViewProps {
   setAdRedirectionCount: (val: number) => void;
   isLoadingActiveAd: boolean;
   handleTriggerAdRedirect: () => void;
+  handleResetAdClicks: () => void;
   isClaimingFree: boolean;
   handleClaimFreeVpn: (id: string) => void;
 }
@@ -48,6 +49,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
   setAdRedirectionCount,
   isLoadingActiveAd,
   handleTriggerAdRedirect,
+  handleResetAdClicks,
   isClaimingFree,
   handleClaimFreeVpn
 }) => {
@@ -319,10 +321,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                       {adRedirectionCount > 0 && (
                         <button
                           type="button"
-                          onClick={() => {
-                            localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, '0');
-                            setAdRedirectionCount(0);
-                          }}
+                          onClick={handleResetAdClicks}
                           className="text-[9px] text-red-400/80 hover:text-red-400 underline cursor-pointer"
                         >
                           Reset verification counter

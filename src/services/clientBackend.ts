@@ -198,6 +198,20 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
 
   const method = init?.method?.toUpperCase() || "GET";
 
+  // Normalize headers into a case-insensitive lookup object for API routes
+  const headers: Record<string, string> = {};
+  if (init && init.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
+    } else if (Array.isArray(init.headers)) {
+      init.headers.forEach(([k, v]) => { headers[k.toLowerCase()] = v; });
+    } else {
+      Object.keys(init.headers).forEach(k => {
+        headers[k.toLowerCase()] = (init.headers as any)[k];
+      });
+    }
+  }
+
   // 0. High-Priority Admin Route Protection Guard (completely safeguards /api/admin/ paths against unauthorized requests)
   if (path.startsWith("/api/admin/")) {
     const reqUid = getRequesterUid(init);

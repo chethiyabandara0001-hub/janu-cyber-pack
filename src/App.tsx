@@ -623,18 +623,82 @@ export default function App() {
       // Attempt redirecting
       window.open(adUrl, '_blank', 'noopener,noreferrer');
       
-      // Update count
-      const currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
-      const nextCount = Math.min(10, currentCount + 1);
-      
-      localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, String(nextCount));
-      setAdRedirectionCount(nextCount);
+      // Server-side Integration: Update count on backend if user is logged in
+      if (user) {
+        try {
+          const incRes = await fetch('/api/free-requests/increment-click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.uid, packageId: selectedFreePackageId })
+          });
+          if (incRes.ok) {
+            const incData = await incRes.json();
+            setAdRedirectionCount(incData.count);
+          }
+        } catch (err) {
+          console.error("Failed to sync click to server", err);
+          // Fallback to local for better UX if server is slow
+          const currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
+          const nextCount = Math.min(10, currentCount + 1);
+          localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, String(nextCount));
+          setAdRedirectionCount(nextCount);
+        }
+      } else {
+        // Guest mode fallback
+        const currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
+        const nextCount = Math.min(10, currentCount + 1);
+        localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, String(nextCount));
+        setAdRedirectionCount(nextCount);
+      }
     } catch (e: any) {
       setFreeClaimError('Ad network failed: ' + e.message);
     } finally {
       setIsLoadingActiveAd(false);
     }
   };
+
+  // Fetch server-side click count
+  const fetchAdClickCount = async (pkgId: string) => {
+    if (!user || !pkgId) return;
+    try {
+      const res = await fetch(`/api/free-requests/click-count?userId=${user.uid}&packageId=${pkgId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAdRedirectionCount(data.count || 0);
+      }
+    } catch (e) {
+      // Fallback to local
+      const local = Number(localStorage.getItem('free_vpn_clicks_' + pkgId) || '0');
+      setAdRedirectionCount(local);
+    }
+  };
+
+  const handleResetAdClicks = async () => {
+    if (!selectedFreePackageId) return;
+    setAdRedirectionCount(0);
+    localStorage.removeItem('free_vpn_clicks_' + selectedFreePackageId);
+    
+    if (user) {
+      try {
+        await fetch('/api/free-requests/reset-clicks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid, packageId: selectedFreePackageId })
+        });
+      } catch (e) {
+        console.error("Failed to reset server clicks", e);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (selectedFreePackageId && user) {
+      fetchAdClickCount(selectedFreePackageId);
+    } else if (selectedFreePackageId && !user) {
+      const local = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
+      setAdRedirectionCount(local);
+    }
+  }, [selectedFreePackageId, user]);
 
   // Support Chat functions for user and admin private communications
   const fetchSupportMessages = async (targetUserId?: string) => {
@@ -1961,6 +2025,7 @@ export default function App() {
             setAdRedirectionCount={setAdRedirectionCount}
             isLoadingActiveAd={isLoadingActiveAd}
             handleTriggerAdRedirect={handleTriggerAdRedirect}
+            handleResetAdClicks={handleResetAdClicks}
             isClaimingFree={isClaimingFree}
             handleClaimFreeVpn={handleClaimFreeVpn}
           />

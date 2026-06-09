@@ -1182,11 +1182,90 @@ export async function createExpressApp() {
   });
 
   // Free VPN request submission route
+  // --- AD CLICK TRACKING & FREE REQUEST VERIFICATION ---
+
+  // Get current click count for a user and package
+  app.get("/api/free-requests/click-count", async (req, res) => {
+    try {
+      const { userId, packageId } = req.query;
+      if (!userId || !packageId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      const database = getDb();
+      const clickDoc = await getDoc(doc(database, "free_stats", `${userId}_${packageId}`));
+      const count = clickDoc.exists() ? (clickDoc.data().count || 0) : 0;
+
+      res.json({ count });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Increment click count for a user and package
+  app.post("/api/free-requests/increment-click", async (req, res) => {
+    try {
+      const { userId, packageId } = req.body;
+      if (!userId || !packageId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      const database = getDb();
+      const docRef = doc(database, "free_stats", `${userId}_${packageId}`);
+      const clickDoc = await getDoc(docRef);
+      
+      let count = 1;
+      if (clickDoc.exists()) {
+        count = (clickDoc.data().count || 0) + 1;
+      }
+
+      await setDoc(docRef, {
+        userId,
+        packageId,
+        count: Math.min(10, count),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      res.json({ status: "success", count: Math.min(10, count) });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Reset click count for a user and package
+  app.post("/api/free-requests/reset-clicks", async (req, res) => {
+    try {
+      const { userId, packageId } = req.body;
+      if (!userId || !packageId) {
+        return res.status(400).json({ error: "Missing parameters" });
+      }
+
+      const database = getDb();
+      await deleteDoc(doc(database, "free_stats", `${userId}_${packageId}`));
+
+      res.json({ status: "success" });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
   app.post("/api/free-requests/submit", async (req, res) => {
     try {
       const { userId, userEmail, userName, freePackageId } = req.body;
       if (!userId || !freePackageId) {
         return res.status(400).json({ error: "Missing required selection details" });
+      }
+
+      // INTEGRATION: Verify ad click count on server side
+      const database = getDb();
+      const clickDoc = await getDoc(doc(database, "free_stats", `${userId}_${freePackageId}`));
+      const count = clickDoc.exists() ? (clickDoc.data().count || 0) : 0;
+      
+      if (count < 10) {
+        return res.status(403).json({ 
+          error: "Incomplete Verification", 
+          details: `You have only completed ${count}/10 ad redirections. Please finish the process to unlock your code.` 
+        });
       }
 
       const list = await getFreePackages();

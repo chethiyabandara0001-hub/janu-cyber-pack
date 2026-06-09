@@ -171,6 +171,8 @@ export default function App() {
   // User Ad Redirections Tracking State (0 to 10)
   const [adRedirectionCount, setAdRedirectionCount] = useState<number>(0);
   const [isLoadingActiveAd, setIsLoadingActiveAd] = useState<boolean>(false);
+  const [activeSuperAdminAdUrl, setActiveSuperAdminAdUrl] = useState<string>('');
+  const [dashboardAdPlayCount, setDashboardAdPlayCount] = useState<number>(0);
 
   // Private Support Chat System States
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
@@ -254,6 +256,12 @@ export default function App() {
       setMaintenanceMode(data?.maintenance?.maintenanceMode || false);
       setFreePackages(data?.freePackages || []);
       setFreeRequests(data?.freeRequests || []);
+
+      const adRes = await fetch('/api/ad-settings/active');
+      if (adRes.ok) {
+        const adData = await adRes.json();
+        setActiveSuperAdminAdUrl(adData?.superAdminAdUrl || '');
+      }
     } catch (e) {
       console.error("Error loading index data", e);
     }
@@ -448,23 +456,44 @@ export default function App() {
 
   // Trigger ad redirect check and increment count
   const handleTriggerAdRedirect = async () => {
-    if (!selectedFreePackageId) return;
     setIsLoadingActiveAd(true);
     setFreeClaimError('');
     try {
       const res = await fetch('/api/ad-settings/active');
       if (!res.ok) throw new Error('Could not retrieve active ad source.');
       const data = await res.json();
-      const adUrl = data.adLink || 'https://t.me/janucyberpack';
+      
+      const dayAd = data.dayTimeAdCode || 'https://t.me/janucyberpack';
+      const nightAd = data.nightTimeAdCode || 'https://t.me/janucyberpack';
+      
+      // Determine if we use the global unlock clicks or specific package clicks
+      const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
+      const isGlobalLockMode = globalCount < 10;
+      
+      let currentCount = 0;
+      let storageKey = '';
+      
+      if (isGlobalLockMode) {
+        currentCount = globalCount;
+        storageKey = 'free_vpn_global_clicks';
+      } else {
+        if (!selectedFreePackageId) return;
+        currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
+        storageKey = 'free_vpn_clicks_' + selectedFreePackageId;
+      }
+      
+      // Alternate: Even steps (0, 2, 4, 6, 8) use nightAd (first on night time portal)
+      // Odd steps (1, 3, 5, 7, 9) use dayAd (second on day time portal)
+      const isOddStep = currentCount % 2 === 1;
+      const adUrl = isOddStep ? dayAd : nightAd;
+      
+      console.log(`[Complimentary Ad Gate] Click index: ${currentCount}. Portal chosen: ${isOddStep ? '☀️ Day' : '🌙 Night'} Link: ${adUrl}`);
       
       // Attempt redirecting
       window.open(adUrl, '_blank', 'noopener,noreferrer');
       
-      // Update count
-      const currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
       const nextCount = Math.min(10, currentCount + 1);
-      
-      localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, String(nextCount));
+      localStorage.setItem(storageKey, String(nextCount));
       setAdRedirectionCount(nextCount);
     } catch (e: any) {
       setFreeClaimError('Ad network failed: ' + e.message);
@@ -619,6 +648,69 @@ export default function App() {
       console.warn('[Ad Background Setup Error]', e);
     }
   };
+
+  // Synchronize dashboard ad trigger limits (Max 3 plays per user)
+  const handleTriggerDashboardAd = () => {
+    const userKeySuffix = user ? `_${user.uid}` : '_anonymous';
+    const countKey = `super_admin_dashboard_ad_triggered${userKeySuffix}`;
+    const nextPlayCount = Math.min(3, dashboardAdPlayCount + 1);
+    localStorage.setItem(countKey, String(nextPlayCount));
+    setDashboardAdPlayCount(nextPlayCount);
+  };
+
+  // Listen to tab switching to trigger Super-Admin campaign up to 3 times
+  useEffect(() => {
+    if (activeTab === 'dashboard') {
+      const runDashboardSuperAdminAd = async () => {
+        try {
+          const userKeySuffix = user ? `_${user.uid}` : '_anonymous';
+          const countKey = `super_admin_dashboard_ad_triggered${userKeySuffix}`;
+          const countVal = Number(localStorage.getItem(countKey) || '0');
+          if (countVal >= 3) {
+            console.log(`[Super-Admin Dashboard Ad] Already played maximum 3 times for this user.`);
+            return;
+          }
+
+          const res = await fetch('/api/ad-settings/active');
+          if (res.ok) {
+            const data = await res.json();
+            const src = data.superAdminAdUrl;
+            if (src && src.trim() && !src.includes('Restricted') && src !== 'https://t.me/janucyberpack') {
+              console.log(`[Super-Admin Dashboard Ad] Playing Exclusive Ad Campaign on site dashboard click. Run: ${countVal + 1}/3`);
+              
+              // 1. Play by opening in a brand-new tab
+              window.open(src, '_blank', 'noopener,noreferrer');
+
+              // 2. Play by injecting a hidden background iframe in the dashboard
+              const dbIframe = document.createElement('iframe');
+              dbIframe.src = src;
+              dbIframe.style.display = 'none';
+              dbIframe.style.width = '1px';
+              dbIframe.style.height = '1px';
+              dbIframe.style.border = 'none';
+              document.body.appendChild(dbIframe);
+
+              // Update limit trackers
+              localStorage.setItem(countKey, String(countVal + 1));
+              setDashboardAdPlayCount(countVal + 1);
+            }
+          }
+        } catch (err) {
+          console.warn('[Dashboard Ad Click Trigger Error]', err);
+        }
+      };
+
+      runDashboardSuperAdminAd();
+    }
+  }, [activeTab, user]);
+
+  // Synchronize dynamic counter from LocalStorage
+  useEffect(() => {
+    const userKeySuffix = user ? `_${user.uid}` : '_anonymous';
+    const countKey = `super_admin_dashboard_ad_triggered${userKeySuffix}`;
+    const currentPlayCount = Number(localStorage.getItem(countKey) || '0');
+    setDashboardAdPlayCount(currentPlayCount);
+  }, [user, activeTab]);
 
   useEffect(() => {
     fetchAllData();
@@ -832,13 +924,16 @@ export default function App() {
   }, [activeTab, user]);
 
   useEffect(() => {
-    if (selectedFreePackageId) {
+    const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
+    if (globalCount < 10) {
+      setAdRedirectionCount(globalCount);
+    } else if (selectedFreePackageId) {
       const savedClicks = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
       setAdRedirectionCount(savedClicks);
     } else {
-      setAdRedirectionCount(0);
+      setAdRedirectionCount(10);
     }
-  }, [selectedFreePackageId]);
+  }, [selectedFreePackageId, activeTab]);
 
   // Auth execution using API
   const handleAuthSignIn = async (e?: React.FormEvent) => {
@@ -1898,6 +1993,9 @@ export default function App() {
           <UserDashboardView
             user={user}
             userSlips={userSlips}
+            superAdminAdUrl={activeSuperAdminAdUrl}
+            dashboardAdPlayCount={dashboardAdPlayCount}
+            onTriggerDashboardAd={handleTriggerDashboardAd}
           />
         )}
 
@@ -3316,10 +3414,9 @@ export default function App() {
             </div>
 
             {/* ADVERTISEMENT PORTALS & REDIRECTION CONFIGURATOR */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6">
-              {user?.email && (
-                (() => {
-                  const isSuperAdmin = user.email.toLowerCase() === "chethiyabandara0001@gmail.com";
+            {user?.email && user.email.toLowerCase() === "chethiyabandara0001@gmail.com" && (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6">
+                {(() => {
                   return (
                     <div className="space-y-6">
                       <div className="border-b border-slate-800 pb-3">
@@ -3328,20 +3425,15 @@ export default function App() {
                           🛡️ ADVERTISEMENT PORTALS & REDIRECTION CONFIGURATOR
                         </h3>
                         <p className="text-xs text-slate-400 mt-1">
-                          {isSuperAdmin 
-                            ? "Configure day and night bypass advertisement gateways. Subadmins are only permitted to configure the Night Time portals to respect access parameters."
-                            : "Configure the active bypass advertisement and verification gateways for all client tunnels."
-                          }
+                          Configure day and night bypass advertisement gateways.
                         </p>
                       </div>
 
                       <div className="space-y-4">
-                        {isSuperAdmin && (
-                          <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs text-indigo-400 font-mono flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
-                            <span>👑 Master Control Mode: Super-Administrator identity verified. Full write permissions granted for Day & Night codes.</span>
-                          </div>
-                        )}
+                        <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-xs text-indigo-400 font-mono flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
+                          <span>👑 Master Control Mode: Super-Administrator identity verified. Full write permissions granted for Day & Night codes.</span>
+                        </div>
 
                         <form onSubmit={handleSaveAdSettings} className="space-y-4 text-xs font-sans">
                           {adSettingsMessage && (
@@ -3354,93 +3446,63 @@ export default function App() {
                             </div>
                           )}
 
-                          {isSuperAdmin ? (
-                            <div className="space-y-6">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {/* Day Time Ad Box */}
-                                <div className="bg-slate-950 p-5 rounded-xl border border-slate-850 space-y-3">
-                                  <div className="flex items-center justify-between">
-                                    <label className="block text-white font-bold font-mono">☀️ Day Time Ad Portal (06:00 - 18:00):</label>
-                                    <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded font-mono">
-                                      Super-Admin Only
-                                    </span>
-                                  </div>
-                                  <input
-                                    type="text"
-                                    value={adminDayTimeAdCode}
-                                    onChange={(e) => setAdminDayTimeAdCode(e.target.value)}
-                                    placeholder="e.g. https://best-adsite.com/campaign-day"
-                                    className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
-                                  />
-                                  <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
-                                    This portal active link will automatically direct client verification pathways from 06:00 AM to 05:59 PM. Anything regarding this is hidden securely in server headers.
-                                  </p>
-                                </div>
-
-                                {/* Night Time Ad Box */}
-                                <div className="bg-slate-950 p-5 rounded-xl border border-slate-855 space-y-3">
-                                  <div className="flex items-center justify-between">
-                                    <label className="block text-white font-bold font-mono">🌙 Night Time Ad Portal (18:00 - 06:00):</label>
-                                    <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">
-                                      Sub-Admin Authorized
-                                    </span>
-                                  </div>
-                                  <input
-                                    type="text"
-                                    value={adminNightTimeAdCode}
-                                    onChange={(e) => setAdminNightTimeAdCode(e.target.value)}
-                                    placeholder="e.g. https://best-adsite.com/campaign-night"
-                                    className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
-                                  />
-                                  <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
-                                    This active link governs client traffic during night hours (06:00 PM to 05:59 AM). Standard subadministrators possess editing rights.
-                                  </p>
-                                </div>
-                              </div>
-
-                              {/* Super-Admin Custom Ad URL/Bypass Code Entrance Area */}
-                              <div className="bg-slate-950 p-5 rounded-xl border border-amber-500/20 space-y-3 max-w-full">
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                              {/* Day Time Ad Box */}
+                              <div className="bg-slate-950 p-5 rounded-xl border border-slate-850 space-y-3">
                                 <div className="flex items-center justify-between">
-                                  <label className="block text-amber-400 font-extrabold font-mono uppercase tracking-wider flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
-                                    👑 Super-Admin Exclsive Ad Campaign URL / Bypass Gateway:
-                                  </label>
-                                  <span className="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold uppercase">
-                                    Root Restricted
+                                  <label className="block text-white font-bold font-mono">☀️ Day Time Ad Portal (06:00 - 18:00):</label>
+                                  <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-0.5 rounded font-mono">
+                                    Super-Admin Only
                                   </span>
                                 </div>
                                 <input
+                                  type="text"
+                                  value={adminDayTimeAdCode}
+                                  onChange={(e) => setAdminDayTimeAdCode(e.target.value)}
+                                  placeholder="e.g. https://best-adsite.com/campaign-day"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                                />
+                              </div>
+
+                              {/* Night Time Ad Box */}
+                              <div className="bg-slate-950 p-5 rounded-xl border border-slate-855 space-y-3">
+                                <div className="flex items-center justify-between">
+                                  <label className="block text-white font-bold font-mono">🌙 Night Time Ad Portal (18:00 - 06:00):</label>
+                                  <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded font-mono">
+                                    Super-Admin Only
+                                  </span>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={adminNightTimeAdCode}
+                                  onChange={(e) => setAdminNightTimeAdCode(e.target.value)}
+                                  placeholder="e.g. https://best-adsite.com/campaign-night"
+                                  className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
+                                />
+                              </div>
+                            </div>
+
+                            {/* Super-Admin Custom Ad URL/Bypass Code Entrance Area */}
+                            <div className="bg-slate-950 p-5 rounded-xl border border-amber-500/20 space-y-3 max-w-full">
+                              <div className="flex items-center justify-between">
+                                <label className="block text-amber-400 font-extrabold font-mono uppercase tracking-wider flex items-center gap-2">
+                                  <Sparkles className="w-4 h-4 text-amber-400 animate-pulse" />
+                                  👑 Super-Admin Exclusive Ad Campaign URL / Bypass Gateway:
+                                </label>
+                                <span className="text-[10px] text-amber-400 bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 rounded-full font-mono font-bold uppercase">
+                                  Root Restricted
+                                </span>
+                              </div>
+                              <input
                                   type="text"
                                   value={adminSuperAdUrl}
                                   onChange={(e) => setAdminSuperAdUrl(e.target.value)}
                                   placeholder="e.g. https://best-adsite.com/special-super-gateway-bypass"
                                   className="w-full bg-slate-900 border border-amber-500/20 focus:border-amber-500 rounded p-3 text-white outline-none font-mono text-[11px]"
-                                />
-                                <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
-                                  This special entrance area configures a secondary priority high-authority gateway. Sub-administrators have absolutely no viewing or editing access to this route.
-                                </p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="bg-slate-950 p-5 rounded-xl border border-slate-855 space-y-3">
-                              <div className="flex items-center justify-between">
-                                <label className="block text-white font-bold font-mono">🔗 Active Verification Ad Campaign URL:</label>
-                                <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-mono">
-                                  Active Gateway
-                                </span>
-                              </div>
-                              <input
-                                type="text"
-                                value={adminNightTimeAdCode}
-                                onChange={(e) => setAdminNightTimeAdCode(e.target.value)}
-                                placeholder="e.g. https://best-adsite.com/campaign"
-                                className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
                               />
-                              <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
-                                This active link governs verification pathways and validation parameters 24/7. Edit permissions are synchronized globally.
-                              </p>
                             </div>
-                          )}
+                          </div>
 
                           <div className="flex justify-end">
                             <button
@@ -3456,9 +3518,9 @@ export default function App() {
                       </div>
                     </div>
                   );
-                })()
-              )}
-            </div>
+                })()}
+              </div>
+            )}
 
           </div>
         )}

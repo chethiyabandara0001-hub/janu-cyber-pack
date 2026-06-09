@@ -525,6 +525,8 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
         adType: isDay ? "day" : "night",
         adLink: activeLink,
         isDay,
+        dayTimeAdCode: ads.dayTimeAdCode || "",
+        nightTimeAdCode: ads.nightTimeAdCode || "",
         superAdminAdUrl: ads.superAdminAdUrl || ""
       }
     };

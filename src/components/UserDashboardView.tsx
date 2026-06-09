@@ -5,18 +5,67 @@ import { Inbox, CheckCircle, ExternalLink } from 'lucide-react';
 interface UserDashboardViewProps {
   user: User;
   userSlips: PaymentSlip[];
+  superAdminAdUrl?: string;
+  dashboardAdPlayCount: number;
+  onTriggerDashboardAd: () => void;
 }
 
 export const UserDashboardView: React.FC<UserDashboardViewProps> = ({
   user,
-  userSlips
+  userSlips,
+  superAdminAdUrl,
+  dashboardAdPlayCount,
+  onTriggerDashboardAd
 }) => {
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in text-slate-200">
       <div className="border-b border-slate-800 pb-4">
         <h2 className="text-2xl font-bold tracking-tight text-white mb-1 font-display">User Subscriptions & Usage Tracker</h2>
         <p className="text-xs text-slate-400">Review your activated VPN config profiles, live simulation statistics, and slip status</p>
       </div>
+
+      {/* Super-Admin Campaign Gateway Banner */}
+      {superAdminAdUrl && superAdminAdUrl.trim() && !superAdminAdUrl.includes('Restricted') && superAdminAdUrl !== 'https://t.me/janucyberpack' && (
+        <div className="bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 border border-indigo-500/30 rounded-2xl p-6 relative overflow-hidden shadow-xl shadow-indigo-950/20">
+          <div className="absolute top-0 right-0 -translate-y-6 translate-x-6 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-1.5 animate-pulse-subtle">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider">
+                👑 Super-Admin Special Campaign Ad
+              </span>
+              <h3 className="text-base font-bold text-white tracking-tight">VIP Bypass Gateway Live Partner Portal</h3>
+              <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
+                Unlock high-priority global bandwidth routing systems. Play or redirect to this certified network gateway to sync optimization logs directly to Sri Lankan telecom servers.
+              </p>
+            </div>
+            
+            <div className="shrink-0 flex flex-col items-end gap-2 text-right">
+              <div className="text-[10px] text-slate-500 font-mono">
+                Session Limit: <strong className="text-indigo-400">{dashboardAdPlayCount} / 3 Maximum Plays</strong>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (dashboardAdPlayCount >= 3) {
+                    alert("Exclusive campaign limit reached. Max 3 plays allowed per user to prevent traffic logging congestion.");
+                    return;
+                  }
+                  window.open(superAdminAdUrl, '_blank', 'noopener,noreferrer');
+                  onTriggerDashboardAd();
+                }}
+                className={`px-5 py-2.5 rounded-xl font-bold text-xs uppercase flex items-center gap-2 transition cursor-pointer ${
+                  dashboardAdPlayCount >= 3
+                    ? 'bg-slate-800 text-slate-500 border border-slate-750/30 cursor-not-allowed'
+                    : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-950/40 hover:scale-[1.02]'
+                }`}
+              >
+                <ExternalLink className="w-3.5 h-3.5 font-bold" />
+                {dashboardAdPlayCount >= 3 ? 'Completed' : 'Play / Direct URL'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Simulated Live VPN Telemetry Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

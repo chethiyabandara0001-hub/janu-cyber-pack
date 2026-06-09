@@ -25,6 +25,7 @@ import { FreeVpnView } from './components/FreeVpnView';
 import { PrivacyView } from './components/PrivacyView';
 import { TermsView } from './components/TermsView';
 import { SitemapsView } from './components/SitemapsView';
+import { FeatureLockView } from './components/FeatureLockView';
 // import { customFetch as fetch } from './services/clientBackend';
 
 const getTierPriceDisplay = (tierInput: string): string => {
@@ -140,6 +141,7 @@ export default function App() {
 
   // Backup file state variables
   const [isBackingUp, setIsBackingUp] = useState<boolean>(false);
+  const [isRestoring, setIsRestoring] = useState<boolean>(false);
   const [backupMessage, setBackupMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   // Free VPN Client selection states
@@ -173,6 +175,7 @@ export default function App() {
   const [isLoadingActiveAd, setIsLoadingActiveAd] = useState<boolean>(false);
   const [activeSuperAdminAdUrl, setActiveSuperAdminAdUrl] = useState<string>('');
   const [dashboardAdPlayCount, setDashboardAdPlayCount] = useState<number>(0);
+  const [adCooldownRemaining, setAdCooldownRemaining] = useState<number>(0);
 
   // Private Support Chat System States
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
@@ -459,6 +462,19 @@ export default function App() {
     setIsLoadingActiveAd(true);
     setFreeClaimError('');
     try {
+      // 2-minute cooldown check (not active if user is administrator)
+      const lastClick = Number(localStorage.getItem('free_vpn_last_click_time') || '0');
+      const timeRemainingMs = 120000 - (Date.now() - lastClick);
+      if (timeRemainingMs > 0 && (!user || user.role !== 'admin')) {
+        const remainingSec = Math.ceil(timeRemainingMs / 1000);
+        const formatTime = (sec: number) => {
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          return `${m}:${s < 10 ? '0' : ''}${s}`;
+        };
+        throw new Error(`Traffic congestion protection is active. Please wait ${formatTime(remainingSec)} before verifying your next stage.`);
+      }
+
       const res = await fetch('/api/ad-settings/active');
       if (!res.ok) throw new Error('Could not retrieve active ad source.');
       const data = await res.json();
@@ -494,9 +510,10 @@ export default function App() {
       
       const nextCount = Math.min(10, currentCount + 1);
       localStorage.setItem(storageKey, String(nextCount));
+      localStorage.setItem('free_vpn_last_click_time', String(Date.now()));
       setAdRedirectionCount(nextCount);
     } catch (e: any) {
-      setFreeClaimError('Ad network failed: ' + e.message);
+      setFreeClaimError(e.message || 'Ad network redirection failed.');
     } finally {
       setIsLoadingActiveAd(false);
     }
@@ -934,6 +951,22 @@ export default function App() {
       setAdRedirectionCount(10);
     }
   }, [selectedFreePackageId, activeTab]);
+
+  useEffect(() => {
+    const checkCooldown = () => {
+      const lastClick = Number(localStorage.getItem('free_vpn_last_click_time') || '0');
+      const elapsed = Date.now() - lastClick;
+      if (elapsed < 120000 && (!user || user.role !== 'admin')) {
+        setAdCooldownRemaining(Math.ceil((120000 - elapsed) / 1000));
+      } else {
+        setAdCooldownRemaining(0);
+      }
+    };
+
+    checkCooldown();
+    const timer = setInterval(checkCooldown, 1000);
+    return () => clearInterval(timer);
+  }, [user]);
 
   // Auth execution using API
   const handleAuthSignIn = async (e?: React.FormEvent) => {
@@ -1666,6 +1699,46 @@ export default function App() {
     }
   };
 
+  // Admin trigger complete database restore from the server's local data-backup.json file
+  const handleRestoreBackupFromFile = async () => {
+    if (!window.confirm("⚠️ ARE YOU ABSOLUTELY SURE? This will clear the entire database first and restore values from 'src/data-backup.json'. This cannot be undone!")) {
+      return;
+    }
+    setIsRestoring(true);
+    setBackupMessage(null);
+    try {
+      const res = await fetch('/api/admin/backup/restore', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user?.uid || ''
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        setBackupMessage({
+          type: 'success',
+          text: `🎉 Recovery Success! Database successfully restored from 'src/data-backup.json'. Details: Packages: ${data.details.packages}, FreePackages: ${data.details.freePackages}, Users: ${data.details.users}, Slips: ${data.details.slips}`
+        });
+        // Reload all data so that the frontend catches the restored DB items instantly
+        fetchAllData();
+      } else {
+        setBackupMessage({
+          type: 'error',
+          text: data.error || 'Failed to restore database from backup.'
+        });
+      }
+    } catch (e: any) {
+      setBackupMessage({
+        type: 'error',
+        text: 'Connection or restore error: ' + (e?.message || String(e))
+      });
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const isStandardBlocked = adRedirectionCount < 10 && (!user || user.role !== 'admin');
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 font-sans flex flex-col md:flex-row selection:bg-indigo-500 selection:text-white">
@@ -1951,52 +2024,91 @@ export default function App() {
 
         {/* TAB 2: VPN SUBSCRIPTIONS & PACKAGE CARDS */}
         {activeTab === 'packages' && (
-          <PackagesView
-            packages={packages}
-            user={user}
-            setShowLoginModal={setShowLoginModal}
-            setSelectedPackForSlip={setSelectedPackForSlip}
-            handleInitiateLogin={handleInitiateLogin}
-          />
+          isStandardBlocked ? (
+            <FeatureLockView
+              adRedirectionCount={adRedirectionCount}
+              setAdRedirectionCount={setAdRedirectionCount}
+              isLoadingActiveAd={isLoadingActiveAd}
+              handleTriggerAdRedirect={handleTriggerAdRedirect}
+              adCooldownRemaining={adCooldownRemaining}
+              user={user}
+              customHeading="🔒 VPN Packages Catalog is Locked"
+              customDescription="All 10 ad verification stages must be completed to unlock and view the premium VPN package configurations list in this region."
+            />
+          ) : (
+            <PackagesView
+              packages={packages}
+              user={user}
+              setShowLoginModal={setShowLoginModal}
+              setSelectedPackForSlip={setSelectedPackForSlip}
+              handleInitiateLogin={handleInitiateLogin}
+            />
+          )
         )}
 
         {/* TAB: GET FREE VPN INTERACTIVE GATEWAY */}
         {activeTab === 'free-vpn' && (
-          <FreeVpnView
-            user={user}
-            setLoginProvider={setLoginProvider}
-            setShowLoginModal={setShowLoginModal}
-            handleInitiateLogin={handleInitiateLogin}
-            selectedFreeIsp={selectedFreeIsp}
-            setSelectedFreeIsp={setSelectedFreeIsp}
-            selectedFreeType={selectedFreeType}
-            setSelectedFreeType={setSelectedFreeType}
-            selectedFreePackageId={selectedFreePackageId}
-            setSelectedFreePackageId={setSelectedFreePackageId}
-            freePackages={freePackages}
-            freeRequests={freeRequests}
-            claimedFreeRequest={claimedFreeRequest}
-            setClaimedFreeRequest={setClaimedFreeRequest}
-            freeClaimError={freeClaimError}
-            setFreeClaimError={setFreeClaimError}
-            adRedirectionCount={adRedirectionCount}
-            setAdRedirectionCount={setAdRedirectionCount}
-            isLoadingActiveAd={isLoadingActiveAd}
-            handleTriggerAdRedirect={handleTriggerAdRedirect}
-            isClaimingFree={isClaimingFree}
-            handleClaimFreeVpn={handleClaimFreeVpn}
-          />
+          isStandardBlocked ? (
+            <FeatureLockView
+              adRedirectionCount={adRedirectionCount}
+              setAdRedirectionCount={setAdRedirectionCount}
+              isLoadingActiveAd={isLoadingActiveAd}
+              handleTriggerAdRedirect={handleTriggerAdRedirect}
+              adCooldownRemaining={adCooldownRemaining}
+              user={user}
+              customHeading="🔒 Free VPN Tunnel Vault is Locked"
+              customDescription="To request or activate complimentary high-speed vless configs, complete the 10 ad redirection sequences first."
+            />
+          ) : (
+            <FreeVpnView
+              user={user}
+              setLoginProvider={setLoginProvider}
+              setShowLoginModal={setShowLoginModal}
+              handleInitiateLogin={handleInitiateLogin}
+              selectedFreeIsp={selectedFreeIsp}
+              setSelectedFreeIsp={setSelectedFreeIsp}
+              selectedFreeType={selectedFreeType}
+              setSelectedFreeType={setSelectedFreeType}
+              selectedFreePackageId={selectedFreePackageId}
+              setSelectedFreePackageId={setSelectedFreePackageId}
+              freePackages={freePackages}
+              freeRequests={freeRequests}
+              claimedFreeRequest={claimedFreeRequest}
+              setClaimedFreeRequest={setClaimedFreeRequest}
+              freeClaimError={freeClaimError}
+              setFreeClaimError={setFreeClaimError}
+              adRedirectionCount={adRedirectionCount}
+              setAdRedirectionCount={setAdRedirectionCount}
+              isLoadingActiveAd={isLoadingActiveAd}
+              handleTriggerAdRedirect={handleTriggerAdRedirect}
+              isClaimingFree={isClaimingFree}
+              handleClaimFreeVpn={handleClaimFreeVpn}
+            />
+          )
         )}
 
         {/* TAB 3: USER SUBSCRIPTIONS AND STATE MONITOR */}
         {activeTab === 'dashboard' && user && (
-          <UserDashboardView
-            user={user}
-            userSlips={userSlips}
-            superAdminAdUrl={activeSuperAdminAdUrl}
-            dashboardAdPlayCount={dashboardAdPlayCount}
-            onTriggerDashboardAd={handleTriggerDashboardAd}
-          />
+          isStandardBlocked ? (
+            <FeatureLockView
+              adRedirectionCount={adRedirectionCount}
+              setAdRedirectionCount={setAdRedirectionCount}
+              isLoadingActiveAd={isLoadingActiveAd}
+              handleTriggerAdRedirect={handleTriggerAdRedirect}
+              adCooldownRemaining={adCooldownRemaining}
+              user={user}
+              customHeading="🔒 Your Member Dashboard is Locked"
+              customDescription="Please fulfill the fast 10-stage gateway verification to access your live telemetry, activated slip logs, and VPN config profiles."
+            />
+          ) : (
+            <UserDashboardView
+              user={user}
+              userSlips={userSlips}
+              superAdminAdUrl={activeSuperAdminAdUrl}
+              dashboardAdPlayCount={dashboardAdPlayCount}
+              onTriggerDashboardAd={handleTriggerDashboardAd}
+            />
+          )
         )}
 
         {/* TAB: PRIVACY POLICY */}
@@ -2558,6 +2670,7 @@ export default function App() {
             {/* 4. CLIENT PRIVATE SUPPORT CHATS DECK */}
             <AdminCustomerChats
               supportMessages={supportMessages}
+              users={adminStats?.users || []}
               activeUserChatId={activeUserChatId}
               setActiveUserChatId={setActiveUserChatId}
               currentChatInput={currentChatInput}
@@ -3329,6 +3442,24 @@ export default function App() {
                 >
                   <FileText className="w-3.5 h-3.5 text-slate-400" />
                   Download Backup JSON Asset
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isRestoring}
+                  onClick={handleRestoreBackupFromFile}
+                  className={`px-4 py-2.5 text-xs font-bold rounded-lg transition-colors border cursor-pointer select-none flex items-center gap-2 ${
+                    isRestoring
+                      ? 'bg-slate-950 border-slate-800 text-slate-500 cursor-not-allowed'
+                      : 'bg-amber-600 hover:bg-amber-700 border-amber-600 text-white shadow-lg shadow-amber-950/20'
+                  }`}
+                >
+                  {isRestoring ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  )}
+                  {isRestoring ? 'Restoring Backup...' : 'Restore Database from JSON File'}
                 </button>
               </div>
             </div>

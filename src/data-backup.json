@@ -1,102 +1,1028 @@
 {
   "packages": [
     {
-      "id": "pack-wg-unlimited",
-      "title": "Super WireGuard Premium Unlimited",
-      "description": "High speed, ultra-secure tunneling protocol optimized for maximum bandwidth. Perfect for continuous heavy media streaming and ultra low-latency gaming with extreme privacy protocols.",
+      "bandwidthGB": "1000GB",
+      "vpnTypeName": "V2Ray",
+      "status": "active",
+      "title": "297/997",
+      "isFeatured": true,
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "description": "𝗗𝗶𝗮𝗹𝗼𝗴 297/997 𝗧𝗶𝗸𝗧𝗼𝗸 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
       "price": 1500,
       "priceCurrency": "LKR",
       "validityDays": 30,
-      "bandwidthGB": "Unlimited",
-      "vpnTypeName": "WireGuard",
+      "id": "pack_1780977170556"
+    },
+    {
+      "id": "pack_1780977257078",
+      "validityDays": 30,
+      "price": 1500,
+      "priceCurrency": "LKR",
+      "description": "𝗗𝗶𝗮𝗹𝗼𝗴 298/724 𝗭𝗼𝗼𝗺 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗥𝗢𝗨𝗧𝗘𝗥)",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
       "isFeatured": true,
-      "status": "active"
+      "bandwidthGB": "1000𝗚𝗕",
+      "vpnTypeName": "V2Ray",
+      "title": "298/724",
+      "status": "active",
+      "packageType": "Router"
     },
     {
-      "id": "pack-vmess-pro",
-      "title": "VMess Stealth Protocol 100GB",
-      "description": "Bypass toughest region-blocks and strong firewalls using advanced VMess protocol with encrypted headers. Includes high-performance dynamic route optimization.",
-      "price": 950,
+      "description": "𝗗𝗶𝗮𝗹𝗼𝗴 224/724 𝗭𝗼𝗼𝗺 𝗣ាក୍କ𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
+      "price": 1500,
       "priceCurrency": "LKR",
       "validityDays": 30,
-      "bandwidthGB": "100 GB",
-      "vpnTypeName": "Vmess",
-      "isFeatured": true,
-      "status": "active"
-    },
-    {
-      "id": "pack-ssh-tunnel",
-      "title": "Secure SSH Direct Tunnel",
-      "description": "Classic high-speed SSH Direct tunnel server with custom payloads supported. Best for custom-config injection, network tinkering, and low-latency packet tunneling.",
-      "price": 600,
-      "priceCurrency": "LKR",
-      "validityDays": 30,
-      "bandwidthGB": "75 GB",
-      "vpnTypeName": "SSH",
-      "isFeatured": false,
-      "status": "active"
-    },
-    {
-      "id": "pack-v2ray-ultra",
-      "title": "V2Ray X-TLS Extreme Unlimited",
-      "description": "State of the art dynamic transport protocol. Unblock any website and secure connection utilizing modern encryption with dynamic routing controls.",
-      "price": 1750,
-      "priceCurrency": "LKR",
-      "validityDays": 30,
-      "bandwidthGB": "Unlimited",
+      "id": "pack_1780977320846",
+      "status": "active",
+      "title": "224/724",
+      "bandwidthGB": "1000𝗚𝗕",
       "vpnTypeName": "V2Ray",
       "isFeatured": true,
-      "status": "active"
-    }
-  ],
-  "posts": [
-    {
-      "id": "post-1",
-      "title": "How to setup WireGuard on Windows, Android and iOS",
-      "excerpt": "Step-by-step beginner-friendly tutorial to load your custom high-speed WireGuard configuration file.",
-      "content": "### Setting up WireGuard on Your Devices\n\nWireGuard is an extremely simple yet fast and modern VPN that utilizes state-of-the-art cryptography. It is designed as a general-purpose VPN for running on embedded interfaces and supercomputers alike. Here is how to configure it:\n\n1. **Download the App**: Install WireGuard from the official stores for Windows, macOS, Android, or iOS.\n2. **Import Configuration**: Open the app and import the `.conf` file or scan the QR Code received in your inbox.\n3. **Connect**: Tap or click \"Activate\" to instantly encrypt your entire network connection!\n\nNo logs are kept, and speeds are up to 6x faster than standard OpenVPN!",
-      "category": "featured",
-      "author": "Admin Support",
-      "date": "2026-05-24"
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026"
     },
     {
-      "id": "post-2",
-      "title": "Bypassing ISP Throttling with Stealthed VMess Protocol",
-      "excerpt": "Learn about VMess dynamic transport headers and why it is the ultimate option in highly restricted networks.",
-      "content": "### Stealthed VMess and V2Ray Explained\n\nVMess is a state-space network protocol designed for clients to proxy connections through highly secured outbound networks.\n\n* **Dynamic Websocket Tunneling**: Encapsulates packets to look like harmless HTTPS web chats.\n* **Header Customization**: Prevents Deep Packet Inspection (DPI) trackers from matching patterns.\n* **Multi-Node Fallbacks**: Intelligently tests and swaps servers if network latency rises.",
-      "category": "recent",
-      "author": "Network Team",
-      "date": "2026-05-26"
+      "title": "297/997",
+      "status": "active",
+      "isp": "Airtel",
+      "vpnTypeName": "V2Ray",
+      "bandwidthGB": "1000𝗚𝗕",
+      "isFeatured": true,
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "description": "𝗔𝗶𝗿𝘁𝗲𝗹 297/997 𝗧𝗶𝗸𝗧𝗼𝗸 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
+      "price": 1500,
+      "priceCurrency": "LKR",
+      "validityDays": 30,
+      "id": "pack_1780977397494"
     },
     {
-      "id": "post-3",
-      "title": "Data Store Server Upgrades: Double Bandwidth Nodes",
-      "excerpt": "We have upgraded our core Singapore, Tokyo, and US gateway endpoints to 10Gbps uplinks.",
-      "content": "We are thrilled to announce that our primary server hubs are now fully upgraded!\n\nAll customers holding active **WireGuard** and **VMess** subscriptions will automatically benefit from:\n- Improved latencies by an average of 40%\n- Double bandwidth allocations for cap-based plans at no extra cost\n- Enhanced multi-user stability during peak hours\n\nThank you for trusting **Data Store** as your primary premium VPN network provider!",
-      "category": "news",
-      "author": "Engineering",
-      "date": "2026-05-27"
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "isFeatured": true,
+      "status": "active",
+      "title": "215",
+      "vpnTypeName": "V2Ray",
+      "bandwidthGB": "1000𝗚𝗕",
+      "isp": "Airtel",
+      "id": "pack_1780977558260",
+      "validityDays": 30,
+      "priceCurrency": "LKR",
+      "description": "𝗔𝗶𝗿𝘁𝗲𝗹 215 𝗭𝗼𝗼𝗺 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
+      "price": 1500
+    },
+    {
+      "title": "260",
+      "status": "active",
+      "isp": "Airtel",
+      "vpnTypeName": "V2Ray",
+      "bandwidthGB": "1000𝗚𝗕",
+      "isFeatured": true,
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "description": "𝗔𝗶𝗿𝘁𝗲𝗹 260 𝗬𝗼𝘂𝗧𝘂𝗯𝗲 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
+      "price": 1500,
+      "priceCurrency": "LKR",
+      "validityDays": 30,
+      "id": "pack_1780977711769"
+    },
+    {
+      "title": "195/490",
+      "status": "active",
+      "vpnTypeName": "V2Ray",
+      "description": "𝗦𝗟𝗧 𝗙𝗶𝗯𝗲𝗿 195/490 𝗭𝗼𝗼𝗺 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗙𝗜𝗕𝗘𝗥)",
+      "price": 1500,
+      "priceCurrency": "LKR",
+      "validityDays": 30,
+      "isFeatured": true,
+      "packageType": "Fiber",
+      "isp": "SLT",
+      "bandwidthGB": "1000𝗚𝗕",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "id": "pack_1780977790978"
+    },
+    {
+      "packageType": "Fiber",
+      "isp": "SLT",
+      "bandwidthGB": "1000𝗚𝗕",
+      "isFeatured": true,
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "id": "pack_1780977840693",
+      "status": "active",
+      "title": "1990 𝗡𝗘𝗧𝗙𝗟𝗜𝗫",
+      "vpnTypeName": "V2Ray",
+      "priceCurrency": "LKR",
+      "price": 1500,
+      "description": "𝗦𝗟𝗧 𝗙𝗶𝗯𝗲𝗿 1990 𝗡𝗘𝗧𝗙𝗟𝗜𝗫 𝗨𝗻𝗹𝗶𝗺𝗶𝘁𝗲𝗱 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗙𝗜𝗕𝗘𝗥)",
+      "validityDays": 30
+    },
+    {
+      "id": "pack_1780977957890",
+      "packageType": "Router",
+      "isp": "SLT",
+      "bandwidthGB": "Unlimited",
+      "isFeatured": true,
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "priceCurrency": "LKR",
+      "price": 1500,
+      "description": "𝗦𝗟𝗧 𝗔𝗗𝗦𝗟 195/490 𝗭𝗼𝗼𝗺 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗔𝗗𝗦𝗟)",
+      "validityDays": 30,
+      "title": "195/490",
+      "status": "active",
+      "vpnTypeName": "V2Ray"
+    },
+    {
+      "validityDays": 30,
+      "id": "pack_1780978023636",
+      "description": "𝗛𝘂𝘁𝗰𝗵 224 𝗭𝗼𝗼𝗺 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
+      "price": 1500,
+      "priceCurrency": "LKR",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "isp": "Hutch",
+      "vpnTypeName": "V2Ray",
+      "bandwidthGB": "1000𝗚𝗕",
+      "title": "224",
+      "status": "active",
+      "isFeatured": true
+    },
+    {
+      "isFeatured": true,
+      "title": "𝗛𝘂𝘁𝗰𝗵 𝗔𝗻𝘆 𝗦𝗼𝗰𝗶𝗮𝗹 𝗠𝗲𝗱𝗶𝗮 𝗣𝗮𝗰𝗸𝗮𝗴𝗲",
+      "status": "active",
+      "bandwidthGB": "1000𝗚𝗕",
+      "vpnTypeName": "V2Ray",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "price": 1500,
+      "priceCurrency": "LKR",
+      "description": "𝗛𝘂𝘁𝗰𝗵 𝗔𝗻𝘆 𝗦𝗼𝗰𝗶𝗮𝗹 𝗠𝗲𝗱𝗶𝗮 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
+      "id": "pack_1780978091377",
+      "validityDays": 30
+    },
+    {
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "isFeatured": true,
+      "isp": "Mobitel",
+      "vpnTypeName": "V2Ray",
+      "bandwidthGB": "1000𝗚𝗕",
+      "title": "𝗠𝗼𝗯𝗶𝘁𝗲𝗹 𝗭𝗼𝗼𝗺",
+      "status": "active",
+      "id": "pack_1780978145283",
+      "validityDays": 30,
+      "description": "𝗠𝗼𝗯𝗶𝘁𝗲𝗹 𝗭𝗼𝗼𝗺 𝗣𝗮𝗰𝗸𝗮𝗴𝗲 (𝗠𝗢𝗕𝗜𝗟𝗘)",
+      "price": 1500,
+      "priceCurrency": "LKR"
     }
   ],
+  "posts": [],
   "contact": {
-    "phone": "+94 77 123 4567",
-    "email": "support@datastore.shop",
-    "telegramChannel": "https://t.me/DataStoreVPNChannel",
-    "telegramBotUser": "@DataStoreVPNSecureBot",
-    "address": "No 45, Galle Road, Colombo 03, Sri Lanka",
+    "telegramChannel": "https://t.me/janucybepack",
     "workingHours": "24/7 Priority Automated System / 08:30 AM - 10:00 PM Live Admin Support",
-    "bankName": "Commercial Bank Sri Lanka",
-    "bankBranch": "Colombo Main Branch",
-    "bankAccountNo": "8010204099",
-    "bankAccountName": "JANU CYBER DATA SOLUTIONS"
+    "bankName": "Peoples Bank",
+    "bankBranch": "Hasalaka Branch",
+    "email": "janucyberpack@gmail.com",
+    "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+    "phone": "+94 76 378 5690",
+    "telegramBotUser": "@janu_cyber_pack_usage_bot",
+    "bankAccountName": "WMKG THARUSHA BANDARA WEERATHUNGA",
+    "bankAccountNo": "140200170070728",
+    "address": "No 45, Galle Road, Colombo 03, Sri Lanka"
   },
-  "announcement": {
-    "title": "🎉 Premium Network Upgrades Completed 🎉",
-    "subtitle": "Enjoy lightning fast internet with low-latency and absolute privacy.",
-    "announcementText": "We have completed our global node synchronization. All premium WireGuard, Vmess, and SSH servers are fully online on full speeds. Upload any payment slips under your account for automatic delivery in minutes!",
-    "showAnnouncement": true
-  },
+  "announcement": {},
   "maintenance": {
     "maintenanceMode": false
-  }
+  },
+  "adSettings": {
+    "superAdminAdUrl": "https://www.effectivecpmnetwork.com/ycq6ysni7?key=cac6ea22aa63e831134fe71d28d06f08",
+    "nightTimeAdCode": "https://omg10.com/4/11121539",
+    "dayTimeAdCode": "https://www.effectivecpmnetwork.com/ycq6ysni7?key=cac6ea22aa63e831134fe71d28d06f08",
+    "integritySalt": "secured_by_janucyberpack_signature_token_2026"
+  },
+  "supportMessages": [
+    {
+      "userId": "pre_admin_uhvx8m6yq",
+      "timestamp": "2026-06-09T06:36:39.585Z",
+      "message": "Hi",
+      "id": "msg_1780986999585_l3f7u",
+      "sender": "user",
+      "userEmail": "tharushabandara678@gmail.com",
+      "userName": "tharushabandara678"
+    },
+    {
+      "userId": "pre_admin_uhvx8m6yq",
+      "timestamp": "2026-06-09T06:39:11.918Z",
+      "id": "msg_1780987151918_zu3yc",
+      "message": "hi",
+      "userEmail": "tharushabandara678@gmail.com",
+      "sender": "admin",
+      "userName": "tharushabandara678"
+    }
+  ],
+  "users": [
+    {
+      "dataUsage": {
+        "speedLimitMbps": 300,
+        "usedGB": 0,
+        "billingCycleEnd": "July 8, 2026",
+        "totalGB": 100,
+        "activeConnections": 1
+      },
+      "email": "chethiyabandara0001@gmail.com",
+      "uid": "admin-master-account",
+      "role": "admin",
+      "displayName": "Super Admin",
+      "createdAt": "2026-05-27T12:58:01.976Z"
+    },
+    {
+      "role": "admin",
+      "email": "tharushabandara678@gmail.com",
+      "uid": "pre_admin_uhvx8m6yq",
+      "dataUsage": {
+        "speedLimitMbps": 300,
+        "usedGB": 0,
+        "totalGB": 100,
+        "billingCycleEnd": "June 27, 2026",
+        "activeConnections": 1
+      },
+      "displayName": "tharushabandara678",
+      "createdAt": "2026-05-28T08:32:33.450Z"
+    },
+    {
+      "password": "ADD@123456",
+      "dataUsage": {
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      },
+      "uid": "user_07ioq6wku",
+      "role": "user",
+      "email": "sojiy42819@herojp.com",
+      "createdAt": "2026-06-09T05:42:18.440Z",
+      "displayName": "Yuh"
+    },
+    {
+      "createdAt": "2026-06-09T06:16:59.526Z",
+      "displayName": "Mp6",
+      "email": "malan.p68@gmail.com",
+      "role": "user",
+      "uid": "user_0cxqyuif4",
+      "password": "210499",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 200,
+        "activeConnections": 0,
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150
+      }
+    },
+    {
+      "displayName": "Imash Kaweesha",
+      "createdAt": "2026-06-09T05:25:31.280Z",
+      "email": "kaweeshaimash1@gmail.com",
+      "role": "user",
+      "uid": "user_164afnhv5",
+      "dataUsage": {
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      }
+    },
+    {
+      "createdAt": "2026-06-09T04:47:35.869Z",
+      "displayName": "Haza",
+      "password": "han98@123vpn",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 200,
+        "activeConnections": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase"
+      },
+      "uid": "user_1t18h3jgg",
+      "role": "user",
+      "email": "testhackfake@gmail.com"
+    },
+    {
+      "uid": "user_5g88o3pq8",
+      "email": "teatuser@gmail.com",
+      "role": "user",
+      "dataUsage": {
+        "speedLimitMbps": 200,
+        "usedGB": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0
+      },
+      "password": "kF76y9JTENJihVx",
+      "displayName": "teatuser",
+      "createdAt": "2026-06-09T06:00:50.860Z"
+    },
+    {
+      "createdAt": "2026-06-09T03:06:59.121Z",
+      "displayName": "Rensiss Roku",
+      "email": "rensissroku@gmail.com",
+      "role": "user",
+      "uid": "user_5ixpn5y79",
+      "dataUsage": {
+        "speedLimitMbps": 200,
+        "usedGB": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0
+      }
+    },
+    {
+      "dataUsage": {
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      },
+      "email": "anuksathjaya25@gmail.com",
+      "role": "user",
+      "uid": "user_5m1ufcpen",
+      "createdAt": "2026-06-09T04:43:09.247Z",
+      "displayName": "Anuk sathjaya"
+    },
+    {
+      "displayName": "Chathuranga Jagath",
+      "createdAt": "2026-06-09T04:44:38.349Z",
+      "uid": "user_6pz4md0j6",
+      "email": "chathurangajagath844@gmail.com",
+      "role": "user",
+      "dataUsage": {
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      }
+    },
+    {
+      "createdAt": "2026-06-09T04:51:14.203Z",
+      "displayName": "Kavinda Lakmal",
+      "uid": "user_7gld2n6o2",
+      "email": "kavindalkmal2327@gmail.com",
+      "role": "user",
+      "dataUsage": {
+        "speedLimitMbps": 200,
+        "usedGB": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0
+      }
+    },
+    {
+      "dataUsage": {
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      },
+      "uid": "user_9pp8agmjp",
+      "role": "user",
+      "email": "pasanpiyumaal96@gmail.com",
+      "createdAt": "2026-06-09T04:23:38.600Z",
+      "displayName": "Pasan Piyumaal"
+    },
+    {
+      "uid": "user_ajzxv3bpn",
+      "email": "kalarusavinda@gmail.com",
+      "role": "user",
+      "dataUsage": {
+        "speedLimitMbps": 200,
+        "usedGB": 0,
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "activeConnections": 0
+      },
+      "displayName": "Savinda Hulangamuwa",
+      "createdAt": "2026-06-09T06:28:43.572Z"
+    },
+    {
+      "displayName": "Umash Induwara",
+      "createdAt": "2026-06-09T05:12:11.061Z",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 200,
+        "activeConnections": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase"
+      },
+      "uid": "user_cyzn13kw3",
+      "role": "user",
+      "email": "umashinduwarayt@gmail.com"
+    },
+    {
+      "createdAt": "2026-06-09T06:19:13.799Z",
+      "displayName": "nikila anusas",
+      "uid": "user_fxxp3esgc",
+      "role": "user",
+      "email": "nikilaanusas@gmail.com",
+      "dataUsage": {
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      }
+    },
+    {
+      "displayName": "Dandi Patau",
+      "createdAt": "2026-06-09T06:06:53.598Z",
+      "email": "dandipatau430@gmail.com",
+      "role": "user",
+      "uid": "user_hk0dgj7to",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 200,
+        "activeConnections": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase"
+      }
+    },
+    {
+      "displayName": "Dex",
+      "createdAt": "2026-06-09T03:01:49.844Z",
+      "uid": "user_jxh5j83hl",
+      "role": "user",
+      "email": "dextervc12@gmail.com",
+      "password": "1212#@",
+      "dataUsage": {
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      }
+    },
+    {
+      "displayName": "Suresh Anthani",
+      "createdAt": "2026-06-09T03:36:56.094Z",
+      "dataUsage": {
+        "activeConnections": 0,
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "usedGB": 0,
+        "speedLimitMbps": 200
+      },
+      "email": "sureshanthani8@gmail.com",
+      "role": "user",
+      "uid": "user_kpmwmqftf"
+    },
+    {
+      "dataUsage": {
+        "activeConnections": 0,
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "usedGB": 0,
+        "speedLimitMbps": 200
+      },
+      "role": "user",
+      "email": "sithuminathisara76@gmail.com",
+      "uid": "user_mcirwacxd",
+      "displayName": "Thisara Sithumina",
+      "createdAt": "2026-06-09T03:53:17.755Z"
+    },
+    {
+      "email": "slg6140@gmail.com",
+      "role": "user",
+      "uid": "user_mzoe5d88s",
+      "password": "22705@AKILa",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 200,
+        "activeConnections": 0,
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150
+      },
+      "displayName": "Akila",
+      "createdAt": "2026-06-09T05:03:21.661Z"
+    },
+    {
+      "displayName": "merlin",
+      "createdAt": "2026-05-27T13:17:29.991Z",
+      "email": "mchethiyabandara@gmail.com",
+      "role": "admin",
+      "uid": "user_nvz010se4",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 150,
+        "activeConnections": 1,
+        "billingCycleEnd": "June 26, 2026",
+        "totalGB": 500
+      }
+    },
+    {
+      "dataUsage": {
+        "speedLimitMbps": 200,
+        "usedGB": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0
+      },
+      "uid": "user_pyz8rknlm",
+      "email": "primeadithya2005@gmail.com",
+      "role": "user",
+      "createdAt": "2026-06-09T03:32:34.306Z",
+      "displayName": "Prime King"
+    },
+    {
+      "uid": "user_qrm8i7f3q",
+      "role": "user",
+      "email": "sakinduishan@gmail.com",
+      "password": "23463@200411",
+      "dataUsage": {
+        "activeConnections": 0,
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "usedGB": 0,
+        "speedLimitMbps": 200
+      },
+      "createdAt": "2026-06-09T03:57:37.333Z",
+      "displayName": "Sakiya"
+    },
+    {
+      "displayName": "chethiya bandara",
+      "createdAt": "2026-06-09T03:35:05.226Z",
+      "dataUsage": {
+        "activeConnections": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "usedGB": 0,
+        "speedLimitMbps": 200
+      },
+      "email": "chethiyabandara0001@gmail.com",
+      "role": "admin",
+      "uid": "user_tqymuzjzq"
+    },
+    {
+      "role": "user",
+      "email": "thaveeshadewani1234@gmail.com",
+      "uid": "user_unrcrswv9",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 200,
+        "activeConnections": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase"
+      },
+      "displayName": "Thaveesha Dewani",
+      "createdAt": "2026-06-09T04:21:05.255Z"
+    },
+    {
+      "displayName": "Randual Perera",
+      "createdAt": "2026-06-09T06:19:57.649Z",
+      "uid": "user_vqjwbwlj2",
+      "role": "user",
+      "email": "randulaperera12@gmail.com",
+      "dataUsage": {
+        "speedLimitMbps": 200,
+        "usedGB": 0,
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "activeConnections": 0
+      }
+    },
+    {
+      "createdAt": "2026-06-09T05:25:03.212Z",
+      "displayName": "vihagadarmasena",
+      "uid": "user_wn7l9v7bk",
+      "role": "user",
+      "email": "vihagadarmasena@gmail.com",
+      "password": "pubudu123",
+      "dataUsage": {
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase",
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      }
+    },
+    {
+      "displayName": "Shan Bro",
+      "createdAt": "2026-06-09T04:37:26.507Z",
+      "email": "shanbro16491@gmail.com",
+      "role": "user",
+      "uid": "user_xamvhl8l7",
+      "dataUsage": {
+        "billingCycleEnd": "30 Days after package purchase",
+        "totalGB": 150,
+        "activeConnections": 0,
+        "speedLimitMbps": 200,
+        "usedGB": 0
+      }
+    },
+    {
+      "displayName": "S R X • A L A N",
+      "createdAt": "2026-06-09T06:14:32.446Z",
+      "uid": "user_zabp9q7cp",
+      "role": "user",
+      "email": "rxpodiya2011@gmail.com",
+      "dataUsage": {
+        "usedGB": 0,
+        "speedLimitMbps": 200,
+        "activeConnections": 0,
+        "totalGB": 150,
+        "billingCycleEnd": "30 Days after package purchase"
+      }
+    }
+  ],
+  "slips": [
+    {
+      "vpnTypeName": "WireGuard",
+      "status": "rejected",
+      "userName": "chethiya bandara",
+      "packageId": "pack_1780976995502",
+      "currency": "LKR",
+      "userEmail": "chethiyabandara0001@gmail.com",
+      "price": 200,
+      "bankSlipBase64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCACkAN8DASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAIFBgQDB//EADYQAAEDAwMDBAECBAYCAwAAAAECAwQABREGEiETMVEUFSJBYTKBFiGxUxUhOUKRI0N0UvD/xAAbAQADAQEBAQEAAAAAAAAAAAAAAgPEBQEGB//EAC8RAAIBAgQFAgYBBQAAAAAAAAECAAMREgQFInESQVGBMGEicZGhwWFi4fH/2gAMEA4Y6dKlKVKFvt6dOlCx9OnSgY//AFpSgtRSlKWVf5p06UY/97dCly+tKUrPz+nTpQorUUpS69OenpShClL+OnpShSl//9k=",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "tier": "Lite 100gb for 200lkr",
+      "verifiedAt": "2026-06-09T03:50:52.623Z",
+      "packageTitle": "er",
+      "userId": "user_tqymuzjzq",
+      "id": "slip_1780977006646_av5mw",
+      "submittedAt": "2026-06-09T03:50:06.646Z",
+      "adminNotes": ""
+    },
+    {
+      "tier": "Lite 100gb for 200lkr",
+      "vpnCode": "iyfyciyc",
+      "packageTitle": "297/997",
+      "id": "slip_1780977773407_yzym1",
+      "userId": "admin-master-account",
+      "adminNotes": "",
+      "submittedAt": "2026-06-09T04:02:53.408Z",
+      "userName": "Super Admin",
+      "packageId": "pack_1780977170556",
+      "vpnTypeName": "V2Ray",
+      "status": "approved",
+      "currency": "LKR",
+      "bankSlipBase64": "data:image/jpeg;base64,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",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "id": "slip_1780977843091_cn425",
+      "userId": "user_tqymuzjzq",
+      "packageTitle": "297/997",
+      "tier": "Lite 100gb for 200lkr",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "verifiedAt": "2026-06-09T04:04:43.724Z",
+      "vpnCode": "jcigdif",
+      "bankSlipBase64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCACkAN8DASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAIFBgQDB//EADYQAAEDAwMDBAECBAYCAwAAAAECAwQABREGEiETMVEUFSJBYTKBFiGxUxUhOUKRI0N0UvD/xAAbAQADAQEBAQEAAAAAAAAAAAAAAgPEBQEGB//EAC8RAAIBAgQFAgYBBQAAAAAAAAECAAMREgQFInESQVGBMGEicZGhwWFi4fH/2gBAQEAsY0NreVf5p06UY/97dCly+tKUrPz+nTpQorUUpS69OenpShClL+OnpShSl//9k=",
+      "userEmail": "chethiyabandara0001@gmail.com",
+      "price": 200,
+      "currency": "LKR",
+      "userName": "chethiya bandara",
+      "packageId": "pack_1780977170556",
+      "vpnTypeName": "V2Ray",
+      "status": "rejected"
+    },
+    {
+      "price": 200,
+      "userEmail": "chethiyabandara0001@gmail.com",
+      "currency": "LKR",
+      "packageTitle": "297/997",
+      "tier": "Lite 100gb for 200lkr",
+      "vpnCode": "jyxjyx it",
+      "adminNotes": "",
+      "submittedAt": "2026-06-09T04:05:54.642Z",
+      "id": "slip_1780977954642_aeizo",
+      "userId": "user_tqymuzjzq",
+      "vpnTypeName": "V2Ray",
+      "packageName": "empty",
+      "bankSlipBase64": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4gHYSUNDX1BST0ZJTEUAAQEAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADb/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCACkAN8DASIAAhEBAxEB/8QAGgABAAMBAQEAAAAAAAAAAAAAAAIFBgQDB//EADYQAAEDAwMDBAECBAYCAwAAAAECAwQABREGEiETMVEUFSJBYTKBFiGxUxUhOUKRI0N0UvD/xAAbAQADAQEBAQEAAAAAAAAAAAAAAgPEBQEGB//EAC8RAAIBAgQFAgYBBQAAAAAAAAECAAMREgQFInESQVGBMGEicZGhwWFi4fH/2gBAQEAsY0NreVf5p06UY/97dCly+tKUrPz+nTpQorUUpS69OenpShClL+OnpShSl//9k=",
+      "status": "approved",
+      "packageId": "pack_1780977170556",
+      "userName": "chethiya bandara"
+    }
+  ],
+  "freePackages": [
+    {
+      "packageName": "𝗧𝗜𝗞𝗧𝗢𝗞 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "id": "free-pack-1780978457619",
+      "packageType": "Mobile",
+      "price": "Free",
+      "code": "vless://dc21f091-1c80-47b0-aaf4-2abe853b939e@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=www.tiktok.com#Free_9831",
+      "createdAt": "2026-06-09T04:14:17.619Z",
+      "isp": "Airtel"
+    },
+    {
+      "packageType": "Mobile",
+      "price": "Free",
+      "code": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "createdAt": "2026-06-09T04:15:13.501Z",
+      "isp": "Hutch",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "id": "free-pack-1780978513501"
+    },
+    {
+      "code": "vless://f43c1e41-c9a1-4ba8-9da8-68732346e7ea@support.zoom.us:80?encryption=none&security=none&type=ws&path=/&host=janu.freedomonline.space#Airtelzoom_1616",
+      "isp": "Airtel",
+      "createdAt": "2026-06-09T04:16:03.556Z",
+      "packageType": "Mobile",
+      "price": "Free",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "id": "free-pack-1780978563556",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘"
+    },
+    {
+      "packageType": "Mobile",
+      "price": "Free",
+      "code": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "createdAt": "2026-06-09T04:17:11.018Z",
+      "isp": "Dialog",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026",
+      "id": "free-pack-1780978631018"
+    },
+    {
+      "packageType": "Mobile",
+      "price": "Free",
+      "code": "vless://ae766f1d-abf9-4d5e-a4d5-b044955f5698@172.66.40.229:8443?encryption=none&security=tls&type=ws&sni=janu.freedomonline.space&path=/&host=janu.freedomonline.space#Mobitel_7487",
+      "createdAt": "2026-06-09T04:19:50.008Z",
+      "isp": "Mobitel",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "id": "free-pack-1780978790008",
+      "integritySalt": "secured_by_janucyberpack_signature_token_2026"
+    }
+  ],
+  "freeRequests": [
+    {
+      "codeReceived": "vless://ae766f1d-abf9-4d5e-a4d5-b044955f5698@172.66.40.229:8443?encryption=none&security=tls&type=ws&sni=janu.freedomonline.space&path=/&host=janu.freedomonline.space#Mobitel_7487",
+      "freePackageId": "free-pack-1780978790008",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "isp": "Mobitel",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:02:13.974Z",
+      "userName": "teatuser",
+      "userId": "user_5g88o3pq8",
+      "id": "freq_1780984933974_amvy",
+      "userEmail": "teatuser@gmail.com",
+      "price": "Free"
+    },
+    {
+      "id": "freq_1780985539150_fd91",
+      "userId": "pre_admin_uhvx8m6yq",
+      "userEmail": "tharushabandara678@gmail.com",
+      "price": "Free",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://ae766f1d-abf9-4d5e-a4d5-b044955f5698@172.66.40.229:8443?encryption=none&security=tls&type=ws&sni=janu.freedomonline.space&path=/&host=janu.freedomonline.space#Mobitel_7487",
+      "freePackageId": "free-pack-1780978790008",
+      "userName": "tharushabandara678",
+      "isp": "Mobitel",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:12:19.151Z"
+    },
+    {
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://ae766f1d-abf9-4d5e-a4d5-b044955f5698@172.66.40.229:8443?encryption=none&security=tls&type=ws&sni=janu.freedomonline.space&path=/&host=janu.freedomonline.space#Mobitel_7487",
+      "freePackageId": "free-pack-1780978790008",
+      "userName": "tharushabandara678",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:12:22.762Z",
+      "isp": "Mobitel",
+      "id": "freq_1780985542762_81on",
+      "userId": "pre_admin_uhvx8m6yq",
+      "price": "Free",
+      "userEmail": "tharushabandara678@gmail.com"
+    },
+    {
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:15:38.139Z",
+      "isp": "Hutch",
+      "userName": "S R X • A L A N",
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "freePackageId": "free-pack-1780978513501",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "price": "Free",
+      "userEmail": "rxpodiya2011@gmail.com",
+      "userId": "user_zabp9q7cp",
+      "id": "freq_1780985738138_vszv"
+    },
+    {
+      "userName": "Dithira Dinusara",
+      "requestedAt": "2026-06-09T06:17:50.522Z",
+      "packageType": "Mobile",
+      "isp": "Hutch",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "freePackageId": "free-pack-1780978513501",
+      "price": "Free",
+      "userEmail": "dinusaradithira9@gmail.com",
+      "id": "freq_1780985870522_9w9v",
+      "userId": "user_odv52glq0"
+    },
+    {
+      "isp": "Hutch",
+      "requestedAt": "2026-06-09T06:18:36.240Z",
+      "packageType": "Mobile",
+      "userName": "Dithira Dinusara",
+      "freePackageId": "free-pack-1780978513501",
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "userEmail": "dinusaradithira9@gmail.com",
+      "price": "Free",
+      "userId": "user_odv52glq0",
+      "id": "freq_1780985916240_468k"
+    },
+    {
+      "userName": "Dithira Dinusara",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:18:39.322Z",
+      "isp": "Hutch",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "freePackageId": "free-pack-1780978513501",
+      "price": "Free",
+      "userEmail": "dinusaradithira9@gmail.com",
+      "id": "freq_1780985919322_lqtd",
+      "userId": "user_odv52glq0"
+    },
+    {
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "freePackageId": "free-pack-1780978513501",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "isp": "Hutch",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:18:42.166Z",
+      "userName": "Dithira Dinusara",
+      "userId": "user_odv52glq0",
+      "id": "freq_1780985922166_6933",
+      "userEmail": "dinusaradithira9@gmail.com",
+      "price": "Free"
+    },
+    {
+      "id": "freq_1780986010045_m9ub",
+      "userId": "user_0cxqyuif4",
+      "userEmail": "malan.p68@gmail.com",
+      "price": "Free",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "freePackageId": "free-pack-1780978631018",
+      "userName": "Mp6",
+      "isp": "Dialog",
+      "requestedAt": "2026-06-09T06:20:10.045Z",
+      "packageType": "Mobile"
+    },
+    {
+      "userName": "Randual Perera",
+      "requestedAt": "2026-06-09T06:20:17.753Z",
+      "packageType": "Mobile",
+      "isp": "Hutch",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "freePackageId": "free-pack-1780978513501",
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "price": "Free",
+      "userEmail": "randulaperera12@gmail.com",
+      "id": "freq_1780986017753_ftbw",
+      "userId": "user_vqjwbwlj2"
+    },
+    {
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "freePackageId": "free-pack-1780978513501",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "isp": "Hutch",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:20:22.744Z",
+      "userName": "Randual Perera",
+      "userId": "user_vqjwbwlj2",
+      "id": "freq_1780986022744_vrqt",
+      "userEmail": "randulaperera12@gmail.com",
+      "price": "Free"
+    },
+    {
+      "freePackageId": "free-pack-1780978513501",
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "isp": "Hutch",
+      "requestedAt": "2026-06-09T06:20:25.560Z",
+      "packageType": "Mobile",
+      "userName": "Randual Perera",
+      "userId": "user_vqjwbwlj2",
+      "id": "freq_1780986025560_4q0w",
+      "userEmail": "randulaperera12@gmail.com",
+      "price": "Free"
+    },
+    {
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "freePackageId": "free-pack-1780978513501",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:20:26.854Z",
+      "isp": "Hutch",
+      "userName": "Randual Perera",
+      "userId": "user_vqjwbwlj2",
+      "id": "freq_1780986026854_9uqw",
+      "price": "Free",
+      "userEmail": "randulaperera12@gmail.com"
+    },
+    {
+      "userName": "Mp6",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:20:34.736Z",
+      "isp": "Dialog",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "freePackageId": "free-pack-1780978631018",
+      "price": "Free",
+      "userEmail": "malan.p68@gmail.com",
+      "id": "freq_1780986034735_riwl",
+      "userId": "user_0cxqyuif4"
+    },
+    {
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "freePackageId": "free-pack-1780978631018",
+      "userName": "Mp6",
+      "isp": "Dialog",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:22:24.651Z",
+      "id": "freq_1780986144651_4wop",
+      "userId": "user_0cxqyuif4",
+      "userEmail": "malan.p68@gmail.com",
+      "price": "Free"
+    },
+    {
+      "isp": "Dialog",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:29:42.616Z",
+      "userName": "Savinda Hulangamuwa",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "freePackageId": "free-pack-1780978631018",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "userEmail": "kalarusavinda@gmail.com",
+      "price": "Free",
+      "userId": "user_ajzxv3bpn",
+      "id": "freq_1780986582616_22x6"
+    },
+    {
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "freePackageId": "free-pack-1780978631018",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "userName": "Savinda Hulangamuwa",
+      "requestedAt": "2026-06-09T06:29:46.098Z",
+      "packageType": "Mobile",
+      "isp": "Dialog",
+      "id": "freq_1780986586098_0jid",
+      "userId": "user_ajzxv3bpn",
+      "price": "Free",
+      "userEmail": "kalarusavinda@gmail.com"
+    },
+    {
+      "price": "Free",
+      "userEmail": "kalarusavinda@gmail.com",
+      "userId": "user_ajzxv3bpn",
+      "id": "freq_1780986587412_78sz",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:29:47.412Z",
+      "isp": "Dialog",
+      "userName": "Savinda Hulangamuwa",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "freePackageId": "free-pack-1780978631018",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘"
+    },
+    {
+      "userName": "Savinda Hulangamuwa",
+      "isp": "Dialog",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:29:48.708Z",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "freePackageId": "free-pack-1780978631018",
+      "userEmail": "kalarusavinda@gmail.com",
+      "price": "Free",
+      "id": "freq_1780986588708_ui7k",
+      "userId": "user_ajzxv3bpn"
+    },
+    {
+      "userName": "Savinda Hulangamuwa",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:29:51.046Z",
+      "isp": "Dialog",
+      "packageName": "𝗭𝗢𝗢𝗠 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "codeReceived": "vless://c428db5e-f246-4aa5-8e22-0a134abf54a2@janu.freedomonline.space:443?encryption=none&security=tls&type=tcp&sni=aka.ms#Tharusha_9537",
+      "freePackageId": "free-pack-1780978631018",
+      "price": "Free",
+      "userEmail": "kalarusavinda@gmail.com",
+      "id": "freq_1780986591046_si29",
+      "userId": "user_ajzxv3bpn"
+    },
+    {
+      "codeReceived": "vless://4e0c3183-2eda-45df-832d-f9748d6ada73@m.whatsapp.com:443?encryption=none&security=tls&type=tcp&sni=janu.freedomonline.space#Freehutchsocialmedia_5579",
+      "freePackageId": "free-pack-1780978513501",
+      "packageName": "𝗦𝗢𝗖𝗜𝗔𝗟 𝗠𝗘𝗗𝗜𝗔 𝗣𝗔𝗖𝗞𝗔𝗚𝗘",
+      "packageType": "Mobile",
+      "requestedAt": "2026-06-09T06:41:09.756Z",
+      "isp": "Hutch",
+      "userName": "oshada akalanka",
+      "userId": "user_netj96itc",
+      "id": "freq_1780987269756_mux9",
+      "price": "Free",
+      "userEmail": "oakalanka20@gmail.com"
+    }
+  ]
 }

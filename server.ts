@@ -152,6 +152,82 @@ async function seedAllData(force = false): Promise<boolean> {
   const performSeeding = async (): Promise<boolean> => {
     try {
       const database = getDb();
+      const backupFilePath = path.join(process.cwd(), "src/data-backup.json");
+
+      if (fs.existsSync(backupFilePath)) {
+        console.log("[SEED] Found data-backup.json. Restoring custom database from backup instead of factory defaults...");
+        try {
+          const fileContent = fs.readFileSync(backupFilePath, "utf8");
+          const backupData = JSON.parse(fileContent);
+
+          await completeDatabaseWipe();
+
+          if (Array.isArray(backupData.packages)) {
+            for (const item of backupData.packages) {
+              if (item?.id) await setDoc(doc(database, "packages", item.id), item);
+            }
+          }
+
+          if (Array.isArray(backupData.posts)) {
+            for (const item of backupData.posts) {
+              if (item?.id) await setDoc(doc(database, "posts", item.id), item);
+            }
+          }
+
+          if (backupData.contact && typeof backupData.contact === 'object') {
+            await setDoc(doc(database, "settings", "contact"), backupData.contact);
+          }
+
+          if (backupData.announcement && typeof backupData.announcement === 'object') {
+            await setDoc(doc(database, "settings", "announcement"), backupData.announcement);
+          }
+
+          if (backupData.maintenance && typeof backupData.maintenance === 'object') {
+            await setDoc(doc(database, "settings", "maintenance"), backupData.maintenance);
+          }
+
+          if (backupData.adSettings && typeof backupData.adSettings === 'object') {
+            await setDoc(doc(database, "settings", "ads"), backupData.adSettings);
+          }
+
+          if (Array.isArray(backupData.supportMessages)) {
+            for (const item of backupData.supportMessages) {
+              if (item?.id) await setDoc(doc(database, "support_messages", item.id), item);
+            }
+          }
+
+          if (Array.isArray(backupData.users)) {
+            for (const item of backupData.users) {
+              if (item?.uid) await setDoc(doc(database, "users", item.uid), item);
+            }
+          }
+
+          if (Array.isArray(backupData.slips)) {
+            for (const item of backupData.slips) {
+              if (item?.id) await setDoc(doc(database, "slips", item.id), item);
+            }
+          }
+
+          if (Array.isArray(backupData.freePackages)) {
+            for (const item of backupData.freePackages) {
+              if (item?.id) await setDoc(doc(database, "free_packages", item.id), item);
+            }
+          }
+
+          if (Array.isArray(backupData.freeRequests)) {
+            for (const item of backupData.freeRequests) {
+              if (item?.id) await setDoc(doc(database, "free_requests", item.id), item);
+            }
+          }
+
+          await setDoc(doc(database, "settings", "seeding_state"), { seeded: true });
+          console.log("[SEED] Successfully seeded and restored all collections from data-backup.json!");
+          return true;
+        } catch (backupErr) {
+          console.error("[SEED-ERROR] Failed to restore from data-backup.json, falling back to standard factory settings:", backupErr);
+        }
+      }
+
       const seedStateRef = doc(database, "settings", "seeding_state");
       
       if (!force) {
@@ -693,14 +769,22 @@ export async function createExpressApp() {
       }
     }
 
-    // One-time automatic cleanup in non-vercel environments
+    // One-time automatic cleanup & restoration in non-vercel environments to populate packages and free VPN details
     const wipeTrackFile = path.join(process.cwd(), ".database_wiped");
-    if (!fs.existsSync(wipeTrackFile)) {
-      completeDatabaseWipe().then(() => {
-        fs.writeFileSync(wipeTrackFile, "wiped", "utf8");
-        console.log("[BOOT] Database wiped clean successfully to honor user request.");
+    const restoreTrackFile = path.join(process.cwd(), ".database_restored");
+
+    if (!fs.existsSync(wipeTrackFile) || !fs.existsSync(restoreTrackFile)) {
+      console.log("[BOOT] Triggering one-time database initial restoration from data-backup.json...");
+      seedAllData(true).then((success) => {
+        if (success) {
+          if (!fs.existsSync(wipeTrackFile)) fs.writeFileSync(wipeTrackFile, "wiped", "utf8");
+          if (!fs.existsSync(restoreTrackFile)) fs.writeFileSync(restoreTrackFile, "restored", "utf8");
+          console.log("[BOOT] Database restored successfully from data-backup.json!");
+        } else {
+          console.warn("[BOOT] Database restoration returned false.");
+        }
       }).catch(err => {
-        console.error("[BOOT] One-time database wipe failed:", err);
+        console.error("[BOOT] One-time automatic database restore failed:", err);
       });
     }
   }
@@ -2139,6 +2223,132 @@ PersistentKeepalive = 25`;
         return res.json(backupData);
       }
     } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // 4i. Restore data from src/data-backup.json (Admin Only)
+  app.post("/api/admin/backup/restore", adminGuard, async (req, res) => {
+    try {
+      const backupFilePath = path.join(process.cwd(), "src/data-backup.json");
+      if (!fs.existsSync(backupFilePath)) {
+        return res.status(400).json({ error: "Backup file src/data-backup.json not found on server." });
+      }
+
+      console.log("[RESTORE-API] Reading backup file src/data-backup.json...");
+      const fileContent = fs.readFileSync(backupFilePath, "utf8");
+      const backupData = JSON.parse(fileContent);
+
+      console.log("[RESTORE-API] Wiping the database prior to data restoration...");
+      await completeDatabaseWipe();
+
+      const database = getDb();
+      let packagesCount = 0;
+      let postsCount = 0;
+      let supportCount = 0;
+      let usersCount = 0;
+      let slipsCount = 0;
+      let freePkgsCount = 0;
+      let freeReqsCount = 0;
+
+      if (Array.isArray(backupData.packages)) {
+        for (const item of backupData.packages) {
+          if (item?.id) {
+            await setDoc(doc(database, "packages", item.id), item);
+            packagesCount++;
+          }
+        }
+      }
+
+      if (Array.isArray(backupData.posts)) {
+        for (const item of backupData.posts) {
+          if (item?.id) {
+            await setDoc(doc(database, "posts", item.id), item);
+            postsCount++;
+          }
+        }
+      }
+
+      if (backupData.contact && typeof backupData.contact === 'object') {
+        await setDoc(doc(database, "settings", "contact"), backupData.contact);
+      }
+
+      if (backupData.announcement && typeof backupData.announcement === 'object') {
+        await setDoc(doc(database, "settings", "announcement"), backupData.announcement);
+      }
+
+      if (backupData.maintenance && typeof backupData.maintenance === 'object') {
+        await setDoc(doc(database, "settings", "maintenance"), backupData.maintenance);
+      }
+
+      if (backupData.adSettings && typeof backupData.adSettings === 'object') {
+        await setDoc(doc(database, "settings", "ads"), backupData.adSettings);
+      }
+
+      if (Array.isArray(backupData.supportMessages)) {
+        for (const item of backupData.supportMessages) {
+          if (item?.id) {
+            await setDoc(doc(database, "support_messages", item.id), item);
+            supportCount++;
+          }
+        }
+      }
+
+      if (Array.isArray(backupData.users)) {
+        for (const item of backupData.users) {
+          if (item?.uid) {
+            await setDoc(doc(database, "users", item.uid), item);
+            usersCount++;
+          }
+        }
+      }
+
+      if (Array.isArray(backupData.slips)) {
+        for (const item of backupData.slips) {
+          if (item?.id) {
+            await setDoc(doc(database, "slips", item.id), item);
+            slipsCount++;
+          }
+        }
+      }
+
+      if (Array.isArray(backupData.freePackages)) {
+        for (const item of backupData.freePackages) {
+          if (item?.id) {
+            await setDoc(doc(database, "free_packages", item.id), item);
+            freePkgsCount++;
+          }
+        }
+      }
+
+      if (Array.isArray(backupData.freeRequests)) {
+        for (const item of backupData.freeRequests) {
+          if (item?.id) {
+            await setDoc(doc(database, "free_requests", item.id), item);
+            freeReqsCount++;
+          }
+        }
+      }
+
+      await setDoc(doc(database, "settings", "seeding_state"), { seeded: true });
+
+      console.log(`[RESTORE-API] Restore completed! Packages: ${packagesCount}, Posts: ${postsCount}, FreePackages: ${freePkgsCount}, FreeRequests: ${freeReqsCount}, Users: ${usersCount}`);
+
+      res.json({
+        status: "success",
+        message: "Database content and schemas restored successfully from backup file!",
+        details: {
+          packages: packagesCount,
+          posts: postsCount,
+          supportMessages: supportCount,
+          users: usersCount,
+          slips: slipsCount,
+          freePackages: freePkgsCount,
+          freeRequests: freeReqsCount
+        }
+      });
+    } catch (e) {
+      console.error("[RESTORE-API-ERROR] Restore failed:", e);
       res.status(500).json({ error: String(e) });
     }
   });

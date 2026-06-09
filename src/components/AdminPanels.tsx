@@ -181,6 +181,7 @@ export const AdminContactDetails: React.FC<AdminContactDetailsProps> = ({
 
 interface AdminCustomerChatsProps {
   supportMessages: SupportMessage[];
+  users?: any[];
   activeUserChatId: string | null;
   setActiveUserChatId: (val: string | null) => void;
   currentChatInput: string;
@@ -198,6 +199,7 @@ interface AdminCustomerChatsProps {
 
 export const AdminCustomerChats: React.FC<AdminCustomerChatsProps> = ({
   supportMessages,
+  users = [],
   activeUserChatId,
   setActiveUserChatId,
   currentChatInput,
@@ -208,6 +210,16 @@ export const AdminCustomerChats: React.FC<AdminCustomerChatsProps> = ({
   handleSendSupportMessage
 }) => {
   const chatThreadsMap: { [userId: string]: { userName: string, userEmail: string, messages: SupportMessage[], lastMsgAt: string } } = {};
+  
+  users.forEach(u => {
+    chatThreadsMap[u.uid] = {
+      userName: u.displayName || 'Anonymous User',
+      userEmail: u.email || 'anonymous@datastore.shop',
+      messages: [],
+      lastMsgAt: ''
+    };
+  });
+
   supportMessages.forEach(msg => {
     const uid = msg.userId;
     if (!chatThreadsMap[uid]) {
@@ -224,10 +236,22 @@ export const AdminCustomerChats: React.FC<AdminCustomerChatsProps> = ({
     }
   });
 
-  const sortedThreads = Object.keys(chatThreadsMap).map(uid => ({
-    userId: uid,
-    ...chatThreadsMap[uid]
-  })).sort((a, b) => b.lastMsgAt.localeCompare(a.lastMsgAt));
+  const sortedThreads = Object.keys(chatThreadsMap).map(uid => {
+    const thread = chatThreadsMap[uid];
+    const isUnread = thread.messages.length > 0 && thread.messages[thread.messages.length - 1].sender === 'user';
+    return {
+      userId: uid,
+      isUnread,
+      ...thread
+    };
+  }).sort((a, b) => {
+    if (a.isUnread && !b.isUnread) return -1;
+    if (!a.isUnread && b.isUnread) return 1;
+    if (!a.lastMsgAt && !b.lastMsgAt) return a.userName.localeCompare(b.userName);
+    if (!a.lastMsgAt) return 1;
+    if (!b.lastMsgAt) return -1;
+    return b.lastMsgAt.localeCompare(a.lastMsgAt);
+  });
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-6 shadow-xl">
@@ -281,9 +305,15 @@ export const AdminCustomerChats: React.FC<AdminCustomerChatsProps> = ({
                         )}
                       </div>
                       <p className="text-[10px] text-slate-550 font-mono truncate">{thr.userEmail}</p>
-                      <p className="text-[10px] text-slate-400 mt-1 truncate italic">
-                        "{thr.messages[thr.messages.length - 1]?.message}"
-                      </p>
+                      {thr.messages.length > 0 ? (
+                        <p className="text-[10px] text-slate-400 mt-1 truncate italic">
+                          "{thr.messages[thr.messages.length - 1]?.message}"
+                        </p>
+                      ) : (
+                        <p className="text-[10px] text-slate-500 mt-1 truncate italic">
+                          No messages yet
+                        </p>
+                      )}
                     </div>
                   </button>
                 );
@@ -312,28 +342,32 @@ export const AdminCustomerChats: React.FC<AdminCustomerChatsProps> = ({
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin scrollbar-thumb-slate-800 flex flex-col animate-fade-in">
-                    {conversation.map(msg => {
-                      const isAdminSender = msg.sender === 'admin';
-                      return (
-                        <div 
-                          key={msg.id} 
-                          className={`flex flex-col ${isAdminSender ? 'items-end' : 'items-start'}`}
-                        >
-                          <span className="text-[8px] text-slate-500 mb-0.5 font-mono">
-                            {isAdminSender ? 'You (Admin)' : activeThread.userName} • {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
-                          </span>
+                    {conversation.length === 0 ? (
+                      <p className="text-center text-slate-500 text-xs mt-10 italic flex-1">No message history with this user yet. You can start a conversation below.</p>
+                    ) : (
+                      conversation.map(msg => {
+                        const isAdminSender = msg.sender === 'admin';
+                        return (
                           <div 
-                            className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed ${
-                              isAdminSender 
-                                ? 'bg-indigo-600 text-white rounded-tr-none'
-                                : 'bg-slate-900 text-slate-200 rounded-tl-none border border-slate-800'
-                            }`}
+                            key={msg.id} 
+                            className={`flex flex-col ${isAdminSender ? 'items-end' : 'items-start'}`}
                           >
-                            <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                            <span className="text-[8px] text-slate-500 mb-0.5 font-mono">
+                              {isAdminSender ? 'You (Admin)' : activeThread.userName} • {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString() : ''}
+                            </span>
+                            <div 
+                              className={`max-w-[80%] px-3 py-2 rounded-2xl text-xs leading-relaxed ${
+                                isAdminSender 
+                                  ? 'bg-indigo-600 text-white rounded-tr-none'
+                                  : 'bg-slate-900 text-slate-200 rounded-tl-none border border-slate-800'
+                              }`}
+                            >
+                              <p className="whitespace-pre-wrap break-words">{msg.message}</p>
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
 
                   <form 

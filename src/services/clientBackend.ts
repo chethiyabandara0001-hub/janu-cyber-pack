@@ -1093,7 +1093,7 @@ PersistentKeepalive = 25`;
 // Export customFetch as a clean exported function for direct local imports
 export async function customFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const url = typeof input === "string" ? input : (input instanceof URL ? input.href : input.url);
-  if (url.includes("/api/")) {
+  if (url.includes("/api/") && !url.includes("/api/admin/backup/restore") && !url.includes("/api/admin/emergency-repair")) {
     try {
       const responseObj = await handleClientApiRoute(url, init);
       return new Response(JSON.stringify(responseObj.data), {
@@ -1118,7 +1118,7 @@ try {
     Object.defineProperty(window, "fetch", {
       value: async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
         const url = typeof input === "string" ? input : (input instanceof URL ? input.href : input.url);
-        if (url.includes("/api/")) {
+        if (url.includes("/api/") && !url.includes("/api/admin/backup/restore") && !url.includes("/api/admin/emergency-repair")) {
           try {
             const responseObj = await handleClientApiRoute(url, init);
             return new Response(JSON.stringify(responseObj.data), {

@@ -2110,26 +2110,13 @@ export default function App() {
 
         {/* TAB 3: USER SUBSCRIPTIONS AND STATE MONITOR */}
         {activeTab === 'dashboard' && user && (
-          isStandardBlocked ? (
-            <FeatureLockView
-              adRedirectionCount={adRedirectionCount}
-              setAdRedirectionCount={setAdRedirectionCount}
-              isLoadingActiveAd={isLoadingActiveAd}
-              handleTriggerAdRedirect={handleTriggerAdRedirect}
-              adCooldownRemaining={adCooldownRemaining}
-              user={user}
-              customHeading="🔒 Your Member Dashboard is Locked"
-              customDescription="Please fulfill the fast 10-stage gateway verification to access your live telemetry, activated slip logs, and VPN config profiles."
-            />
-          ) : (
-            <UserDashboardView
-              user={user}
-              userSlips={userSlips}
-              superAdminAdUrl={activeSuperAdminAdUrl}
-              dashboardAdPlayCount={dashboardAdPlayCount}
-              onTriggerDashboardAd={handleTriggerDashboardAd}
-            />
-          )
+          <UserDashboardView
+            user={user}
+            userSlips={userSlips}
+            superAdminAdUrl={activeSuperAdminAdUrl}
+            dashboardAdPlayCount={dashboardAdPlayCount}
+            onTriggerDashboardAd={handleTriggerDashboardAd}
+          />
         )}
 
         {/* TAB: PRIVACY POLICY */}
@@ -3729,7 +3716,12 @@ export default function App() {
               </a>
               <a href="https://janucyber.store" target="_blank" rel="noopener noreferrer" className="hover:text-indigo-400 transition-colors">Official Domain</a>
             </div>
-            <p className="text-[11px] text-slate-600">Created by <a href="https://ace-10.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 font-semibold transition-colors cursor-pointer underline decoration-indigo-500/40 underline-offset-2">ACE10</a></p>
+          </div>
+          
+          <div className="mt-8 text-center">
+            <p className="text-sm font-medium text-slate-550/80">
+              Created by <a href="https://ace-10.vercel.app/" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-indigo-400 font-bold transition-colors cursor-pointer tracking-wider">ACE10</a>
+            </p>
           </div>
         </div>
       </footer>

@@ -791,6 +791,16 @@ export async function createExpressApp() {
   // 2. Cryptographic and Database Identity Check as an Express Admin Middleware
   const adminGuard = async (req: express.Request, res: express.Response, _next: express.NextFunction) => {
     try {
+      // 1. Check for Master API Key (Direct binding for Android/External apps)
+      const providedKey = req.headers["x-api-key"] || req.query.apiKey;
+      const masterKey = process.env.MASTER_API_KEY;
+      
+      if (masterKey && providedKey === masterKey) {
+        console.log(`[AUTH] Admin access granted via Master API Key`);
+        return _next();
+      }
+
+      // 2. Fallback to standard UID-based role check
       const requesterUid = req.headers["x-requester-uid"] || req.query.requesterUid || req.body.requesterUid;
       if (!requesterUid) {
         return res.status(401).json({ error: "Access Denied: Administrative query credentials are missing." });
@@ -1711,6 +1721,20 @@ export async function createExpressApp() {
       } else {
         res.status(500).json({ error: "Failed to fully restore defaults. Check server logs." });
       }
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // GET /api/admin/slips - List all slips (Admin/API Key Only)
+  app.get("/api/admin/slips", adminGuard, async (req, res) => {
+    try {
+      const database = getDb();
+      const snap = await getDocs(collection(database, "slips"));
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Sort by submittedAt descending
+      list.sort((a: any, b: any) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+      res.json(list);
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }

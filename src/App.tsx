@@ -25,7 +25,7 @@ import { FreeVpnView } from './components/FreeVpnView';
 import { PrivacyView } from './components/PrivacyView';
 import { TermsView } from './components/TermsView';
 import { SitemapsView } from './components/SitemapsView';
-import { customFetch as fetch } from './services/clientBackend';
+// import { customFetch as fetch } from './services/clientBackend';
 
 const getTierPriceDisplay = (tierInput: string): string => {
   const normalized = (tierInput || '').trim().toLowerCase();
@@ -233,18 +233,6 @@ export default function App() {
   const [promoteEmail, setPromoteEmail] = useState<string>('');
   const [adminManageMessage, setAdminManageMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
-  // Telegram Bot Live Terminal simulator states
-  const [terminalLogs, setTerminalLogs] = useState<string[]>([
-    `[${new Date(Date.now() - 360000).toLocaleTimeString()}] [SYSTEM] Telebot process daemon successfully booted under Node runtime.`,
-    `[${new Date(Date.now() - 300000).toLocaleTimeString()}] [INFO] Long-Polling connection pool initialized for verification channels.`,
-    `[${new Date(Date.now() - 240000).toLocaleTimeString()}] [INFO] WebSocket tunnel handshakes completed with official Telegram API gateway servers.`,
-    `[${new Date(Date.now() - 180000).toLocaleTimeString()}] [SUCCESS] Database bridges connected securely. Active user telemetry synced.`,
-    `[${new Date(Date.now() - 120000).toLocaleTimeString()}] [BOT] Received /start command signal from Telegram client @chethiya_bandara (ID: 554311)`,
-    `[${new Date(Date.now() - 60000).toLocaleTimeString()}] [INFO] Automatic daemon watchdog check accomplished. Status: 100% Operational, Latency: 12ms.`,
-  ]);
-  const [isTerminalLive, setIsTerminalLive] = useState<boolean>(false);
-  const [customBotCmd, setCustomBotCmd] = useState<string>('');
-  const terminalEndRef = useRef<HTMLDivElement>(null);
   const userChatEndRef = useRef<HTMLDivElement>(null);
 
   // Auto scroll to latest support chat messages
@@ -253,83 +241,6 @@ export default function App() {
       userChatEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [supportMessages, isSupportModalOpen]);
-
-  // Auto scroll to latest logs
-  useEffect(() => {
-    if (terminalEndRef.current) {
-      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [terminalLogs]);
-
-  // Periodic heartbeat loops for live logs
-  useEffect(() => {
-    if (!isTerminalLive) return;
-
-    const phrases = [
-      "Background heartbeat validated. Core socket link remains active.",
-      "Optimized internal packet caching system. Status: healthy.",
-      "Polled database for transaction slip validations: queue clear.",
-      "Active 10Gbps gateway link check resolved successfully (16ms latency).",
-      "SSL verification keys checked recursively. Expiry of daemon cert: 108 days.",
-      "Secured API rate metrics: 0.12 total req/sec, connection pool is nominal.",
-      "Dynamic data allocation watchdogs verified active tunnel endpoints.",
-    ];
-
-    const interval = setInterval(() => {
-      const idx = Math.floor(Math.random() * phrases.length);
-      setTerminalLogs(prev => {
-        const nextLogs = [...prev, `[${new Date().toLocaleTimeString()}] [SYSTEM] ${phrases[idx]}`];
-        if (nextLogs.length > 50) {
-          return nextLogs.slice(nextLogs.length - 50);
-        }
-        return nextLogs;
-      });
-    }, 7000);
-
-    return () => clearInterval(interval);
-  }, [isTerminalLive]);
-
-  const handleSendTerminalCmd = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customBotCmd.trim()) return;
-
-    const cmd = customBotCmd.trim();
-    const timestamp = new Date().toLocaleTimeString();
-    
-    setTerminalLogs(prev => {
-      let responseLogs = [...prev, `[${timestamp}] [USER-ADMIN] admin@datastore:~$ ${cmd}`];
-      const lowerCmd = cmd.toLowerCase();
-
-      if (lowerCmd === '/status') {
-        responseLogs.push(`[${timestamp}] [SYSTEM] CPU Load: 7% • Daemon RAM: 298MB/512MB Allocation`);
-        responseLogs.push(`[${timestamp}] [SYSTEM] Telebot process state: ONLINE (PID: 88402)`);
-        responseLogs.push(`[${timestamp}] [SYSTEM] Established socket connections: 14 channels, DB sync OK.`);
-      } else if (lowerCmd === '/restartbot' || lowerCmd === '/restart') {
-        responseLogs.push(`[${timestamp}] [SYSTEM] Initializing bot warm reload...`);
-        responseLogs.push(`[${timestamp}] [SYSTEM] Flushed all socket poll queries.`);
-        responseLogs.push(`[${timestamp}] [SUCCESS] Bot daemon restarted successfully! Long-polling re-armed.`);
-      } else if (lowerCmd === '/cleanlogs' || lowerCmd === '/clear') {
-        responseLogs = [`[${timestamp}] [SYSTEM] User terminal logs cache cleared successfully.`];
-      } else if (lowerCmd === '/sendbroadcast') {
-        responseLogs.push(`[${timestamp}] [INFO] Launching Global Broadcast dispatch to active customer pool...`);
-        responseLogs.push(`[${timestamp}] [SUCCESS] Broadcaster pipeline fully matched 34 client channels.`);
-      } else {
-        responseLogs.push(`[${timestamp}] [BOT-ROUTER] Recv custom test packet: "${cmd}" from admin desktop.`);
-        responseLogs.push(`[${timestamp}] [BOT-ROUTER] Auto-Response: "Acknowledge signal test. Web application and Telegram API bindings are working as expected."`);
-      }
-
-      if (responseLogs.length > 50) {
-        return responseLogs.slice(responseLogs.length - 50);
-      }
-      return responseLogs;
-    });
-
-    if (cmd.toLowerCase() === '/cleanlogs' || cmd.toLowerCase() === '/clear') {
-      setTerminalLogs([]);
-    }
-
-    setCustomBotCmd('');
-  };
 
   // Read initial data from backend API
   const fetchAllData = async () => {

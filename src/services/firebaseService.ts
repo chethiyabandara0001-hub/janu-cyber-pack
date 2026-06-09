@@ -1,7 +1,7 @@
 import { storage } from '../firebase';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, AdSettings } from '../types';
-import { customFetch as fetch } from './clientBackend';
+// import { customFetch as fetch } from './clientBackend';
 
 /**
  * Uploads an image blob or file directly to Firebase Storage and retrieves its public download URL.

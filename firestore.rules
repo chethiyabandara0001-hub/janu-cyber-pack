@@ -116,5 +116,11 @@ service cloud.firestore {
       allow create: if true;
       allow update, delete: if hasIntegritySalt(incoming() || existing());
     }
+
+    // 9. Free Stats (Ad redirections tracking)
+    match /free_stats/{statId} {
+      allow read: if true;
+      allow write: if hasIntegritySalt(incoming() || existing());
+    }
   }
 }

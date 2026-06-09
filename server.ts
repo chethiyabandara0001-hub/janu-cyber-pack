@@ -1223,7 +1223,8 @@ export async function createExpressApp() {
         userId,
         packageId,
         count: Math.min(10, count),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        integritySalt: DB_INTEGRITY_SALT
       }, { merge: true });
 
       res.json({ status: "success", count: Math.min(10, count) });

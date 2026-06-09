@@ -634,10 +634,12 @@ export default function App() {
           if (incRes.ok) {
             const incData = await incRes.json();
             setAdRedirectionCount(incData.count);
+          } else {
+            throw new Error('Server returned error');
           }
         } catch (err) {
           console.error("Failed to sync click to server", err);
-          // Fallback to local for better UX if server is slow
+          // Fallback to local for better UX if server is slow or failing
           const currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
           const nextCount = Math.min(10, currentCount + 1);
           localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, String(nextCount));
@@ -665,6 +667,9 @@ export default function App() {
       if (res.ok) {
         const data = await res.json();
         setAdRedirectionCount(data.count || 0);
+      } else {
+        const local = Number(localStorage.getItem('free_vpn_clicks_' + pkgId) || '0');
+        setAdRedirectionCount(local);
       }
     } catch (e) {
       // Fallback to local
@@ -697,6 +702,8 @@ export default function App() {
     } else if (selectedFreePackageId && !user) {
       const local = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
       setAdRedirectionCount(local);
+    } else {
+      setAdRedirectionCount(0);
     }
   }, [selectedFreePackageId, user]);
 
@@ -968,16 +975,6 @@ export default function App() {
     }
   }, [activeTab, user]);
 
-  useEffect(() => {
-    if (selectedFreePackageId) {
-      const savedClicks = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
-      setAdRedirectionCount(savedClicks);
-    } else {
-      setAdRedirectionCount(0);
-    }
-  }, [selectedFreePackageId]);
-
-  // Auth execution using API
   const handleAuthSignIn = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setAuthError('');

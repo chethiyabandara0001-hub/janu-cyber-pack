@@ -512,7 +512,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   if (path === "/api/ad-settings/active" && method === "GET") {
     await ensureSeeded();
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
-    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "" };
+    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "" };
 
     const currentHour = new Date().getUTCHours() + 5.5;
     const lankaHour = (currentHour >= 24 ? currentHour - 24 : currentHour) % 24;
@@ -524,7 +524,8 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
       data: {
         adType: isDay ? "day" : "night",
         adLink: activeLink,
-        isDay
+        isDay,
+        superAdminAdUrl: ads.superAdminAdUrl || ""
       }
     };
   }
@@ -651,6 +652,70 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   }
 
   // 11. Admin Maintenance controls
+  if (path === "/api/admin/reset-stat" && method === "POST") {
+    const { type } = await getJsonBody(init);
+    const requesterUid = queryParams.requesterUid || getRequesterUid(init);
+
+    if (type === "free_requests") {
+      const snap = await getCollectionDocs("free_requests");
+      for (const d of snap) {
+        const docId = d.id || d.requestId;
+        if (docId) await deleteDoc(doc(db, "free_requests", docId));
+      }
+      return { status: 200, data: { status: "success", message: "All Free VPN request logs have been cleared successfully." } };
+    }
+
+    if (type === "users") {
+      const users = await getCollectionDocs("users");
+      let count = 0;
+      for (const d of users) {
+        const docId = d.id || d.uid;
+        const isMaster = d.email?.toLowerCase().trim() === "chethiyabandara0001@gmail.com";
+        const isRequestingAdmin = docId === requesterUid;
+        
+        if (d.role !== "admin" && !isMaster && !isRequestingAdmin) {
+          if (docId) {
+            await deleteDoc(doc(db, "users", docId));
+            count++;
+          }
+        }
+      }
+      return { status: 200, data: { status: "success", message: `Statistics reset: ${count} users removed from database.` } };
+    }
+
+    if (type === "sales" || type === "approved") {
+      const slips = await getCollectionDocs("slips");
+      let count = 0;
+      for (const d of slips) {
+        if (d.status === "approved") {
+          const docId = d.id;
+          if (docId) {
+            await deleteDoc(doc(db, "slips", docId));
+            count++;
+          }
+        }
+      }
+      return { status: 200, data: { status: "success", message: `Statistics reset: ${count} approved records removed.` } };
+    }
+
+    if (type === "pending") {
+      const slips = await getCollectionDocs("slips");
+      let count = 0;
+      for (const d of slips) {
+        if (d.status === "pending") {
+          const docId = d.id;
+          if (docId) {
+            await deleteDoc(doc(db, "slips", docId));
+            count++;
+          }
+        }
+      }
+      return { status: 200, data: { status: "success", message: `Queue reset: ${count} pending slips cleared.` } };
+    }
+
+    return { status: 400, data: { error: "Invalid stat type requested for reset." } };
+  }
+
   if (path === "/api/admin/reset-stats" && method === "POST") {
     const slips = await getCollectionDocs("slips");
     for (const d of slips) {

@@ -511,6 +511,9 @@ export default function App() {
       const nextCount = Math.min(10, currentCount + 1);
       localStorage.setItem(storageKey, String(nextCount));
       localStorage.setItem('free_vpn_last_click_time', String(Date.now()));
+      if (nextCount >= 10) {
+        localStorage.setItem('free_vpn_unlocked_at', String(Date.now()));
+      }
       setAdRedirectionCount(nextCount);
     } catch (e: any) {
       setFreeClaimError(e.message || 'Ad network redirection failed.');
@@ -941,9 +944,28 @@ export default function App() {
   }, [activeTab, user]);
 
   useEffect(() => {
+    // 1. If he refreshes the page and had 10 ads completed, reset it.
     const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-    if (globalCount < 10) {
-      setAdRedirectionCount(globalCount);
+    if (globalCount >= 10) {
+      localStorage.setItem('free_vpn_global_clicks', '0');
+      localStorage.removeItem('free_vpn_unlocked_at');
+    }
+  }, []); // Run once on mount
+
+  useEffect(() => {
+    // 2. If he visits the free vpn page and had 10 ads completed, reset it.
+    if (activeTab === 'free-vpn') {
+      const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
+      if (globalCount >= 10) {
+        localStorage.setItem('free_vpn_global_clicks', '0');
+        localStorage.removeItem('free_vpn_unlocked_at');
+        setAdRedirectionCount(0);
+      }
+    }
+
+    const currentCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
+    if (currentCount < 10) {
+      setAdRedirectionCount(currentCount);
     } else if (selectedFreePackageId) {
       const savedClicks = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
       setAdRedirectionCount(savedClicks);
@@ -954,12 +976,24 @@ export default function App() {
 
   useEffect(() => {
     const checkCooldown = () => {
+      // 2-minute cooldown between clicks
       const lastClick = Number(localStorage.getItem('free_vpn_last_click_time') || '0');
       const elapsed = Date.now() - lastClick;
       if (elapsed < 120000 && (!user || user.role !== 'admin')) {
         setAdCooldownRemaining(Math.ceil((120000 - elapsed) / 1000));
       } else {
         setAdCooldownRemaining(0);
+      }
+
+      // 3. Trying to get free vpn code after 2 minutes of completion -> Reset
+      const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
+      if (globalCount >= 10) {
+        const unlockedAt = Number(localStorage.getItem('free_vpn_unlocked_at') || '0');
+        if (unlockedAt > 0 && Date.now() - unlockedAt > 120000) {
+          localStorage.setItem('free_vpn_global_clicks', '0');
+          localStorage.removeItem('free_vpn_unlocked_at');
+          setAdRedirectionCount(0);
+        }
       }
     };
 

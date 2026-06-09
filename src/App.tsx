@@ -9,7 +9,7 @@ import {
   Shield, Server, Inbox, Settings, Activity, Upload, Check, X, AlertCircle, 
   Send, Phone, Mail, Award, Lock, LogIn, ExternalLink, RefreshCw, Layers,
   ChevronRight, ChevronLeft, Sparkles, Database, Plus, Trash2, Edit2, Volume2, Globe, FileText, CheckCircle, ShieldAlert, MessageSquare, MessagesSquare, RotateCcw,
-  Sun, Moon, Loader2, Zap, ArrowRight, Wrench
+  Sun, Moon, Loader2, Zap, ArrowRight, Wrench, Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Package, Post, PaymentSlip, ContactDetails, HomeAnnouncement, FreePackage, FreeRequest, SupportMessage } from './types';
@@ -365,12 +365,14 @@ export default function App() {
 
   // Admin delete Free VPN user request log
   const handleDeleteFreeRequest = async (id: string) => {
+    if (!user) return;
     try {
       setAdminFreeError('');
-      const response = await fetch(`/api/admin/free-requests/${id}`, {
+      const response = await fetch(`/api/admin/free-requests/${id}?requesterUid=${user.uid}`, {
         method: 'DELETE',
         headers: {
-          'X-Requester-Uid': user?.uid || ''
+          'X-Requester-Uid': user.uid,
+          'Requester-Uid': user.uid
         }
       });
 
@@ -382,6 +384,7 @@ export default function App() {
       setFreeRequests(data.freeRequests || []);
       setConfirmDeleteFreeRequestId(null);
     } catch (err: any) {
+      console.error('[DELETE-LOG-ERROR]', err);
       setAdminFreeError(err.message || 'An error occurred while deleting request log.');
     }
   };
@@ -630,23 +633,74 @@ export default function App() {
     }
   };
 
-  // Reset metrics / stats on backend
-  const handleResetStats = async () => {
+  // Reset specialized statistics individually (Admin Only)
+  const handleResetSpecificStat = async (type: 'users' | 'sales' | 'pending' | 'approved' | 'free_requests', e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    if (!user) {
+      alert('Authentication error: User context not found. Please log in again.');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to reset this specifically? This action is irreversible.`)) return;
+    
     setAdminLoading(true);
     try {
-      const res = await fetch('/api/admin/reset-stats', {
+      console.log(`[ADMIN-ACTION] Resetting stat: ${type} for User: ${user.uid}`);
+      const res = await fetch(`/api/admin/reset-stat?requesterUid=${user.uid}`, {
         method: 'POST',
         headers: {
-          'X-Requester-Uid': user?.uid || ''
+          'Content-Type': 'application/json',
+          'X-Requester-Uid': user.uid,
+          'Requester-Uid': user.uid
+        },
+        body: JSON.stringify({ type, requesterUid: user.uid })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === 'success') {
+        alert(data.message || 'Stat reset successfully');
+        // Aggressive fetch to update UI immediately
+        await Promise.all([
+          fetchAdminStats(),
+          fetchAllData()
+        ]);
+      } else {
+        alert(`Error: ${data.error || 'Failed to reset stat'}`);
+      }
+    } catch (err) {
+      console.error('[ADMIN-ERROR]', err);
+      alert('Network error while resetting stat. Check your internet connection.');
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  // Reset metrics / stats on backend
+  const handleResetStats = async () => {
+    if (!user) return;
+    setAdminLoading(true);
+    try {
+      const res = await fetch(`/api/admin/reset-stats?requesterUid=${user.uid}`, {
+        method: 'POST',
+        headers: {
+          'X-Requester-Uid': user.uid,
+          'Requester-Uid': user.uid
         }
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setShowResetConfirm(false);
         await fetchAdminStats();
+        alert('Statistics reset successfully.');
+      } else {
+        alert('Failed to reset statistics: ' + (data.error || 'Unknown error'));
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      alert('Network error during reset.');
     } finally {
       setAdminLoading(false);
     }
@@ -654,13 +708,15 @@ export default function App() {
 
   // Reset & Restore initial default packages, free packages, and posts from the server database
   const handleRestoreDefaults = async () => {
+    if (!user) return;
     setAdminLoading(true);
     setAdminManageMessage(null);
     try {
-      const res = await fetch('/api/admin/restore-defaults', {
+      const res = await fetch(`/api/admin/restore-defaults?requesterUid=${user.uid}`, {
         method: 'POST',
         headers: {
-          'X-Requester-Uid': user?.uid || ''
+          'X-Requester-Uid': user.uid,
+          'Requester-Uid': user.uid
         }
       });
       const data = await res.json();
@@ -670,9 +726,11 @@ export default function App() {
           type: 'success',
           text: 'Database successfully restored to original factory default packages, posts, and free VPN listings!'
         });
+        alert('Database restored to factory defaults.');
         await fetchAllData();
         await fetchAdminStats();
       } else {
+        alert('Failed to restore defaults.');
         setAdminManageMessage({
           type: 'error',
           text: data.error || 'Failed to restore default configuration.'
@@ -680,6 +738,7 @@ export default function App() {
       }
     } catch (e: any) {
       console.error(e);
+      alert('Network error during restore.');
       setAdminManageMessage({
         type: 'error',
         text: 'Network error connecting to administrative restore module: ' + (e?.message || String(e))
@@ -1872,21 +1931,65 @@ export default function App() {
             {/* Quick KPI stats row */}
             {adminStats && (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Estimated Users Total</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-white mt-1">{adminStats.totalUsers}</p>
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Estimated Users Total</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-white mt-1">{adminStats.totalUsers}</p>
+                    </div>
+                    <button 
+                      onClick={(e) => handleResetSpecificStat('users', e)}
+                      className="text-slate-600 hover:text-rose-500 transition-colors p-1"
+                      title="Reset Users"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                  <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Total Sales Approved</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-emerald-400 mt-1">LKR {(adminStats?.totalSales || 0).toLocaleString()}</p>
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Total Sales Approved</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-emerald-400 mt-1">LKR {(adminStats?.totalSales || 0).toLocaleString()}</p>
+                    </div>
+                    <button 
+                      onClick={(e) => handleResetSpecificStat('sales', e)}
+                      className="text-slate-600 hover:text-rose-500 transition-colors p-1"
+                      title="Reset Sales"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                  <p className="text-[10px] text-amber-400 font-mono uppercase tracking-wider">Pending Slips Queue</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-amber-400 mt-1">{adminStats.pendingCount}</p>
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] text-amber-400 font-mono uppercase tracking-wider">Pending Slips Queue</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-amber-400 mt-1">{adminStats.pendingCount}</p>
+                    </div>
+                    <button 
+                      onClick={(e) => handleResetSpecificStat('pending', e)}
+                      className="text-slate-600 hover:text-rose-500 transition-colors p-1"
+                      title="Clear Pending Queue"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-                  <p className="text-[10px] text-indigo-450 text-indigo-400 font-mono uppercase tracking-wider">Approved Deliveries</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-indigo-400 mt-1">{adminStats.approvedCount}</p>
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 relative group">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[10px] text-indigo-450 text-indigo-400 font-mono uppercase tracking-wider">Approved Deliveries</p>
+                      <p className="text-2xl sm:text-3xl font-bold text-indigo-400 mt-1">{adminStats.approvedCount}</p>
+                    </div>
+                    <button 
+                      onClick={(e) => handleResetSpecificStat('approved', e)}
+                      className="text-slate-600 hover:text-rose-500 transition-colors p-1"
+                      title="Clear Approved List"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -2769,8 +2872,22 @@ export default function App() {
 
               </div>
 
-              {/* Administrative User claims logs queue full row */}
               <div className="border-t border-slate-800/60 pt-5 space-y-3">
+                <div className="flex items-center justify-between px-1">
+                   <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                     <Clock className="w-4 h-4 text-slate-500" />
+                     Administrative User claims logs queue
+                   </h3>
+                   {freeRequests.length > 0 && (
+                     <button
+                       onClick={(e) => handleResetSpecificStat('free_requests', e)}
+                       className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white rounded-lg border border-rose-500/20 text-[10px] font-bold transition-all uppercase tracking-tight"
+                     >
+                       <Trash2 className="w-3.5 h-3.5" />
+                       Clear All Logs
+                     </button>
+                   )}
+                </div>
 
                 <div className="border border-slate-850 rounded-xl bg-slate-950 overflow-hidden">
                   {freeRequests.length === 0 ? (

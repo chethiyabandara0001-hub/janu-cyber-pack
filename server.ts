@@ -720,6 +720,10 @@ export async function createExpressApp() {
     });
   };
 
+  // Middleware (Moved up for reliable body parsing in guards)
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
   app.set("trust proxy", 1); // Trust first proxy (like Cloudflare)
   app.use(cors({ origin: true, credentials: true })); // Allow all cross origin requests (useful behind CF)
   
@@ -736,6 +740,25 @@ export async function createExpressApp() {
       res.send("<h1>Database Reset Success!</h1><p>The collections have been restored to factory defaults. Direct <a href='/'>back to app</a></p>");
     } catch (e) {
       res.status(500).send("Repair failed: " + String(e));
+    }
+  });
+
+  // Admin Import route
+  app.post("/api/admin/import-free-packages", adminGuard, async (req, res) => {
+    try {
+      const { packages } = req.body;
+      if (!Array.isArray(packages)) {
+        return res.status(400).json({ error: "Invalid data format" });
+      }
+      const database = getDb();
+      for (const p of packages) {
+        await setDoc(doc(database, "free_packages", p.id), p);
+      }
+      console.log(`[ADMIN-IMPORT] Successfully imported ${packages.length} free packages.`);
+      res.json({ status: "success", message: `Successfully imported ${packages.length} free packages.` });
+    } catch (e) {
+      console.error("[ADMIN-IMPORT-ERROR]", e);
+      res.status(500).json({ error: "Import failed: " + String(e) });
     }
   });
 
@@ -791,42 +814,56 @@ export async function createExpressApp() {
   // 2. Cryptographic and Database Identity Check as an Express Admin Middleware
   const adminGuard = async (req: express.Request, res: express.Response, _next: express.NextFunction) => {
     try {
+      console.log(`[AUTH-CHECK] Path: ${req.path} Method: ${req.method}`);
       // 1. Check for Master API Key (Direct binding for Android/External apps)
-      const providedKey = req.headers["x-api-key"] || req.query.apiKey;
+      const providedKey = req.headers["x-api-key"] || req.query.apiKey || req.body?.apiKey;
       const masterKey = process.env.MASTER_API_KEY;
       
       if (masterKey && providedKey === masterKey) {
-        console.log(`[AUTH] Admin access granted via Master API Key`);
+        console.log(`[AUTH-SUCCESS] Admin access granted via Master API Key`);
         return _next();
       }
 
       // 2. Fallback to standard UID-based role check
-      const requesterUid = req.headers["x-requester-uid"] || req.query.requesterUid || req.body.requesterUid;
-      if (!requesterUid) {
+      const requesterUid = req.headers["x-requester-uid"] || req.headers["requester-uid"] || req.query.requesterUid || req.body?.requesterUid;
+      console.log(`[AUTH-CHECK] Requester UID: ${requesterUid}`);
+      
+      if (!requesterUid || requesterUid === "undefined" || requesterUid === "null") {
+        console.warn(`[AUTH-FAILURE] Missing valid requester UID for path: ${req.path}`);
         return res.status(401).json({ error: "Access Denied: Administrative query credentials are missing." });
       }
       
       const database = getDb();
       const userDocRef = doc(database, "users", String(requesterUid));
       const userSnap = await getDoc(userDocRef);
+      
+      const masterEmail = "chethiyabandara0001@gmail.com";
+      
       if (!userSnap.exists()) {
-        return res.status(403).json({ error: "Access Denied: Administrative record not registered." });
+        console.warn(`[AUTH-FAILURE] User ${requesterUid} not found in database records.`);
+        // Note: Even if not in DB, if we trust the UID is from a logged in admin, we could proceed.
+        // But for safety, we usually require a DB entry for role checking.
+        return res.status(403).json({ error: "Access Denied: Your account is not registered in the administrative database." });
       }
       
       const userData = userSnap.data();
-      if (userData.role !== "admin") {
-        return res.status(403).json({ error: "Access Denied: Insufficient permissions for administrative query." });
+      const isAdmin = userData.role === "admin" || userData.email?.toLowerCase() === masterEmail.toLowerCase();
+
+      if (!isAdmin) {
+        console.warn(`[AUTH-FAILURE] User ${requesterUid} does not have admin permissions. Role: ${userData.role}`);
+        return res.status(403).json({ error: "Access Denied: You do not have permission to perform this action." });
       }
       
+      console.log(`[AUTH-SUCCESS] Admin access granted to UID: ${requesterUid} (${userData.email})`);
       _next();
     } catch (e) {
+      console.error(`[AUTH-ERROR] Security validation failure: ${e}`);
       res.status(500).json({ error: "Security validation failure: " + String(e) });
     }
   };
 
   // Middleware
-  app.use(express.json({ limit: "50mb" }));
-  app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  // (Moved up for reliable body parsing in guards)
 
   // Ensure uploads directory exists and expose it as static folder
   const uploadsDir = path.join(process.cwd(), "uploads");
@@ -1652,6 +1689,70 @@ export async function createExpressApp() {
         packages: packagesList,
         posts: postsList
       });
+    } catch (e) {
+      res.status(500).json({ error: String(e) });
+    }
+  });
+
+  // Reset specialized statistics individually (Admin Only)
+  app.post("/api/admin/reset-stat", adminGuard, async (req, res) => {
+    try {
+      const { type } = req.body;
+      const database = getDb();
+
+      if (type === "free_requests") {
+        const snap = await getDocs(collection(database, "free_requests"));
+        console.log(`[ADMIN-ACTION] Trimming ${snap.size} free request logs...`);
+        const deletePromises = snap.docs.map(d => deleteDoc(doc(database, "free_requests", d.id)));
+        await Promise.all(deletePromises);
+        return res.json({ status: "success", message: "All Free VPN request logs have been cleared successfully." });
+      }
+
+      if (type === "users") {
+        const usersSnap = await getDocs(collection(database, "users"));
+        const currentAdminUid = req.headers["x-requester-uid"] || req.headers["requester-uid"] || req.body?.requesterUid;
+        let count = 0;
+        for (const d of usersSnap.docs) {
+          const u = d.data();
+          // Protect admins and specifically the one requesting
+          const isMaster = u.email?.toLowerCase() === "chethiyabandara0001@gmail.com";
+          const isRequestingAdmin = d.id === currentAdminUid;
+          
+          if (u.role !== "admin" && !isMaster && !isRequestingAdmin) {
+            await deleteDoc(doc(database, "users", d.id));
+            count++;
+          }
+        }
+        return res.json({ status: "success", message: `Statistics reset: ${count} users removed from database.` });
+      }
+
+      if (type === "sales" || type === "approved") {
+        const slipsSnap = await getDocs(collection(database, "slips"));
+        let count = 0;
+        for (const d of slipsSnap.docs) {
+          const status = d.data().status;
+          if (status === "approved") {
+            await deleteDoc(doc(database, "slips", d.id));
+            count++;
+          }
+        }
+        return res.json({ status: "success", message: `Statistics reset: ${count} approved records removed.` });
+      }
+
+      if (type === "pending") {
+        const slipsSnap = await getDocs(collection(database, "slips"));
+        let count = 0;
+        for (const d of slipsSnap.docs) {
+          const status = d.data().status;
+          if (status === "pending") {
+            await deleteDoc(doc(database, "slips", d.id));
+            count++;
+          }
+        }
+        return res.json({ status: "success", message: `Queue reset: ${count} pending slips cleared.` });
+      }
+
+      res.status(400).json({ error: "Invalid stat type requested for reset." });
     } catch (e) {
       res.status(500).json({ error: String(e) });
     }

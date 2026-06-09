@@ -2058,26 +2058,13 @@ export default function App() {
 
         {/* TAB 2: VPN SUBSCRIPTIONS & PACKAGE CARDS */}
         {activeTab === 'packages' && (
-          isStandardBlocked ? (
-            <FeatureLockView
-              adRedirectionCount={adRedirectionCount}
-              setAdRedirectionCount={setAdRedirectionCount}
-              isLoadingActiveAd={isLoadingActiveAd}
-              handleTriggerAdRedirect={handleTriggerAdRedirect}
-              adCooldownRemaining={adCooldownRemaining}
-              user={user}
-              customHeading="🔒 VPN Packages Catalog is Locked"
-              customDescription="All 10 ad verification stages must be completed to unlock and view the premium VPN package configurations list in this region."
-            />
-          ) : (
-            <PackagesView
-              packages={packages}
-              user={user}
-              setShowLoginModal={setShowLoginModal}
-              setSelectedPackForSlip={setSelectedPackForSlip}
-              handleInitiateLogin={handleInitiateLogin}
-            />
-          )
+          <PackagesView
+            packages={packages}
+            user={user}
+            setShowLoginModal={setShowLoginModal}
+            setSelectedPackForSlip={setSelectedPackForSlip}
+            handleInitiateLogin={handleInitiateLogin}
+          />
         )}
 
         {/* TAB: GET FREE VPN INTERACTIVE GATEWAY */}

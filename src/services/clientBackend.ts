@@ -467,7 +467,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   if (path === "/api/admin/ad-settings" && method === "GET") {
     const email = queryParams.email || "";
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
-    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "" };
+    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false };
 
     if (email.toLowerCase().trim() === "chethiyabandara0001@gmail.com") {
       return {
@@ -475,7 +475,8 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
         data: {
           dayTimeAdCode: ads.dayTimeAdCode || "",
           nightTimeAdCode: ads.nightTimeAdCode || "",
-          superAdminAdUrl: ads.superAdminAdUrl || ""
+          superAdminAdUrl: ads.superAdminAdUrl || "",
+          useDaytimeOnly: !!ads.useDaytimeOnly
         }
       };
     } else {
@@ -484,23 +485,25 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
         data: {
           dayTimeAdCode: "●●●●●●● (Restricted: Super-Admin Only)",
           nightTimeAdCode: ads.nightTimeAdCode || "",
-          superAdminAdUrl: "●●●●●●● (Restricted: Super-Admin Only)"
+          superAdminAdUrl: "●●●●●●● (Restricted: Super-Admin Only)",
+          useDaytimeOnly: false
         }
       };
     }
   }
 
   if (path === "/api/admin/ad-settings/save" && method === "POST") {
-    const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl } = await getJsonBody(init);
+    const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl, useDaytimeOnly } = await getJsonBody(init);
     const adsRef = doc(db, "settings", "ads");
     const adsSnap = await getDoc(adsRef);
-    const current = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "" };
+    const current = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false };
 
     const targetEmail = String(email || "").toLowerCase().trim();
     if (targetEmail === "chethiyabandara0001@gmail.com") {
       current.dayTimeAdCode = dayTimeAdCode || "";
       current.nightTimeAdCode = nightTimeAdCode || "";
       current.superAdminAdUrl = superAdminAdUrl || "";
+      current.useDaytimeOnly = !!useDaytimeOnly;
     } else {
       current.nightTimeAdCode = nightTimeAdCode || "";
     }
@@ -512,22 +515,25 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   if (path === "/api/ad-settings/active" && method === "GET") {
     await ensureSeeded();
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
-    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "" };
+    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false };
 
     const currentHour = new Date().getUTCHours() + 5.5;
     const lankaHour = (currentHour >= 24 ? currentHour - 24 : currentHour) % 24;
     const isDay = lankaHour >= 6 && lankaHour < 18;
-    const activeLink = isDay ? (ads.dayTimeAdCode || "https://t.me/janucyberpack") : (ads.nightTimeAdCode || "https://t.me/janucyberpack");
+    const activeLink = ads.useDaytimeOnly
+      ? (ads.dayTimeAdCode || "https://t.me/janucyberpack")
+      : (isDay ? (ads.dayTimeAdCode || "https://t.me/janucyberpack") : (ads.nightTimeAdCode || "https://t.me/janucyberpack"));
 
     return {
       status: 200,
       data: {
-        adType: isDay ? "day" : "night",
+        adType: (ads.useDaytimeOnly || isDay) ? "day" : "night",
         adLink: activeLink,
-        isDay,
+        isDay: ads.useDaytimeOnly ? true : isDay,
         dayTimeAdCode: ads.dayTimeAdCode || "",
         nightTimeAdCode: ads.nightTimeAdCode || "",
-        superAdminAdUrl: ads.superAdminAdUrl || ""
+        superAdminAdUrl: ads.superAdminAdUrl || "",
+        useDaytimeOnly: !!ads.useDaytimeOnly
       }
     };
   }

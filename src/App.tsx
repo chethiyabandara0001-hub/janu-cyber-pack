@@ -167,6 +167,7 @@ export default function App() {
   const [adminDayTimeAdCode, setAdminDayTimeAdCode] = useState<string>('');
   const [adminNightTimeAdCode, setAdminNightTimeAdCode] = useState<string>('');
   const [adminSuperAdUrl, setAdminSuperAdUrl] = useState<string>('');
+  const [adminUseDaytimeOnly, setAdminUseDaytimeOnly] = useState<boolean>(false);
   const [isSavingAdSettings, setIsSavingAdSettings] = useState<boolean>(false);
   const [adSettingsMessage, setAdSettingsMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -414,6 +415,7 @@ export default function App() {
         setAdminDayTimeAdCode(data.dayTimeAdCode || '');
         setAdminNightTimeAdCode(data.nightTimeAdCode || '');
         setAdminSuperAdUrl(data.superAdminAdUrl || '');
+        setAdminUseDaytimeOnly(!!data.useDaytimeOnly);
       }
     } catch (e) {
       console.error("Failed to load ad settings", e);
@@ -437,7 +439,8 @@ export default function App() {
           email: user.email,
           dayTimeAdCode: adminDayTimeAdCode,
           nightTimeAdCode: adminNightTimeAdCode,
-          superAdminAdUrl: adminSuperAdUrl
+          superAdminAdUrl: adminSuperAdUrl,
+          useDaytimeOnly: adminUseDaytimeOnly
         })
       });
       const data = await res.json();
@@ -449,6 +452,7 @@ export default function App() {
         setAdminDayTimeAdCode(data.adSettings.dayTimeAdCode || '');
         setAdminNightTimeAdCode(data.adSettings.nightTimeAdCode || '');
         setAdminSuperAdUrl(data.adSettings.superAdminAdUrl || '');
+        setAdminUseDaytimeOnly(!!data.adSettings.useDaytimeOnly);
       }
     } catch (err: any) {
       setAdSettingsMessage({ type: 'error', text: err.message || 'Error saving ad configurations' });
@@ -500,10 +504,12 @@ export default function App() {
       
       // Alternate: Even steps (0, 2, 4, 6, 8) use nightAd (first on night time portal)
       // Odd steps (1, 3, 5, 7, 9) use dayAd (second on day time portal)
+      // If useDaytimeOnly is configured on active settings, we strictly bypass this and use daytime ad only for all steps!
+      const useDaytimeOnly = !!data.useDaytimeOnly;
       const isOddStep = currentCount % 2 === 1;
-      const adUrl = isOddStep ? dayAd : nightAd;
+      const adUrl = useDaytimeOnly ? dayAd : (isOddStep ? dayAd : nightAd);
       
-      console.log(`[Complimentary Ad Gate] Click index: ${currentCount}. Portal chosen: ${isOddStep ? '☀️ Day' : '🌙 Night'} Link: ${adUrl}`);
+      console.log(`[Complimentary Ad Gate] Click index: ${currentCount}. Portal chosen: ${useDaytimeOnly ? '☀️ Day (Override Daytime-Only Switch)' : (isOddStep ? '☀️ Day' : '🌙 Night')} Link: ${adUrl}`);
       
       // Attempt redirecting
       window.open(adUrl, '_blank', 'noopener,noreferrer');
@@ -3619,6 +3625,32 @@ export default function App() {
                                   placeholder="e.g. https://best-adsite.com/campaign-night"
                                   className="w-full bg-slate-900 border border-slate-800 rounded p-2.5 text-white outline-none focus:border-indigo-500 font-mono text-[11px]"
                                 />
+                              </div>
+                            </div>
+
+                            {/* Super-Admin daytime-ad-only toggle switch */}
+                            <div className="bg-slate-950 p-5 rounded-xl border border-indigo-500/20 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-1 pr-4">
+                                  <label className="block text-white font-extrabold font-mono uppercase tracking-wider flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
+                                    ☀️ Force Daytime Ad Code Only (All redirects):
+                                  </label>
+                                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                                    When enabled, both day and night time redirects will bypass the alternating / one-by-one ad program and serve the Daytime Ad code directly.
+                                  </p>
+                                </div>
+                                <div className="flex items-center shrink-0">
+                                  <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                      type="checkbox"
+                                      checked={adminUseDaytimeOnly}
+                                      onChange={(e) => setAdminUseDaytimeOnly(e.target.checked)}
+                                      className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                  </label>
+                                </div>
                               </div>
                             </div>
 

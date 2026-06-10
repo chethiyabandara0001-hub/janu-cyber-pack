@@ -119,6 +119,7 @@ export interface AdSettings extends DatabaseDoc {
   dayTimeAdCode: string;
   nightTimeAdCode: string;
   superAdminAdUrl?: string;
+  useDaytimeOnly?: boolean;
 }
 
 export interface MaintenanceSettings extends DatabaseDoc {

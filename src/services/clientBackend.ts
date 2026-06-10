@@ -467,7 +467,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   if (path === "/api/admin/ad-settings" && method === "GET") {
     const email = queryParams.email || "";
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
-    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false };
+    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false, adFrequency: 1 };
 
     if (email.toLowerCase().trim() === "chethiyabandara0001@gmail.com") {
       return {
@@ -476,7 +476,8 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
           dayTimeAdCode: ads.dayTimeAdCode || "",
           nightTimeAdCode: ads.nightTimeAdCode || "",
           superAdminAdUrl: ads.superAdminAdUrl || "",
-          useDaytimeOnly: !!ads.useDaytimeOnly
+          useDaytimeOnly: !!ads.useDaytimeOnly,
+          adFrequency: ads.adFrequency || 1
         }
       };
     } else {
@@ -486,17 +487,18 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
           dayTimeAdCode: "●●●●●●● (Restricted: Super-Admin Only)",
           nightTimeAdCode: ads.nightTimeAdCode || "",
           superAdminAdUrl: "●●●●●●● (Restricted: Super-Admin Only)",
-          useDaytimeOnly: false
+          useDaytimeOnly: false,
+          adFrequency: 1
         }
       };
     }
   }
 
   if (path === "/api/admin/ad-settings/save" && method === "POST") {
-    const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl, useDaytimeOnly } = await getJsonBody(init);
+    const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl, useDaytimeOnly, adFrequency } = await getJsonBody(init);
     const adsRef = doc(db, "settings", "ads");
     const adsSnap = await getDoc(adsRef);
-    const current = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false };
+    const current = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false, adFrequency: 1 };
 
     const targetEmail = String(email || "").toLowerCase().trim();
     if (targetEmail === "chethiyabandara0001@gmail.com") {
@@ -504,6 +506,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
       current.nightTimeAdCode = nightTimeAdCode || "";
       current.superAdminAdUrl = superAdminAdUrl || "";
       current.useDaytimeOnly = !!useDaytimeOnly;
+      current.adFrequency = typeof adFrequency === "number" ? adFrequency : Number(adFrequency || 1);
     } else {
       current.nightTimeAdCode = nightTimeAdCode || "";
     }
@@ -515,7 +518,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   if (path === "/api/ad-settings/active" && method === "GET") {
     await ensureSeeded();
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
-    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false };
+    const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false, adFrequency: 1 };
 
     const currentHour = new Date().getUTCHours() + 5.5;
     const lankaHour = (currentHour >= 24 ? currentHour - 24 : currentHour) % 24;
@@ -533,7 +536,8 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
         dayTimeAdCode: ads.dayTimeAdCode || "",
         nightTimeAdCode: ads.nightTimeAdCode || "",
         superAdminAdUrl: ads.superAdminAdUrl || "",
-        useDaytimeOnly: !!ads.useDaytimeOnly
+        useDaytimeOnly: !!ads.useDaytimeOnly,
+        adFrequency: ads.adFrequency || 1
       }
     };
   }

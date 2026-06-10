@@ -168,6 +168,7 @@ export default function App() {
   const [adminNightTimeAdCode, setAdminNightTimeAdCode] = useState<string>('');
   const [adminSuperAdUrl, setAdminSuperAdUrl] = useState<string>('');
   const [adminUseDaytimeOnly, setAdminUseDaytimeOnly] = useState<boolean>(false);
+  const [adminAdFrequency, setAdminAdFrequency] = useState<number>(1);
   const [isSavingAdSettings, setIsSavingAdSettings] = useState<boolean>(false);
   const [adSettingsMessage, setAdSettingsMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -416,6 +417,7 @@ export default function App() {
         setAdminNightTimeAdCode(data.nightTimeAdCode || '');
         setAdminSuperAdUrl(data.superAdminAdUrl || '');
         setAdminUseDaytimeOnly(!!data.useDaytimeOnly);
+        setAdminAdFrequency(data.adFrequency || 1);
       }
     } catch (e) {
       console.error("Failed to load ad settings", e);
@@ -440,7 +442,8 @@ export default function App() {
           dayTimeAdCode: adminDayTimeAdCode,
           nightTimeAdCode: adminNightTimeAdCode,
           superAdminAdUrl: adminSuperAdUrl,
-          useDaytimeOnly: adminUseDaytimeOnly
+          useDaytimeOnly: adminUseDaytimeOnly,
+          adFrequency: adminAdFrequency
         })
       });
       const data = await res.json();
@@ -453,6 +456,7 @@ export default function App() {
         setAdminNightTimeAdCode(data.adSettings.nightTimeAdCode || '');
         setAdminSuperAdUrl(data.adSettings.superAdminAdUrl || '');
         setAdminUseDaytimeOnly(!!data.adSettings.useDaytimeOnly);
+        setAdminAdFrequency(data.adSettings.adFrequency || 1);
       }
     } catch (err: any) {
       setAdSettingsMessage({ type: 'error', text: err.message || 'Error saving ad configurations' });
@@ -511,8 +515,15 @@ export default function App() {
       
       console.log(`[Complimentary Ad Gate] Click index: ${currentCount}. Portal chosen: ${useDaytimeOnly ? '☀️ Day (Override Daytime-Only Switch)' : (isOddStep ? '☀️ Day' : '🌙 Night')} Link: ${adUrl}`);
       
-      // Attempt redirecting
-      window.open(adUrl, '_blank', 'noopener,noreferrer');
+      // Attempt redirecting based on frequency (double/triple grabbing bar setting)
+      const adFrequency = Number(data.adFrequency || 1);
+      console.log(`[Ad Multiplier] Opening ad redirects with frequency multiplier: ${adFrequency}x`);
+      
+      for (let i = 0; i < adFrequency; i++) {
+        // Attach subtle hash suffix to ensure unique tab routing
+        const targetUrl = adUrl.includes('?') ? `${adUrl}&ref_seq=${i}` : `${adUrl}#ref_seq=${i}`;
+        window.open(targetUrl, `_blank_ad_${i}_${Date.now()}`, 'noopener,noreferrer');
+      }
       
       const nextCount = Math.min(10, currentCount + 1);
       localStorage.setItem(storageKey, String(nextCount));
@@ -3650,6 +3661,42 @@ export default function App() {
                                     />
                                     <div className="w-11 h-6 bg-slate-800 rounded-full peer peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-350 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                                   </label>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Super-Admin Ad Frequency Multiplier Slider / Grabbing Bar */}
+                            <div className="bg-slate-950 p-5 rounded-xl border border-indigo-500/20 space-y-4">
+                              <div className="flex items-center justify-between">
+                                <div className="space-y-1 pr-4">
+                                  <label className="block text-white font-extrabold font-mono uppercase tracking-wider flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
+                                    ⚡ Ad Redirection Frequency (Grabbing Bar):
+                                  </label>
+                                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                                    Set the multiplicity factor representing the number of advertisement redirects opened simultaneously per single user gateway click stage.
+                                  </p>
+                                </div>
+                                <div className="shrink-0">
+                                  <span className="text-xs font-black font-mono text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-lg uppercase tracking-wider">
+                                    {adminAdFrequency === 1 ? '1x Single' : adminAdFrequency === 2 ? '2x Double' : '3x Triple'}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="space-y-2 px-1">
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="3"
+                                  step="1"
+                                  value={adminAdFrequency}
+                                  onChange={(e) => setAdminAdFrequency(Number(e.target.value))}
+                                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-grab active:cursor-grabbing accent-indigo-500"
+                                />
+                                <div className="flex justify-between text-[10px] font-bold font-mono text-slate-500">
+                                  <span>1x Single</span>
+                                  <span>2x Double</span>
+                                  <span>3x Triple</span>
                                 </div>
                               </div>
                             </div>

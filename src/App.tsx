@@ -177,7 +177,6 @@ export default function App() {
   const [isLoadingActiveAd, setIsLoadingActiveAd] = useState<boolean>(false);
   const [activeSuperAdminAdUrl, setActiveSuperAdminAdUrl] = useState<string>('');
   const [dashboardAdPlayCount, setDashboardAdPlayCount] = useState<number>(0);
-  const [adCooldownRemaining, setAdCooldownRemaining] = useState<number>(0);
 
   // Private Support Chat System States
   const [supportMessages, setSupportMessages] = useState<SupportMessage[]>([]);
@@ -470,19 +469,6 @@ export default function App() {
     setIsLoadingActiveAd(true);
     setFreeClaimError('');
     try {
-      // 2-minute cooldown check (not active if user is administrator)
-      const lastClick = Number(localStorage.getItem('free_vpn_last_click_time') || '0');
-      const timeRemainingMs = 120000 - (Date.now() - lastClick);
-      if (timeRemainingMs > 0 && (!user || user.role !== 'admin')) {
-        const remainingSec = Math.ceil(timeRemainingMs / 1000);
-        const formatTime = (sec: number) => {
-          const m = Math.floor(sec / 60);
-          const s = sec % 60;
-          return `${m}:${s < 10 ? '0' : ''}${s}`;
-        };
-        throw new Error(`Traffic congestion protection is active. Please wait ${formatTime(remainingSec)} before verifying your next stage.`);
-      }
-
       const res = await fetch('/api/ad-settings/active');
       if (!res.ok) throw new Error('Could not retrieve active ad source.');
       const data = await res.json();
@@ -527,7 +513,6 @@ export default function App() {
       
       const nextCount = Math.min(10, currentCount + 1);
       localStorage.setItem(storageKey, String(nextCount));
-      localStorage.setItem('free_vpn_last_click_time', String(Date.now()));
       if (nextCount >= 10) {
         localStorage.setItem('free_vpn_unlocked_at', String(Date.now()));
       }
@@ -990,34 +975,6 @@ export default function App() {
       setAdRedirectionCount(10);
     }
   }, [selectedFreePackageId, activeTab]);
-
-  useEffect(() => {
-    const checkCooldown = () => {
-      // 2-minute cooldown between clicks
-      const lastClick = Number(localStorage.getItem('free_vpn_last_click_time') || '0');
-      const elapsed = Date.now() - lastClick;
-      if (elapsed < 120000 && (!user || user.role !== 'admin')) {
-        setAdCooldownRemaining(Math.ceil((120000 - elapsed) / 1000));
-      } else {
-        setAdCooldownRemaining(0);
-      }
-
-      // 3. Trying to get free vpn code after 2 minutes of completion -> Reset
-      const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-      if (globalCount >= 10) {
-        const unlockedAt = Number(localStorage.getItem('free_vpn_unlocked_at') || '0');
-        if (unlockedAt > 0 && Date.now() - unlockedAt > 120000) {
-          localStorage.setItem('free_vpn_global_clicks', '0');
-          localStorage.removeItem('free_vpn_unlocked_at');
-          setAdRedirectionCount(0);
-        }
-      }
-    };
-
-    checkCooldown();
-    const timer = setInterval(checkCooldown, 1000);
-    return () => clearInterval(timer);
-  }, [user]);
 
   // Auth execution using API
   const handleAuthSignIn = async (e?: React.FormEvent) => {
@@ -2092,7 +2049,6 @@ export default function App() {
               setAdRedirectionCount={setAdRedirectionCount}
               isLoadingActiveAd={isLoadingActiveAd}
               handleTriggerAdRedirect={handleTriggerAdRedirect}
-              adCooldownRemaining={adCooldownRemaining}
               user={user}
               customHeading="🔒 Free VPN Tunnel Vault is Locked"
               customDescription="To request or activate complimentary high-speed vless configs, complete the 10 ad redirection sequences first."

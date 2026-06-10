@@ -6,7 +6,6 @@ interface FeatureLockViewProps {
   setAdRedirectionCount: (val: number) => void;
   isLoadingActiveAd: boolean;
   handleTriggerAdRedirect: () => void;
-  adCooldownRemaining: number;
   user: any;
   customHeading?: string;
   customDescription?: string;
@@ -17,17 +16,10 @@ export const FeatureLockView: React.FC<FeatureLockViewProps> = ({
   setAdRedirectionCount,
   isLoadingActiveAd,
   handleTriggerAdRedirect,
-  adCooldownRemaining,
   user,
   customHeading = "🔒 Premium Security Verification Required",
-  customDescription = "To prevent automated scraping and network congestion, standard users must verify 10 secure ad redirections to access this premium feature. Users can verify maximum 1 stage every 2 minutes."
+  customDescription = "To prevent automated scraping and network congestion, standard users must verify 10 secure ad redirections to access this premium feature."
 }) => {
-
-  const formatRemainingTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
-  };
 
   const handleResetProgress = () => {
     if (window.confirm("Are you sure you want to reset your verification progress to Stage 0?")) {
@@ -110,13 +102,6 @@ export const FeatureLockView: React.FC<FeatureLockViewProps> = ({
             </div>
 
             <div className="flex items-center gap-3">
-              {adCooldownRemaining > 0 && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/25 rounded-lg text-[10px] text-amber-400 font-semibold font-sans">
-                  <AlertCircle className="w-3.5 h-3.5 animate-spin" />
-                  Cooldown: {formatRemainingTime(adCooldownRemaining)}
-                </div>
-              )}
-
               <button
                 type="button"
                 disabled={isLoadingActiveAd || adRedirectionCount >= 10}

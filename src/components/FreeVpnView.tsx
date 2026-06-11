@@ -72,7 +72,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
       {/* MAIN SELECTIONS AND CLASSIFICATIONS */}
       {(() => {
         const globalClicks = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-        const isUnlocked = globalClicks >= 10;
+        const isUnlocked = globalClicks >= 10 || (user && user.role === 'admin');
 
         if (!isUnlocked) {
           return (

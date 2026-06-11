@@ -470,7 +470,7 @@ export default function App() {
   };
 
   // Trigger ad redirect check and increment count
-  const handleTriggerAdRedirect = async (pkgId?: string) => {
+  const handleTriggerAdRedirect = async (pkgId?: string | any) => {
     setIsLoadingActiveAd(true);
     setFreeClaimError('');
     try {
@@ -481,8 +481,11 @@ export default function App() {
       const dayAd = data.dayTimeAdCode || 'https://t.me/janucyberpack';
       const nightAd = data.nightTimeAdCode || 'https://t.me/janucyberpack';
       
+      // Specifically ensure we check if pkgId is actually a valid string package ID (not a MouseEvent)
+      const cleanPkgId = (pkgId && typeof pkgId === 'string' && pkgId.trim().length > 0 && !pkgId.startsWith('[object')) ? pkgId : undefined;
+      
       // Determine click sequence based on state target
-      const storageKey = pkgId ? `free_vpn_claim_clicks_${pkgId}` : 'free_vpn_global_clicks';
+      const storageKey = cleanPkgId ? `free_vpn_claim_clicks_${cleanPkgId}` : 'free_vpn_global_clicks';
       const currentCount = Number(localStorage.getItem(storageKey) || '0');
       
       // Alternate: Even steps (0, 2, 4, 6, 8) use nightAd (first on night time portal)
@@ -507,7 +510,7 @@ export default function App() {
       const nextCount = Math.min(10, currentCount + 1);
       localStorage.setItem(storageKey, String(nextCount));
       
-      if (!pkgId) {
+      if (!cleanPkgId) {
         if (nextCount >= 10) {
           localStorage.setItem('free_vpn_unlocked_at', String(Date.now()));
         }

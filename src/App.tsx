@@ -174,6 +174,7 @@ export default function App() {
 
   // User Ad Redirections Tracking State (0 to 10)
   const [adRedirectionCount, setAdRedirectionCount] = useState<number>(0);
+  const [packageClaimClicks, setPackageClaimClicks] = useState<number>(0);
   const [isLoadingActiveAd, setIsLoadingActiveAd] = useState<boolean>(false);
   const [activeSuperAdminAdUrl, setActiveSuperAdminAdUrl] = useState<string>('');
   const [dashboardAdPlayCount, setDashboardAdPlayCount] = useState<number>(0);
@@ -304,10 +305,9 @@ export default function App() {
         setFreeRequests(data.freeRequests);
       }
 
-      // Reset ad clicks progress upon successful activation of Free VPN package
-      localStorage.setItem('free_vpn_global_clicks', '0');
-      localStorage.removeItem('free_vpn_unlocked_at');
-      setAdRedirectionCount(0);
+      // Reset package claim clicks progress upon successful activation of Free VPN package
+      localStorage.setItem(`free_vpn_claim_clicks_${pkgId}`, '0');
+      setPackageClaimClicks(0);
     } catch (err: any) {
       setFreeClaimError(err.message || 'An error occurred while activating package.');
     } finally {
@@ -470,7 +470,7 @@ export default function App() {
   };
 
   // Trigger ad redirect check and increment count
-  const handleTriggerAdRedirect = async () => {
+  const handleTriggerAdRedirect = async (pkgId?: string) => {
     setIsLoadingActiveAd(true);
     setFreeClaimError('');
     try {
@@ -481,9 +481,9 @@ export default function App() {
       const dayAd = data.dayTimeAdCode || 'https://t.me/janucyberpack';
       const nightAd = data.nightTimeAdCode || 'https://t.me/janucyberpack';
       
-      // Determine click sequence based on the single unified counter source of truth
-      const currentCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-      const storageKey = 'free_vpn_global_clicks';
+      // Determine click sequence based on state target
+      const storageKey = pkgId ? `free_vpn_claim_clicks_${pkgId}` : 'free_vpn_global_clicks';
+      const currentCount = Number(localStorage.getItem(storageKey) || '0');
       
       // Alternate: Even steps (0, 2, 4, 6, 8) use nightAd (first on night time portal)
       // Odd steps (1, 3, 5, 7, 9) use dayAd (second on day time portal)
@@ -506,10 +506,15 @@ export default function App() {
       
       const nextCount = Math.min(10, currentCount + 1);
       localStorage.setItem(storageKey, String(nextCount));
-      if (nextCount >= 10) {
-        localStorage.setItem('free_vpn_unlocked_at', String(Date.now()));
+      
+      if (!pkgId) {
+        if (nextCount >= 10) {
+          localStorage.setItem('free_vpn_unlocked_at', String(Date.now()));
+        }
+        setAdRedirectionCount(nextCount);
+      } else {
+        setPackageClaimClicks(nextCount);
       }
-      setAdRedirectionCount(nextCount);
     } catch (e: any) {
       setFreeClaimError(e.message || 'Ad network redirection failed.');
     } finally {
@@ -941,6 +946,13 @@ export default function App() {
   useEffect(() => {
     const currentCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
     setAdRedirectionCount(currentCount);
+
+    if (selectedFreePackageId) {
+      const pkgClicks = Number(localStorage.getItem(`free_vpn_claim_clicks_${selectedFreePackageId}`) || '0');
+      setPackageClaimClicks(pkgClicks);
+    } else {
+      setPackageClaimClicks(0);
+    }
   }, [selectedFreePackageId, activeTab]);
 
   // Auth execution using API
@@ -2044,6 +2056,8 @@ export default function App() {
               handleTriggerAdRedirect={handleTriggerAdRedirect}
               isClaimingFree={isClaimingFree}
               handleClaimFreeVpn={handleClaimFreeVpn}
+              packageClaimClicks={packageClaimClicks}
+              setPackageClaimClicks={setPackageClaimClicks}
             />
           )
         )}

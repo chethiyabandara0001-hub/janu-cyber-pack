@@ -22,9 +22,11 @@ interface FreeVpnViewProps {
   adRedirectionCount: number;
   setAdRedirectionCount: (val: number) => void;
   isLoadingActiveAd: boolean;
-  handleTriggerAdRedirect: () => void;
+  handleTriggerAdRedirect: (pkgId?: string) => void;
   isClaimingFree: boolean;
   handleClaimFreeVpn: (id: string) => void;
+  packageClaimClicks: number;
+  setPackageClaimClicks: (val: number) => void;
 }
 
 export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
@@ -49,7 +51,9 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
   isLoadingActiveAd,
   handleTriggerAdRedirect,
   isClaimingFree,
-  handleClaimFreeVpn
+  handleClaimFreeVpn,
+  packageClaimClicks,
+  setPackageClaimClicks
 }) => {
   return (
     <div className="space-y-8 animate-fade-in font-sans">
@@ -381,14 +385,14 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                     )}
 
                     {/* Advertisement redirection verification engine */}
-                    {adRedirectionCount < 10 ? (
+                    {packageClaimClicks < 10 ? (
                       <div className="bg-slate-950/80 border border-indigo-500/20 p-5 rounded-2xl space-y-4 font-mono text-[11px]">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-indigo-400 uppercase flex items-center gap-1.5">
                             🛡️ Security Access Gate [Package Lock]
                           </span>
                           <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20 font-bold animate-pulse">
-                            {adRedirectionCount} / 10 Clicks Completed
+                            {packageClaimClicks} / 10 Clicks Completed
                           </span>
                         </div>
 
@@ -397,14 +401,14 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                         </p>
 
                         <div className="text-[10px] text-slate-505 bg-slate-900/40 border border-slate-850/60 p-2.5 rounded-lg text-center font-sans">
-                          🔄 Current verification sequence: <strong className="text-indigo-400 font-mono">Stage {adRedirectionCount + 1} Authorized</strong>
+                          🔄 Current verification sequence: <strong className="text-indigo-400 font-mono">Stage {packageClaimClicks + 1} Authorized</strong>
                         </div>
 
                         {/* Staggered progress grid nodes */}
                         <div className="grid grid-cols-10 gap-1.5">
                           {Array.from({ length: 10 }).map((_, idx) => {
-                            const isCompleted = idx < adRedirectionCount;
-                            const isActive = idx === adRedirectionCount;
+                            const isCompleted = idx < packageClaimClicks;
+                            const isActive = idx === packageClaimClicks;
                             return (
                               <div
                                 key={idx}
@@ -423,12 +427,12 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
 
                         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
                           <div className="space-y-1 col">
-                            {adRedirectionCount > 0 && (
+                            {packageClaimClicks > 0 && (
                               <button
                                 type="button"
                                 onClick={() => {
-                                  localStorage.setItem('free_vpn_global_clicks', '0');
-                                  setAdRedirectionCount(0);
+                                  localStorage.setItem(`free_vpn_claim_clicks_${selectedFreePackageId}`, '0');
+                                  setPackageClaimClicks(0);
                                 }}
                                 className="text-[9px] text-red-400/80 hover:text-red-400 underline cursor-pointer"
                               >
@@ -439,7 +443,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
 
                           <button
                             type="button"
-                            onClick={handleTriggerAdRedirect}
+                            onClick={() => handleTriggerAdRedirect(selectedFreePackageId)}
                             disabled={isLoadingActiveAd}
                             className="px-4 py-2 rounded-lg font-bold text-xs uppercase flex items-center gap-1.5 bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-950/40 scale-102 hover:scale-105 transition cursor-pointer"
                           >
@@ -451,7 +455,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                             ) : (
                               <>
                                 <ExternalLink className="w-3.5 h-3.5" />
-                                🚀 Redirect & Verify [Step {adRedirectionCount + 1}/10]
+                                🚀 Redirect & Verify [Step {packageClaimClicks + 1}/10]
                               </>
                             )}
                           </button>

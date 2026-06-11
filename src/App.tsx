@@ -303,6 +303,11 @@ export default function App() {
       if (data.freeRequests) {
         setFreeRequests(data.freeRequests);
       }
+
+      // Reset ad clicks progress upon successful activation of Free VPN package
+      localStorage.setItem('free_vpn_global_clicks', '0');
+      localStorage.removeItem('free_vpn_unlocked_at');
+      setAdRedirectionCount(0);
     } catch (err: any) {
       setFreeClaimError(err.message || 'An error occurred while activating package.');
     } finally {
@@ -476,21 +481,9 @@ export default function App() {
       const dayAd = data.dayTimeAdCode || 'https://t.me/janucyberpack';
       const nightAd = data.nightTimeAdCode || 'https://t.me/janucyberpack';
       
-      // Determine if we use the global unlock clicks or specific package clicks
-      const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-      const isGlobalLockMode = globalCount < 10;
-      
-      let currentCount = 0;
-      let storageKey = '';
-      
-      if (isGlobalLockMode) {
-        currentCount = globalCount;
-        storageKey = 'free_vpn_global_clicks';
-      } else {
-        if (!selectedFreePackageId) return;
-        currentCount = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
-        storageKey = 'free_vpn_clicks_' + selectedFreePackageId;
-      }
+      // Determine click sequence based on the single unified counter source of truth
+      const currentCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
+      const storageKey = 'free_vpn_global_clicks';
       
       // Alternate: Even steps (0, 2, 4, 6, 8) use nightAd (first on night time portal)
       // Odd steps (1, 3, 5, 7, 9) use dayAd (second on day time portal)
@@ -946,34 +939,8 @@ export default function App() {
   }, [activeTab, user]);
 
   useEffect(() => {
-    // 1. If he refreshes the page and had 10 ads completed, reset it.
-    const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-    if (globalCount >= 10) {
-      localStorage.setItem('free_vpn_global_clicks', '0');
-      localStorage.removeItem('free_vpn_unlocked_at');
-    }
-  }, []); // Run once on mount
-
-  useEffect(() => {
-    // 2. If he visits the free vpn page and had 10 ads completed, reset it.
-    if (activeTab === 'free-vpn') {
-      const globalCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-      if (globalCount >= 10) {
-        localStorage.setItem('free_vpn_global_clicks', '0');
-        localStorage.removeItem('free_vpn_unlocked_at');
-        setAdRedirectionCount(0);
-      }
-    }
-
     const currentCount = Number(localStorage.getItem('free_vpn_global_clicks') || '0');
-    if (currentCount < 10) {
-      setAdRedirectionCount(currentCount);
-    } else if (selectedFreePackageId) {
-      const savedClicks = Number(localStorage.getItem('free_vpn_clicks_' + selectedFreePackageId) || '0');
-      setAdRedirectionCount(savedClicks);
-    } else {
-      setAdRedirectionCount(10);
-    }
+    setAdRedirectionCount(currentCount);
   }, [selectedFreePackageId, activeTab]);
 
   // Auth execution using API

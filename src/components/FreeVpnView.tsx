@@ -427,7 +427,7 @@ export const FreeVpnView: React.FC<FreeVpnViewProps> = ({
                               <button
                                 type="button"
                                 onClick={() => {
-                                  localStorage.setItem('free_vpn_clicks_' + selectedFreePackageId, '0');
+                                  localStorage.setItem('free_vpn_global_clicks', '0');
                                   setAdRedirectionCount(0);
                                 }}
                                 className="text-[9px] text-red-400/80 hover:text-red-400 underline cursor-pointer"

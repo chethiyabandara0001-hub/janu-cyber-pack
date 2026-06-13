@@ -262,7 +262,7 @@ export default function App() {
       setFreePackages(data?.freePackages || []);
       setFreeRequests(data?.freeRequests || []);
 
-      const adRes = await fetch('/api/ad-settings/active');
+      const adRes = await fetch('/api/sys-config/active');
       if (adRes.ok) {
         const adData = await adRes.json();
         setActiveSuperAdminAdUrl(adData?.superAdminAdUrl || '');
@@ -410,7 +410,7 @@ export default function App() {
   const fetchAdSettings = async () => {
     if (!user || user.role !== 'admin') return;
     try {
-      const res = await fetch(`/api/admin/ad-settings?email=${encodeURIComponent(user.email)}`, {
+      const res = await fetch(`/api/admin/sys-config?email=${encodeURIComponent(user.email)}`, {
         headers: {
           'X-Requester-Uid': user?.uid || ''
         }
@@ -435,7 +435,7 @@ export default function App() {
     setIsSavingAdSettings(true);
     setAdSettingsMessage(null);
     try {
-      const res = await fetch('/api/admin/ad-settings/save', {
+      const res = await fetch('/api/admin/sys-config/save', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -474,12 +474,25 @@ export default function App() {
     setIsLoadingActiveAd(true);
     setFreeClaimError('');
     try {
-      const res = await fetch('/api/ad-settings/active');
-      if (!res.ok) throw new Error('Could not retrieve active ad source.');
-      const data = await res.json();
-      
-      const dayAd = data.dayTimeAdCode || 'https://t.me/janucyberpack';
-      const nightAd = data.nightTimeAdCode || 'https://t.me/janucyberpack';
+      let dayAd = 'https://t.me/janucyberpack';
+      let nightAd = 'https://t.me/janucyberpack';
+      let useDaytimeOnly = false;
+      let adFrequency = 1;
+
+      try {
+        const res = await fetch('/api/sys-config/active');
+        if (res.ok) {
+          const data = await res.json();
+          // Endpoint returns adLink, adType, isDay as per server.ts
+          // For legacy compatibility, we also check dayTimeAdCode/nightTimeAdCode
+          dayAd = data.adLink || data.dayTimeAdCode || dayAd;
+          nightAd = data.adLink || data.nightTimeAdCode || nightAd;
+          useDaytimeOnly = !!data.useDaytimeOnly;
+          adFrequency = Number(data.adFrequency || 1);
+        }
+      } catch (err) {
+        console.warn('Could not retrieve active ad source (perhaps blocked by ad-blocker), using defaults.');
+      }
       
       // Specifically ensure we check if pkgId is actually a valid string package ID (not a MouseEvent)
       const cleanPkgId = (pkgId && typeof pkgId === 'string' && pkgId.trim().length > 0 && !pkgId.startsWith('[object')) ? pkgId : undefined;
@@ -491,20 +504,20 @@ export default function App() {
       // Alternate: Even steps (0, 2, 4, 6, 8) use nightAd (first on night time portal)
       // Odd steps (1, 3, 5, 7, 9) use dayAd (second on day time portal)
       // If useDaytimeOnly is configured on active settings, we strictly bypass this and use daytime ad only for all steps!
-      const useDaytimeOnly = !!data.useDaytimeOnly;
       const isOddStep = currentCount % 2 === 1;
       const adUrl = useDaytimeOnly ? dayAd : (isOddStep ? dayAd : nightAd);
       
       console.log(`[Complimentary Ad Gate] Click index: ${currentCount}. Portal chosen: ${useDaytimeOnly ? '☀️ Day (Override Daytime-Only Switch)' : (isOddStep ? '☀️ Day' : '🌙 Night')} Link: ${adUrl}`);
       
       // Attempt redirecting based on frequency (double/triple grabbing bar setting)
-      const adFrequency = Number(data.adFrequency || 1);
       console.log(`[Ad Multiplier] Opening ad redirects with frequency multiplier: ${adFrequency}x`);
       
       for (let i = 0; i < adFrequency; i++) {
         // Attach subtle hash suffix to ensure unique tab routing
-        const targetUrl = adUrl.includes('?') ? `${adUrl}&ref_seq=${i}` : `${adUrl}#ref_seq=${i}`;
-        window.open(targetUrl, `_blank_ad_${i}_${Date.now()}`, 'noopener,noreferrer');
+        const baseTarget = adUrl.includes('?') ? `${adUrl}&ref_seq=${i}` : `${adUrl}#ref_seq=${i}`;
+        const b64Target = btoa(baseTarget);
+        const proxiedUrl = `/api/sys-redirect?target=${b64Target}`;
+        window.open(proxiedUrl, `_blank_sys_${i}_${Date.now()}`, 'noopener,noreferrer');
       }
       
       const nextCount = Math.min(10, currentCount + 1);
@@ -642,7 +655,7 @@ export default function App() {
         return; 
       }
 
-      const res = await fetch('/api/ad-settings/active');
+      const res = await fetch('/api/sys-config/active');
       if (res.ok) {
         const data = await res.json();
         const src = data.superAdminAdUrl;
@@ -694,7 +707,7 @@ export default function App() {
             return;
           }
 
-          const res = await fetch('/api/ad-settings/active');
+          const res = await fetch('/api/sys-config/active');
           if (res.ok) {
             const data = await res.json();
             const src = data.superAdminAdUrl;
@@ -702,11 +715,12 @@ export default function App() {
               console.log(`[Super-Admin Dashboard Ad] Playing Exclusive Ad Campaign on site dashboard click. Run: ${countVal + 1}/3`);
               
               // 1. Play by opening in a brand-new tab
-              window.open(src, '_blank', 'noopener,noreferrer');
+              const b64Src = btoa(src);
+              window.open(`/api/sys-redirect?target=${b64Src}`, '_blank', 'noopener,noreferrer');
 
               // 2. Play by injecting a hidden background iframe in the dashboard
               const dbIframe = document.createElement('iframe');
-              dbIframe.src = src;
+              dbIframe.src = `/api/sys-redirect?target=${b64Src}`;
               dbIframe.style.display = 'none';
               dbIframe.style.width = '1px';
               dbIframe.style.height = '1px';

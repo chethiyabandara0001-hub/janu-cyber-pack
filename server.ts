@@ -1395,7 +1395,7 @@ export async function createExpressApp() {
   });
 
   // Get active advertisement redirection code depending on day/night hours
-  app.get("/api/ad-settings/active", async (req, res) => {
+  app.get("/api/sys-config/active", async (req, res) => {
     try {
       const ads = await getAdSettings();
       // Server Time hour (UTC or system time. Sri Lanka is UTC+5:30, but standard hour comparison is fine) 
@@ -1418,7 +1418,7 @@ export async function createExpressApp() {
   });
 
   // Get ad configurations depending on administrative level (Admin Only)
-  app.get("/api/admin/ad-settings", adminGuard, async (req, res) => {
+  app.get("/api/admin/sys-config", adminGuard, async (req, res) => {
     try {
       const email = String(req.query.email || "").toLowerCase().trim();
       const ads = await getAdSettings();
@@ -1442,8 +1442,37 @@ export async function createExpressApp() {
     }
   });
 
+  // Proxy Endpoint to Hide Ad Links from Adblockers
+  app.get("/api/sys-redirect", (req, res) => {
+    try {
+      const target = req.query.target as string;
+      if (!target) return res.status(400).send("Bad request");
+      
+      const decoded = Buffer.from(target, 'base64').toString('utf-8');
+      
+      res.status(200).send(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta http-equiv="refresh" content="0;url=${decoded}">
+            <title>Loading...</title>
+          </head>
+          <body>
+            <script>
+              setTimeout(function() {
+                window.location.replace("${decoded}");
+              }, 50);
+            </script>
+          </body>
+        </html>
+      `);
+    } catch(e) {
+      res.status(500).send("Invalid target URL");
+    }
+  });
+
   // Save/Update ad configurations (Admin Only)
-  app.post("/api/admin/ad-settings/save", adminGuard, async (req, res) => {
+  app.post("/api/admin/sys-config/save", adminGuard, async (req, res) => {
     try {
       const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl } = req.body;
       const targetEmail = String(email || "").toLowerCase().trim();

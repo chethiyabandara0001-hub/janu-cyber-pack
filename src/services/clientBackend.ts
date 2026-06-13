@@ -464,7 +464,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
   }
 
   // 7. Dynamic Ad redirects and management
-  if (path === "/api/admin/ad-settings" && method === "GET") {
+  if (path === "/api/admin/sys-config" && method === "GET") {
     const email = queryParams.email || "";
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
     const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false, adFrequency: 1 };
@@ -494,7 +494,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
     }
   }
 
-  if (path === "/api/admin/ad-settings/save" && method === "POST") {
+  if (path === "/api/admin/sys-config/save" && method === "POST") {
     const { email, dayTimeAdCode, nightTimeAdCode, superAdminAdUrl, useDaytimeOnly, adFrequency } = await getJsonBody(init);
     const adsRef = doc(db, "settings", "ads");
     const adsSnap = await getDoc(adsRef);
@@ -515,7 +515,7 @@ async function handleClientApiRoute(urlStr: string, init?: RequestInit): Promise
     return { status: 200, data: { status: "success", adSettings: current } };
   }
 
-  if (path === "/api/ad-settings/active" && method === "GET") {
+  if (path === "/api/sys-config/active" && method === "GET") {
     await ensureSeeded();
     const adsSnap = await getDoc(doc(db, "settings", "ads"));
     const ads = adsSnap.exists() ? adsSnap.data() : { dayTimeAdCode: "", nightTimeAdCode: "", superAdminAdUrl: "", useDaytimeOnly: false, adFrequency: 1 };

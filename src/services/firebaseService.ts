@@ -131,7 +131,7 @@ export const firebaseService = {
 
   // Ad integrations
   saveAdSettings: async (settings: AdSettings) => {
-    const res = await fetch('/api/admin/ad-settings/save', {
+    const res = await fetch('/api/admin/sys-config/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings)
@@ -140,7 +140,7 @@ export const firebaseService = {
   },
 
   fetchActiveAdSettings: async () => {
-    const res = await fetch('/api/ad-settings/active');
+    const res = await fetch('/api/sys-config/active');
     return res.json();
   },
 
